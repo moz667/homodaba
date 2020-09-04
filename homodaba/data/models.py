@@ -1,6 +1,5 @@
 from django.db import models
 
-# TODO: publicar en github
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
@@ -13,6 +12,13 @@ class Person(models.Model):
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
+"""
+TODO: genero y rating
+>>> the_matrix['genres']
+['Action', 'Sci-Fi']
+>>> the_matrix['rating']
+8.7
+"""
 class Movie(models.Model):
     MK_MOVIE = 'movie'
     MK_SERIE = 'tv series'
@@ -30,7 +36,7 @@ class Movie(models.Model):
     summary = models.TextField('Resumen', null=True, blank=True)
     poster_url = models.CharField('Cartel (URL)', max_length=255, null=True, blank=True)
     poster_thumbnail_url = models.CharField('Cartel en miniatura (URL)', max_length=255, null=True, blank=True)
-    year = models.IntegerField('Año de estreno/episodio piloto', null=True, blank=True)
+    year = models.IntegerField('Año', null=True, blank=True)
     # TODO: Definir sagas?
     """
     directed_by = models.TextField('Dirigida por', null=True, blank=True)

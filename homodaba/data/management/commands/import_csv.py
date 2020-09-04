@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.utils.translation import gettext as _
 
-from homodaba.data.models import Movie, Person, MovieStorageType, MoviePerson
+from data.models import Movie, Person, MovieStorageType, MoviePerson
 
 import csv
 
@@ -17,8 +17,6 @@ class Command(BaseCommand):
             raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
         if not 'year' in r or not r['year']:
             raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
-        if not 'storage_name' in r or not r['storage_name']:
-            raise Exception("ERROR!: El nombre del almacenamiento es obligatorio y tiene que estar definido en el CSV como 'storage_name'.")
 
     def add_arguments(self, parser):
         parser.add_argument('csv_file', nargs='+', type=str)
@@ -44,8 +42,8 @@ class Command(BaseCommand):
     def get_or_create_person(self, ia_person):
         # TODO: deberia ser solo una :P
         local_person = self.get_person_local_data(ia_person.getID())
-        if local_person.count() > 0:
-            return local_person[0]
+        if local_person:
+            return local_person
         
         return Person.objects.create(
             name=ia_person['name'],
@@ -60,7 +58,7 @@ class Command(BaseCommand):
         if '.' in clean_title:
             clean_title = title.split('.')[-1]
 
-        return clean_title
+        return clean_title.strip()
             
 
     def get_or_insert_movie(self, r):
@@ -103,7 +101,7 @@ class Command(BaseCommand):
             if media_format:
                 if media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_ISO_EXTENSION:
                     path = path + ".iso"
-                elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_EXTENSION:
+                elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION:
                     path = path + ".%s" % media_format.lower()
 
         # 1) Buscamos si ya esta dada de alta la pelicula para ese año en la bbdd
@@ -117,7 +115,7 @@ class Command(BaseCommand):
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             print("INFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
             return local_movies[0]
-        elif local_movies > 1:
+        elif local_movies.count() > 1:
             print("WARNING!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
             return None
         # 2) Buscamos la pelicula con el año en IMDbPy
@@ -125,22 +123,21 @@ class Command(BaseCommand):
         search_results = ia.search_movie('%s (%s)' % (title, r['year']))
         search_result = None
         for sr in search_results:
-            if sr['year'] == r['year'] and sr['title'] == title:
+            if ['year', 'title'] in sr and sr['year'] == r['year'] and sr['title'] == title:
                 search_result = sr
                 break
         
         # Buscamos el titulo por el preferred si lo tiene
         if search_result is None and 'title_preferred' in r:
             search_results = ia.search_movie('%s (%s)' % (r['title_preferred'], r['year']))
-
             for sr in search_results:
-                if sr['year'] == r['year'] and sr['title'] == title:
+                if ['year', 'title'] in sr and sr['year'] == r['year'] and sr['title'] == title:
                     search_result = sr
                     break
 
             # Buscamos el titulo por los aka
             if search_result is None and len(search_results) == 1:
-                ia_movie = ia.get_movie(search_result[0].movieID)
+                ia_movie = ia.get_movie(search_results[0].movieID)
                 # TODO: Poner por setting estos ' (Spain)'
                 for aka in ia_movie['akas']:
                     if aka == '%s (Spain)' % title:
@@ -152,6 +149,7 @@ class Command(BaseCommand):
             i = 1
             for sr in search_results:
                 print("%s) %s (%s)" % (str(i), sr['title'], sr['year']))
+                i = i + 1
             print("n) Para continuar con el siguiente")
             print("q) Para salir")
 
@@ -175,7 +173,7 @@ class Command(BaseCommand):
                         print("ERROR!: Ese valor no es posible.")
                         input_return = ""
             
-            search_result = search_results[input_return]
+            search_result = search_results[int(input_return) - 1]
 
         if search_result is None:
             # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
@@ -200,7 +198,7 @@ class Command(BaseCommand):
             # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
             # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
             # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
-            lp = get_or_create_person(ia_person)
+            lp = self.get_or_create_person(ia_person)
 
             if not lp.is_director:
                 lp.is_director = True
@@ -212,7 +210,7 @@ class Command(BaseCommand):
         writers = []
 
         for ia_person in ia_movie['writer']:
-            lp = get_or_create_person(ia_person)
+            lp = self.get_or_create_person(ia_person)
 
             if not lp.is_writer:
                 lp.is_writer = True
@@ -224,7 +222,7 @@ class Command(BaseCommand):
         casting = []
 
         for ia_person in ia_movie['cast']:
-            lp = get_or_create_person(ia_person)
+            lp = self.get_or_create_person(ia_person)
 
             if not lp.is_actor:
                 lp.is_actor = True
@@ -299,8 +297,16 @@ URL DEL IMDB: https://www.imdb.com/title/tt0133093/
 >>> the_matrix = ia.get_movie('0133093')
 >>> the_matrix.keys()
 ['original title', 'cast', 'genres', 'runtimes', 'countries', 'country codes', 'language codes', 'color info', 'aspect ratio', 'sound mix', 'box office', 'certificates', 'original air date', 'rating', 'votes', 'cover url', 'imdbID', 'plot outline', 'languages', 'title', 'year', 'kind', 'directors', 'writers', 'producers', 'composers', 'cinematographers', 'editors', 'editorial department', 'casting directors', 'production designers', 'art directors', 'set decorators', 'costume designers', 'make up department', 'production managers', 'assistant directors', 'art department', 'sound department', 'special effects', 'visual effects', 'stunts', 'camera department', 'animation department', 'casting department', 'costume departmen', 'location management', 'music department', 'script department', 'transportation department', 'miscellaneous', 'akas', 'writer', 'director', 'top 250 rank', 'production companies', 'distributors', 'special effects companies', 'other companies', 'plot', 'synopsis', 'canonical title', 'long imdb title', 'long imdb canonical title', 'smart canonical title', 'smart long imdb canonical title', 'full-size cover url']
+>>> the_matrix['original title']
+'Matrix (1999)'
+>>> the_matrix['title']
+'The Matrix'
 >>> the_matrix['kind']
 'movie' # Nos puede servir para diferenciar pelis de series... 
+>>> the_matrix['genres']
+['Action', 'Sci-Fi']
+>>> the_matrix['rating']
+8.7
 >>> the_matrix['full-size cover url']
 'https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@.jpg'
 >>> the_matrix.summary()
