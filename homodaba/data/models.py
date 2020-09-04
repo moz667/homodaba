@@ -102,7 +102,7 @@ class MovieStorageType(models.Model):
         (MF_ULTRA_BRAY, MF_ULTRA_BRAY),
     ]
 
-    MEDIA_FORMATS_AS_LIST = [k for (k, k) in MovieStorageType.MEDIA_FORMATS]
+    MEDIA_FORMATS_AS_LIST = [k for (k, k) in MEDIA_FORMATS]
 
     MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION = [
         MF_AVI, MF_M2TS, MF_M4V, MF_MKV, MF_MP4
