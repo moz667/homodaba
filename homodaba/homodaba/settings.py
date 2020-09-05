@@ -31,7 +31,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'bootstrap_admin',
+    # TODO: No me acaba de convencer... lo mismo lo quitamos 'bootstrap_admin',
+    'admin_interface',
+    'colorfield',
     'data.apps.DataConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+X_FRAME_OPTIONS='SAMEORIGIN' # only if django version >= 3.0
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

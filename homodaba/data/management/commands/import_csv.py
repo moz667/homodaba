@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     def validate(self, r):
         # path_no_extension_and_title;title_preferred
-        if (not 'title' in r or not r['title']) and (not 'path_no_extension_and_title' in r or not r['path_no_extension_and_title']):
+        if not 'title' in r or not r['title']:
             raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
         if not 'year' in r or not r['year']:
             raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
@@ -29,7 +29,9 @@ class Command(BaseCommand):
         
         return None
 
-    def search_movie_local_data(self, title, year, storage_type=None, storage_name=None, path=None, media_format=None):
+    # , is_original=False, storage_type=None, storage_name=None, path=None, media_format=None
+    # TODO: filtro por el storage_type=None, storage_name=None, path=None, media_format=None si tuviera ?
+    def search_movie_local_data(self, title, year):
         query_title = Q(title__iexact=title)
         query_title.add(Q(title_original__iexact=title), Q.OR)
         query_title.add(Q(title_preferred__iexact=title), Q.OR)
@@ -62,42 +64,46 @@ class Command(BaseCommand):
             
 
     def get_or_insert_movie(self, r):
-        # storage_name;path_no_extension_and_title;title_preferred;director;year;resolution;media_format
-        # TODO: En caso del csv de perico:
-        # Localizacion;Título Original;Titulo traducido;Director;Año;Resolución;Formato
-        #   Localizacion = storage_name
-        #   Título Original = path sin extension (se podria utilizar tambien como title, 
-        #       pero creo que no hace falta, ademas algunos casos como por ejemplo:
-        #       007/007. 01. Dr.No
-        #       falla en la busqueda de imdbPy
-        #   )
-        #   Titulo traducido = title
-        #   Director = director
-        #   Año = year
-        #   Resolucion = resolution
-        #   Formato = media_format
+        print('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        """
+        TODO: Documentar campos para la ayuda:
+        storage_name;
+        path_no_extension;
+        title;
+        title_preferred;
+        director;
+        year;
+        resolution;
+        media_format;
+        storage_type;
+        """
         """
         Tenemos que averiguar primero:
         1) Si se trata de una peli original
         2) El archivo donde se almacena si no lo es
         """
-        title = r['title'] if 'title' in r else None
+        title = r['title']
         storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
         is_original = True if not storage_name else False
 
-        if not title and 'path_no_extension_and_title' in r:
-            # Si se trata de los originales podemos usar el path que es el titulo realmente
-            if is_original:
-                title = r['path_no_extension_and_title']
+        storage_type = None
+        if 'storage_type' in r and r['storage_type']:
+            if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
+                print('WARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
             else:
-                title = self.clean_path_no_extension_and_title(r['path_no_extension_and_title'])
+                storage_type = r['storage_type']
+        
+        media_format = None
+        if 'media_format' in r and r['media_format']:
+            if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
+                print('WARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
+            else:
+                media_format = r['media_format']
 
-        print('Insertando "%s"...' % title)
-        media_format = r['media_format'] if 'media_format' in r and r['media_format'] and r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST else None
+        path = r['path'] if not is_original and 'path' in r and r['path'] else None
 
-        path = r['path'] if 'path' in r and r['path'] else None
-        if not is_original and not path and 'path_no_extension_and_title' in r and r['path_no_extension_and_title']:
-            path = r['path_no_extension_and_title']
+        if not is_original and not path and 'path_no_extension' in r and r['path_no_extension']:
+            path = r['path_no_extension']
             if media_format:
                 if media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_ISO_EXTENSION:
                     path = path + ".iso"
@@ -108,9 +114,8 @@ class Command(BaseCommand):
         # search_movie_local_data(self, title, year, storage_name=None, path=None, media_format=None):
         local_movies = self.search_movie_local_data(
             title=title, year=r['year'], 
-            storage_name=r['storage_name'] if 'storage_name' in r and r['storage_name'] else None
-
         )
+
         if local_movies.count() == 1:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             print("INFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
@@ -138,12 +143,13 @@ class Command(BaseCommand):
             # Buscamos el titulo por los aka
             if search_result is None and len(search_results) == 1:
                 ia_movie = ia.get_movie(search_results[0].movieID)
-                # TODO: Poner por setting estos ' (Spain)'
+                # FIXME: Poner por setting estos ' (Spain)'
                 for aka in ia_movie['akas']:
                     if aka == '%s (Spain)' % title:
                         search_result = search_result[0]
                         break
         
+        # TODO: argumento para mostrar solo el problema sin necesidad de requerir input
         if search_result is None and len(search_results) > 0:
             print('Parece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, r['year']))
             i = 1
@@ -179,18 +185,39 @@ class Command(BaseCommand):
             # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
             print("ERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
             return None
-
-        # 2.2.2) Recuperamos la pelicula de IMDbPy
-        ia_movie = ia.get_movie(search_result.movieID)
-        # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
-        if 'director' in r and r['director']:
-            ia_directors = [p['name'] for p in ia_movie['director']]
-
-            for director_name in r['director'].split(','):
-                if not director_name in ia_directors:
-                    # Esto es para que revises tu csv!!!
-                    print("WARNING! No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
         
+        # Tambien puede ocurrirnos que esa pelicula ya este dada de alta
+        local_movies = Movie.objects.filter(imdb_id=search_result.movieID).all()
+
+        if local_movies.count() == 0:
+            # 2.2.2) Recuperamos la pelicula de IMDbPy
+            ia_movie = ia.get_movie(search_result.movieID)
+
+            # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
+            if ia_movie['title'] != title:
+                print('WARNING!: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+        
+            # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
+            if 'director' in r and r['director']:
+                ia_directors = [p['name'] for p in ia_movie['director']]
+
+                for director_name in r['director'].split(','):
+                    if not director_name in ia_directors:
+                        # Esto es para que revises tu csv!!!
+                        print("WARNING! No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+
+            local_movie = self.insert_movie(ia_movie)
+        else:
+            print("INFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
+            local_movie = local_movies[0]
+        
+        # TODO:
+        # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
+        # 2.6) Devolvemos la pelicula
+
+        return local_movie
+
+    def insert_movie(self, ia_movie):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
@@ -234,15 +261,13 @@ class Command(BaseCommand):
         # buscamos el titulo preferido:
         title_preferred = None
 
-        # TODO: Poner por setting estos ' (Spain)'
+        # FIXME: Poner por setting estos ' (Spain)'
         for aka in ia_movie['akas']:
             if ' (Spain)' in aka:
                 title_preferred = aka.replace(' (Spain)', '')
                 break
         
-        # Buscamos 
-
-        movie = Movie.objects.create(
+        local_movie = Movie.objects.create(
             title=ia_movie['title'],
             title_original=ia_movie['original title'],
             title_preferred=title_preferred,
@@ -255,12 +280,11 @@ class Command(BaseCommand):
             imdb_raw_data=ia_movie.asXML(),
         )
 
-        # TODO:
+        # TODO: 
         # 2.4) Damos de alta las relaciones entre peliculas y personas de todas las recuperadas antes (directores, escritores, casting...)
-        # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
-        # 2.6) Devolvemos la pelicula
 
-        return movie
+        return local_movie
+
 
     def handle(self, *args, **options):
         with open(options['csv_file'][0], newline='') as csvfile:

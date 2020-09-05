@@ -82,6 +82,8 @@ class MovieStorageType(models.Model):
         (ST_VHS, 'VHS'),
     ]
 
+    STORAGE_TYPES_AS_LIST = [k for (k, v) in STORAGE_TYPES]
+
     MF_AVI = 'AVI'
     MF_BLURAY = 'BLURAY'
     MF_BLURAY_ISO = 'BLURAY-ISO'
@@ -108,7 +110,7 @@ class MovieStorageType(models.Model):
         (MF_ULTRA_BRAY, MF_ULTRA_BRAY),
     ]
 
-    MEDIA_FORMATS_AS_LIST = [k for (k, k) in MEDIA_FORMATS]
+    MEDIA_FORMATS_AS_LIST = [k for (k, v) in MEDIA_FORMATS]
 
     MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION = [
         MF_AVI, MF_M2TS, MF_M4V, MF_MKV, MF_MP4
