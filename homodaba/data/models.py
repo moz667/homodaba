@@ -1,5 +1,7 @@
 from django.db import models
 
+from tagging.registry import register as tagging_register
+
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
@@ -37,6 +39,7 @@ class Movie(models.Model):
     poster_url = models.CharField('Cartel (URL)', max_length=255, null=True, blank=True)
     poster_thumbnail_url = models.CharField('Cartel en miniatura (URL)', max_length=255, null=True, blank=True)
     year = models.IntegerField('Año', null=True, blank=True)
+    rating = models.DecimalField('Puntuación', null=True, blank=True, max_digits=4, decimal_places=2)
     # TODO: Definir sagas?
     """
     directed_by = models.TextField('Dirigida por', null=True, blank=True)
@@ -45,6 +48,12 @@ class Movie(models.Model):
     """
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
+
+tagging_register(
+    model=Movie, 
+    tag_descriptor_attr='genres', 
+    tagged_item_manager_attr='genre_applied'
+)
 
 class MoviePerson(models.Model):
     RT_DIRECTOR = 'director'
@@ -66,7 +75,7 @@ class MoviePerson(models.Model):
         verbose_name_plural = 'participantes'
 
 class MovieStorageType(models.Model):
-    ST_DRIVE = 'hd-drive'
+    ST_DRIVE = 'hard-drive'
     ST_NEW_SHARE = 'net-share'
     ST_DVD = 'dvd'
     ST_BRAY = 'bluray'

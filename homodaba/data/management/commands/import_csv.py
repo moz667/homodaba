@@ -21,16 +21,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('csv_file', nargs='+', type=str)
 
-    def get_person_local_data(self, imdb_id):
-        persons = Person.objects.filter(imdb_id=imdb_id).all()
-
-        if persons.count() > 0:
-            return persons[0]
-        
-        return None
-
-    # , is_original=False, storage_type=None, storage_name=None, path=None, media_format=None
-    # TODO: filtro por el storage_type=None, storage_name=None, path=None, media_format=None si tuviera ?
     def search_movie_local_data(self, title, year):
         query_title = Q(title__iexact=title)
         query_title.add(Q(title_original__iexact=title), Q.OR)
@@ -42,10 +32,10 @@ class Command(BaseCommand):
         return Movie.objects.filter(query).all()
 
     def get_or_create_person(self, ia_person):
-        # TODO: deberia ser solo una :P
-        local_person = self.get_person_local_data(ia_person.getID())
-        if local_person:
-            return local_person
+        local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
+
+        if local_persons.count() > 0:
+            return local_persons[0]
         
         return Person.objects.create(
             name=ia_person['name'],
@@ -127,7 +117,11 @@ class Command(BaseCommand):
         ia = IMDb()
         search_results = ia.search_movie('%s (%s)' % (title, r['year']))
         search_result = None
+
+        print(title)
+
         for sr in search_results:
+            print(sr['title'])
             if ['year', 'title'] in sr and sr['year'] == r['year'] and sr['title'] == title:
                 search_result = sr
                 break
@@ -136,7 +130,7 @@ class Command(BaseCommand):
         if search_result is None and 'title_preferred' in r:
             search_results = ia.search_movie('%s (%s)' % (r['title_preferred'], r['year']))
             for sr in search_results:
-                if ['year', 'title'] in sr and sr['year'] == r['year'] and sr['title'] == title:
+                if int(sr['year']) == int(r['year']) and sr['title'] == title:
                     search_result = sr
                     break
 
@@ -195,7 +189,7 @@ class Command(BaseCommand):
 
             # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
             if ia_movie['title'] != title:
-                print('WARNING!: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+                print('INFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
         
             # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
             if 'director' in r and r['director']:
@@ -204,17 +198,38 @@ class Command(BaseCommand):
                 for director_name in r['director'].split(','):
                     if not director_name in ia_directors:
                         # Esto es para que revises tu csv!!!
-                        print("WARNING! No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+                        print("INFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
 
             local_movie = self.insert_movie(ia_movie)
         else:
             print("INFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
             local_movie = local_movies[0]
         
-        # TODO:
+        # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
+        storages = MovieStorageType.objects.filter(
+            movie=local_movie, 
+            is_original=is_original, 
+            storage_type=storage_type, 
+            name=storage_name,
+            media_format=media_format,
+        )
+        # de ser asi sacar mensaje notificandolo
+        if storages.count() > 0:
+            print('WARNING: DUPLICADO!!!! Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (title, r['year']))
+            return local_movie
+        
         # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
-        # 2.6) Devolvemos la pelicula
+        MovieStorageType.objects.create(
+            movie=local_movie, 
+            is_original=is_original, 
+            storage_type=storage_type, 
+            name=storage_name,
+            path=path,
+            media_format=media_format,
+            resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None,
+        )
 
+        # 2.6) Devolvemos la pelicula
         return local_movie
 
     def insert_movie(self, ia_movie):
@@ -277,14 +292,38 @@ class Command(BaseCommand):
             poster_url=ia_movie['full-size cover url'],
             poster_thumbnail_url=ia_movie['cover url'],
             year=ia_movie['year'],
+            rating=ia_movie['rating'],
             imdb_raw_data=ia_movie.asXML(),
         )
 
+        if 'genres' in ia_movie and ia_movie['genres']:
+            local_movie.genres = ','.join(ia_movie['genres'])
+            local_movie.save()
+
         # TODO: 
         # 2.4) Damos de alta las relaciones entre peliculas y personas de todas las recuperadas antes (directores, escritores, casting...)
+        for d in directors:
+            MoviePerson.objects.create(
+                movie=local_movie,
+                person=d,
+                role=MoviePerson.RT_DIRECTOR
+            )
+
+        for w in writers:
+            MoviePerson.objects.create(
+                movie=local_movie,
+                person=w,
+                role=MoviePerson.RT_WRITER
+            )
+
+        for c in casting:
+            MoviePerson.objects.create(
+                movie=local_movie,
+                person=c,
+                role=MoviePerson.RT_ACTOR
+            )
 
         return local_movie
-
 
     def handle(self, *args, **options):
         with open(options['csv_file'][0], newline='') as csvfile:

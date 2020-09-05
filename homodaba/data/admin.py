@@ -13,7 +13,12 @@ class PersonAdmin(admin.ModelAdmin):
 admin.site.register(Person, PersonAdmin)
 
 class MovieStorageTypeAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('get_movie_title', 'is_original', 'storage_type', 'media_format', 'resolution')
+    list_filter = ('storage_type', 'media_format', )
+    def get_movie_title(self, obj):
+        return obj.movie.title
+    get_movie_title.short_description = 'Pelicula'
+    get_movie_title.admin_order_field = 'movie__title'
 admin.site.register(MovieStorageType, MovieStorageTypeAdmin)
 
 class MoviePersonAdmin(admin.ModelAdmin):
@@ -26,12 +31,12 @@ class MoviePersonAdmin(admin.ModelAdmin):
     get_movie_title.admin_order_field = 'movie__title'
 
     def get_movie_year(self, obj):
-        return obj.movie.title
+        return obj.movie.year
     get_movie_year.short_description = 'Año'
     get_movie_year.admin_order_field = 'movie__year'
 
     def get_person_name(self, obj):
-        return obj.movie.title
+        return obj.person.name
     get_person_name.short_description = 'Participante'
     get_person_name.admin_order_field = 'person__name'
 
