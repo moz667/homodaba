@@ -11,15 +11,78 @@ from imdb import IMDb
 class Command(BaseCommand):
     help = _('Importa datos desde un CSV')
 
+    def csv_file_help(self):
+        # TODO: Si te lo quieres currar mas bpk... be my guest ;D
+        print("""
+Descripcion de los campos del csv:
+
+OBLIGATORIOS:
+    title: Titulo de la pelicula (OBLIGATORIO)
+
+    year: Año de estreno (OBLIGATORIO)
+
+OPCIONALES:
+    storage_name: identificador del almacenamiento (nombre del disco duro, 
+        carpeta compartida...) (opcional, aunque hay que tener en cuenta
+        que si no se define, ó es 'Original', tomara que el medio es 
+        original)
+
+    media_format: Formato en el que esta almacenado el medio (ver 
+        models.MovieStorageType.MEDIA_FORMATS para mas info de los 
+        disponibles) (opcional, por defecto DVD)
+
+    storage_type: Tipo de almacenamiento en el se encuentra el medio 
+        (ver models.MovieStorageType.STORAGE_TYPES para mas info de los 
+        disponibles) (opcional, por defecto DVD)
+
+    path_no_extension: Campo especial para definir donde se almacena el 
+        medio SIN EXTENSION de archivo (en caso de discos duros, carpetas 
+        compartidas...) (opcional)
+
+    path: Ruta completa (con extension si fuera necesaria) al medio
+        (opcional, hay que tener en cuenta que si path no tiene valor, pero
+        por el contrario hemos incluido el campo path_no_extension, 
+        intentara averiguar el valor de path en base a path_no_extension y
+        media_format, por ejemplo para estos valores:
+        media_format=AVI
+        path_no_extension=carpeta/fichero_sin_extension
+        path se calculara como:
+        path=carpeta/fichero_sin_extension.avi)
+
+    title_preferred: Titulo en el idioma materno del usuario (por defecto: 
+        Español) (opcional)
+
+    director: Director de la pelicula (directores separados por coma) 
+        (opcional y no muy necesario ya que esa info nos la da 
+        alegremente imdb)
+
+    resolution: Resolución del medio (1080p, 2060p... etc) (opcional)
+    """)
+        exit()
+
     def validate(self, r):
-        # path_no_extension_and_title;title_preferred
         if not 'title' in r or not r['title']:
             raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
         if not 'year' in r or not r['year']:
             raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_file', nargs='+', type=str)
+        parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
+        parser.add_argument(
+            '--csv-file-help',
+            action='store_true',
+            help='Ayuda ampliada acerca del archivo csv.',
+        )
+        parser.add_argument(
+            '--interactive',
+            action='store_true',
+            help='Requiere interactuar cuando encuentre un problema, en cualquier otro caso saca informacion acerca del mismo.',
+        )
+        parser.add_argument(
+            '--verbose',
+            action='store_true',
+            help='Detalle el proceso del tratado de peliculas.',
+        )
 
     def search_movie_local_data(self, title, year):
         query_title = Q(title__iexact=title)
@@ -53,20 +116,9 @@ class Command(BaseCommand):
         return clean_title.strip()
             
 
-    def get_or_insert_movie(self, r):
-        print('Tratando "%s (%s)"...' % (r['title'], r['year']))
-        """
-        TODO: Documentar campos para la ayuda:
-        storage_name;
-        path_no_extension;
-        title;
-        title_preferred;
-        director;
-        year;
-        resolution;
-        media_format;
-        storage_type;
-        """
+    def get_or_insert_movie(self, r, interactive=False, verbose=True):
+        if verbose:
+            print('Tratando "%s (%s)"...' % (r['title'], r['year']))
         """
         Tenemos que averiguar primero:
         1) Si se trata de una peli original
@@ -76,17 +128,17 @@ class Command(BaseCommand):
         storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
         is_original = True if not storage_name else False
 
-        storage_type = None
+        storage_type = MovieStorageType.ST_DVD
         if 'storage_type' in r and r['storage_type']:
             if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
-                print('WARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
+                print('\tWARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
             else:
                 storage_type = r['storage_type']
         
-        media_format = None
+        media_format = MovieStorageType.MF_DVD
         if 'media_format' in r and r['media_format']:
             if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
-                print('WARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
+                print('\tWARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
             else:
                 media_format = r['media_format']
 
@@ -108,76 +160,78 @@ class Command(BaseCommand):
 
         if local_movies.count() == 1:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            print("INFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
+            if verbose:
+                print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
             return local_movies[0]
         elif local_movies.count() > 1:
-            print("WARNING!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
+            print("\tERROR!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
             return None
         # 2) Buscamos la pelicula con el año en IMDbPy
         ia = IMDb()
         search_results = ia.search_movie('%s (%s)' % (title, r['year']))
         search_result = None
 
-        print(title)
-
         for sr in search_results:
-            print(sr['title'])
-            if ['year', 'title'] in sr and sr['year'] == r['year'] and sr['title'] == title:
+            if int(sr['year']) == int(r['year']) and sr['title'] == title:
                 search_result = sr
                 break
         
-        # Buscamos el titulo por el preferred si lo tiene
-        if search_result is None and 'title_preferred' in r:
-            search_results = ia.search_movie('%s (%s)' % (r['title_preferred'], r['year']))
-            for sr in search_results:
-                if int(sr['year']) == int(r['year']) and sr['title'] == title:
-                    search_result = sr
-                    break
+        if search_result is None:
+            if not interactive:
+                print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
+                return None
+            else:
+                # Buscamos el titulo por el preferred si lo tiene
+                if search_result is None and 'title_preferred' in r:
+                    search_results = ia.search_movie('%s (%s)' % (r['title_preferred'], r['year']))
+                    for sr in search_results:
+                        if int(sr['year']) == int(r['year']) and sr['title'] == title:
+                            search_result = sr
+                            break
 
-            # Buscamos el titulo por los aka
-            if search_result is None and len(search_results) == 1:
-                ia_movie = ia.get_movie(search_results[0].movieID)
-                # FIXME: Poner por setting estos ' (Spain)'
-                for aka in ia_movie['akas']:
-                    if aka == '%s (Spain)' % title:
-                        search_result = search_result[0]
-                        break
-        
-        # TODO: argumento para mostrar solo el problema sin necesidad de requerir input
-        if search_result is None and len(search_results) > 0:
-            print('Parece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, r['year']))
-            i = 1
-            for sr in search_results:
-                print("%s) %s (%s)" % (str(i), sr['title'], sr['year']))
-                i = i + 1
-            print("n) Para continuar con el siguiente")
-            print("q) Para salir")
+                    # Buscamos el titulo por los aka
+                    if search_result is None and len(search_results) == 1:
+                        ia_movie = ia.get_movie(search_results[0].movieID)
+                        # FIXME: Poner por setting estos ' (Spain)'
+                        for aka in ia_movie['akas']:
+                            if aka == '%s (Spain)' % title:
+                                search_result = search_result[0]
+                                break
+                
+                if search_result is None and len(search_results) > 0:
+                    print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, r['year']))
+                    i = 1
+                    for sr in search_results:
+                        print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
+                        i = i + 1
+                    print("\tn) Para continuar con el siguiente")
+                    print("\tq) Para salir")
 
-            input_return = ''
-            while not input_return:
-                input_return = input("")
+                    input_return = ''
+                    while not input_return:
+                        input_return = input("")
 
-                if input_return == 'q':
-                    print("ERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-                    exit()
-                elif input_return == 'n':
-                    print("ERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-                    return None
-                else:
-                    try:
-                        input_return = int(input_return)
-                        if not (input_return > 0 and input_return <= len(search_results)):
-                            print("ERROR!: Ese valor no es posible.")
-                            input_return = ""
-                    except ValueError:
-                        print("ERROR!: Ese valor no es posible.")
-                        input_return = ""
-            
-            search_result = search_results[int(input_return) - 1]
+                        if input_return == 'q':
+                            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
+                            exit()
+                        elif input_return == 'n':
+                            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
+                            return None
+                        else:
+                            try:
+                                input_return = int(input_return)
+                                if not (input_return > 0 and input_return <= len(search_results)):
+                                    print("\tERROR!: Ese valor no es posible.")
+                                    input_return = ""
+                            except ValueError:
+                                print("\tERROR!: Ese valor no es posible.")
+                                input_return = ""
+                    
+                    search_result = search_results[int(input_return) - 1]
 
         if search_result is None:
             # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
-            print("ERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
+            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
             return None
         
         # Tambien puede ocurrirnos que esa pelicula ya este dada de alta
@@ -188,21 +242,22 @@ class Command(BaseCommand):
             ia_movie = ia.get_movie(search_result.movieID)
 
             # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-            if ia_movie['title'] != title:
-                print('INFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+            if ia_movie['title'] != title and verbose:
+                print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
         
             # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
-            if 'director' in r and r['director']:
+            if 'director' in r and r['director'] and verbose:
                 ia_directors = [p['name'] for p in ia_movie['director']]
 
                 for director_name in r['director'].split(','):
                     if not director_name in ia_directors:
                         # Esto es para que revises tu csv!!!
-                        print("INFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
 
             local_movie = self.insert_movie(ia_movie)
         else:
-            print("INFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
+            if verbose:
+                print("\tINFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
             local_movie = local_movies[0]
         
         # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
@@ -215,7 +270,8 @@ class Command(BaseCommand):
         )
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
-            print('WARNING: DUPLICADO!!!! Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (title, r['year']))
+            if verbose:
+                print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (title, r['year']))
             return local_movie
         
         # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
@@ -326,17 +382,29 @@ class Command(BaseCommand):
         return local_movie
 
     def handle(self, *args, **options):
+        if options['csv_file_help']:
+            self.csv_file_help()
+        
+        if not 'csv_file' in options or not options['csv_file']:
+            self.help()
+            return
+
+        interactive = options['interactive']
+        verbose = options['verbose']
+        
         with open(options['csv_file'][0], newline='') as csvfile:
             # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
             for r in csv_reader:
                 self.validate(r)
-
+        
         with open(options['csv_file'][0], newline='') as csvfile:
             # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
             for r in csv_reader:
-                self.get_or_insert_movie(r)
+                self.get_or_insert_movie(r, interactive=interactive, verbose=verbose)
+                if verbose:
+                    print("")
 
 
 """

@@ -130,9 +130,9 @@ class MovieStorageType(models.Model):
     ]
 
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, verbose_name='pelicula')
-    is_original = models.BooleanField('Original', default=False, null=False, blank=False)
-    storage_type = models.CharField('Tipo de almacenamiento', max_length=20, choices=STORAGE_TYPES, default=ST_DRIVE, null=False, blank=False)
+    is_original = models.BooleanField('Original', default=True, null=False, blank=False)
+    storage_type = models.CharField('Tipo de almacenamiento', max_length=20, choices=STORAGE_TYPES, default=ST_DVD, null=False, blank=False)
     name = models.CharField('Nombre del almacenamiento', max_length=200, null=True, blank=True)
     path = models.CharField('Ubicación', max_length=512, null=True, blank=True)
-    media_format = models.CharField('Formato', max_length=20, choices=MEDIA_FORMATS, default=MF_MKV, null=False, blank=False)
+    media_format = models.CharField('Formato', max_length=20, choices=MEDIA_FORMATS, default=MF_DVD, null=False, blank=False)
     resolution = models.CharField('Resolución', max_length=20, null=True, blank=True)
