@@ -1,12 +1,31 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.utils.translation import gettext as _
+from django.utils.text import slugify
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson
 
 import csv
+from datetime import datetime
+from time import sleep
+import sys
 
 from imdb import IMDb
+
+SLEEP_DELAY = 0
+
+# TODO: Mover esta funcion a algun sitio... 
+"""
+Convierte una lista de tags a un formato consinstente
+de django-tagging. El problema con django-tagging
+es que le vale todo... (separadas por espacios, por 
+comas, por comas y espacio...) yo soy mas partidario 
+de guardarlas siempre con el mismo formato
+El resultado dereberia ser algo asi:
+'"tag primera", "tag segunda", "tag ultima",'
+"""
+def str_tag_from_list(tag_list):
+    return '"' + '", "'.join(tag_list) + '",'
 
 class Command(BaseCommand):
     help = _('Importa datos desde un CSV')
@@ -57,6 +76,12 @@ OPCIONALES:
         alegremente imdb)
 
     resolution: Resolución del medio (1080p, 2060p... etc) (opcional)
+    
+    tags: Etiquetas separadas por coma, lo usamos para identificar sagas (optional)
+    
+    title_original: Titulo original de la película, si se suministra ignora
+        el de imdb que parece que siempre lo devuelve en ingles.
+
     """)
         exit()
 
@@ -68,6 +93,8 @@ OPCIONALES:
 
     def add_arguments(self, parser):
         parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
+        parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a tratar desde la fila que se titule igual que el valor de este parametro.""")
+        parser.add_argument('--imdba-delay', nargs='+', type=int, help="""Retardo entre llamadas al imdb (util si te da muchos errores de conexion).""")
         parser.add_argument(
             '--csv-file-help',
             action='store_true',
@@ -93,6 +120,98 @@ OPCIONALES:
         query_title.add(Q(year=year), Q.AND)
         
         return Movie.objects.filter(query).all()
+
+    # TODO: no demasiado elegante... 
+    # esta funcion es para retrasar las llamadas a imdba
+    def sleep_delay(self):
+        global SLEEP_DELAY
+
+        if SLEEP_DELAY:
+            sleep(SLEEP_DELAY)
+
+    def search_movie_imdb(self, title, year, title_alt=None):
+        # 2) Buscamos la pelicula con el año en IMDbPy
+        ia = IMDb()
+        search_results = ia.search_movie('%s (%s)' % (title, year))
+        search_result = None
+
+        slugify_title = slugify(title)
+
+        for sr in search_results:
+            if 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
+                return sr
+        
+        self.sleep_delay()
+        search_results = ia.search_movie(title)
+ 
+        # TODO: El problema es que el titulo este en español o algo por el estilo... 
+        for sr in search_results:
+            if 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
+                return sr
+
+        """
+        # TODO: Buscamos el titulo por los akas ? esto quizas es muy burro...
+        if search_result is None and len(search_results) == 1:
+            ia_movie = ia.get_movie(search_results[0].movieID)
+            if 'akas' in ia_movie:
+                # FIXME: Poner por setting estos ' (Spain)'
+                for aka in ia_movie['akas']:
+                    if aka == '%s (Spain)' % title:
+                        search_result = search_result[0]
+                        break
+        """
+
+        # Buscamos el titulo por el alt si lo tiene
+        if title_alt:
+            self.sleep_delay()
+            return self.search_movie_imdb(title_alt, year)
+        
+        # No encontramos ni una...
+        return None
+    
+    def interactive_imdb_search(self, title, year, title_alt=None):
+        ia = IMDb()
+        search_results = ia.search_movie('%s (%s)' % (title, year))
+                
+        if len(search_results) == 0:
+            search_results = ia.search_movie(title)
+        
+        if len(search_results) == 0 and title_alt:
+            return self.interactive_imdb_search(title_alt, year)
+
+        if len(search_results) > 0:
+            print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, year))
+            i = 1
+            for sr in search_results:
+                print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
+                i = i + 1
+            print("\tn) Para continuar con el siguiente")
+            print("\tq) Para salir")
+
+            input_return = ''
+            while not input_return:
+                input_return = input("")
+
+                if input_return == 'q':
+                    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
+                    exit()
+                elif input_return == 'n':
+                    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
+                    return None
+                else:
+                    try:
+                        input_return = int(input_return)
+                        if not (input_return > 0 and input_return <= len(search_results)):
+                            print("\tERROR!: Ese valor no es posible.")
+                            input_return = ""
+                    except ValueError:
+                        print("\tERROR!: Ese valor no es posible.")
+                        input_return = ""
+            
+            return search_results[int(input_return) - 1]
+        
+        # No encontramos ni una...
+        return None
 
     def get_or_create_person(self, ia_person):
         local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
@@ -125,6 +244,7 @@ OPCIONALES:
         2) El archivo donde se almacena si no lo es
         """
         title = r['title']
+        title_alt=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
         storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
         is_original = True if not storage_name else False
 
@@ -166,68 +286,20 @@ OPCIONALES:
         elif local_movies.count() > 1:
             print("\tERROR!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
             return None
-        # 2) Buscamos la pelicula con el año en IMDbPy
-        ia = IMDb()
-        search_results = ia.search_movie('%s (%s)' % (title, r['year']))
-        search_result = None
 
-        for sr in search_results:
-            if int(sr['year']) == int(r['year']) and sr['title'] == title:
-                search_result = sr
-                break
-        
+        # 2) Buscamos la pelicula con el año en IMDbPy
+        search_result = self.search_movie_imdb(
+            title, r['year'], title_alt=title_alt
+        )
+
         if search_result is None:
             if not interactive:
                 print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
                 return None
             else:
-                # Buscamos el titulo por el preferred si lo tiene
-                if search_result is None and 'title_preferred' in r:
-                    search_results = ia.search_movie('%s (%s)' % (r['title_preferred'], r['year']))
-                    for sr in search_results:
-                        if int(sr['year']) == int(r['year']) and sr['title'] == title:
-                            search_result = sr
-                            break
-
-                    # Buscamos el titulo por los aka
-                    if search_result is None and len(search_results) == 1:
-                        ia_movie = ia.get_movie(search_results[0].movieID)
-                        # FIXME: Poner por setting estos ' (Spain)'
-                        for aka in ia_movie['akas']:
-                            if aka == '%s (Spain)' % title:
-                                search_result = search_result[0]
-                                break
-                
-                if search_result is None and len(search_results) > 0:
-                    print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, r['year']))
-                    i = 1
-                    for sr in search_results:
-                        print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
-                        i = i + 1
-                    print("\tn) Para continuar con el siguiente")
-                    print("\tq) Para salir")
-
-                    input_return = ''
-                    while not input_return:
-                        input_return = input("")
-
-                        if input_return == 'q':
-                            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-                            exit()
-                        elif input_return == 'n':
-                            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-                            return None
-                        else:
-                            try:
-                                input_return = int(input_return)
-                                if not (input_return > 0 and input_return <= len(search_results)):
-                                    print("\tERROR!: Ese valor no es posible.")
-                                    input_return = ""
-                            except ValueError:
-                                print("\tERROR!: Ese valor no es posible.")
-                                input_return = ""
-                    
-                    search_result = search_results[int(input_return) - 1]
+                search_reult = self.interactive_imdb_search(
+                    title, r['year'], title_alt=title_alt
+                )
 
         if search_result is None:
             # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
@@ -238,6 +310,7 @@ OPCIONALES:
         local_movies = Movie.objects.filter(imdb_id=search_result.movieID).all()
 
         if local_movies.count() == 0:
+            ia = IMDb()
             # 2.2.2) Recuperamos la pelicula de IMDbPy
             ia_movie = ia.get_movie(search_result.movieID)
 
@@ -247,14 +320,22 @@ OPCIONALES:
         
             # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
             if 'director' in r and r['director'] and verbose:
-                ia_directors = [p['name'] for p in ia_movie['director']]
+                if not 'director' in ia_movie:
+                    print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+                else:
+                    ia_directors = [p['name'] for p in ia_movie['director']]
 
-                for director_name in r['director'].split(','):
-                    if not director_name in ia_directors:
-                        # Esto es para que revises tu csv!!!
-                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+                    for director_name in r['director'].split(','):
+                        if not director_name in ia_directors:
+                            # Esto es para que revises tu csv!!!
+                            print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
 
-            local_movie = self.insert_movie(ia_movie)
+            local_movie = self.insert_movie(
+                ia_movie, 
+                tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
+                title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
+                verbose=verbose
+            )
         else:
             if verbose:
                 print("\tINFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
@@ -288,72 +369,94 @@ OPCIONALES:
         # 2.6) Devolvemos la pelicula
         return local_movie
 
-    def insert_movie(self, ia_movie):
+    def insert_movie(self, ia_movie, tags=[], title_original=None, verbose=False):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
-        for ia_person in ia_movie['director']:
-            # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
-            # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
-            # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
-            lp = self.get_or_create_person(ia_person)
+        if 'director' in ia_movie:
+            for ia_person in ia_movie['director']:
+                # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
+                # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
+                # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
+                lp = self.get_or_create_person(ia_person)
 
-            if not lp.is_director:
-                lp.is_director = True
-                lp.save()
-            
-            directors.append(lp)
+                if not lp.is_director:
+                    lp.is_director = True
+                    lp.save()
+                
+                directors.append(lp)
+        elif verbose:
+            print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
         writers = []
 
-        for ia_person in ia_movie['writer']:
-            lp = self.get_or_create_person(ia_person)
+        if 'writer' in ia_movie:
+            for ia_person in ia_movie['writer']:
+                lp = self.get_or_create_person(ia_person)
 
-            if not lp.is_writer:
-                lp.is_writer = True
-                lp.save()
-            
-            writers.append(lp)
+                if not lp.is_writer:
+                    lp.is_writer = True
+                    lp.save()
+                
+                writers.append(lp)
+        elif verbose:
+            print('\tINFO: No encontramos escritores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
         casting = []
 
-        for ia_person in ia_movie['cast']:
-            lp = self.get_or_create_person(ia_person)
+        if 'cast' in ia_movie:
+            for ia_person in ia_movie['cast']:
+                lp = self.get_or_create_person(ia_person)
 
-            if not lp.is_actor:
-                lp.is_actor = True
-                lp.save()
-            
-            casting.append(lp)
+                if not lp.is_actor:
+                    lp.is_actor = True
+                    lp.save()
+                
+                casting.append(lp)
+        elif verbose:
+            print('\tINFO: No encontramos casting para la pelicula "%s"' % ia_movie['title'])
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
         # buscamos el titulo preferido:
         title_preferred = None
 
         # FIXME: Poner por setting estos ' (Spain)'
-        for aka in ia_movie['akas']:
-            if ' (Spain)' in aka:
-                title_preferred = aka.replace(' (Spain)', '')
-                break
+        if 'akas' in ia_movie:
+            for aka in ia_movie['akas']:
+                if ' (Spain)' in aka:
+                    title_preferred = aka.replace(' (Spain)', '')
+                    break
         
         local_movie = Movie.objects.create(
             title=ia_movie['title'],
-            title_original=ia_movie['original title'],
+            title_original=title_original if not title_original is None and title_original else ia_movie['original title'],
             title_preferred=title_preferred,
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
             summary=ia_movie.summary(),
-            poster_url=ia_movie['full-size cover url'],
-            poster_thumbnail_url=ia_movie['cover url'],
+            poster_url=ia_movie['full-size cover url'] if 'full-size cover url' in ia_movie else None,
+            poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie else None,
             year=ia_movie['year'],
-            rating=ia_movie['rating'],
+            rating=ia_movie['rating'] if 'rating' in ia_movie else None,
             imdb_raw_data=ia_movie.asXML(),
         )
 
-        if 'genres' in ia_movie and ia_movie['genres']:
-            local_movie.genres = ','.join(ia_movie['genres'])
+        taged = False
+        if 'akas' in ia_movie:
+            taged = True
+            local_movie.title_akas = str_tag_from_list(ia_movie['akas'])
+
+        if 'genres' in ia_movie:
+            taged = True
+            local_movie.genres = str_tag_from_list(ia_movie['genres'])
+
+        if len(tags):
+            taged = True
+            local_movie.tags = str_tag_from_list(tags)
+
+        if taged:
             local_movie.save()
 
         # TODO: 
@@ -385,23 +488,69 @@ OPCIONALES:
         if options['csv_file_help']:
             self.csv_file_help()
         
-        if not 'csv_file' in options or not options['csv_file']:
+        if not 'csv_file' in options or not options['csv_file'] or not options['csv_file'][0]:
             self.help()
             return
+        
+        if 'imdba_delay' in options and options['imdba_delay'] and options['imdba_delay'][0] > 0:
+            global SLEEP_DELAY
+            SLEEP_DELAY = options['imdba_delay'][0]
+        
+        from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
+        from_title = ' '.join(from_title) if from_title else None
 
         interactive = options['interactive']
         verbose = options['verbose']
-        
+        fieldnames = []
+
         with open(options['csv_file'][0], newline='') as csvfile:
             # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
+            fieldnames = csv_reader.fieldnames
             for r in csv_reader:
                 self.validate(r)
         
+        now = datetime.now()
+
+        csv_fails = open('fail-%s.csv' % now.strftime('%Y%m%d-%H%M%S'), 'w', newline='')
+        csv_done = open('done-%s.csv' % now.strftime('%Y%m%d-%H%M%S'), 'w', newline='')
+        csv_writer_fails = csv.DictWriter(csv_fails, fieldnames=fieldnames, delimiter=';', quotechar='|')
+        csv_writer_done = csv.DictWriter(csv_done, fieldnames=fieldnames, delimiter=';', quotechar='|')
+        csv_writer_fails.writeheader()
+        csv_writer_done.writeheader()
+
         with open(options['csv_file'][0], newline='') as csvfile:
             # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
+            start = not from_title
             for r in csv_reader:
-                self.get_or_insert_movie(r, interactive=interactive, verbose=verbose)
-                if verbose:
-                    print("")
+                if from_title and from_title == r['title']:
+                    start = True
+
+                if start:
+                    try:
+                        cur_movie = self.get_or_insert_movie(r, interactive=interactive, verbose=verbose)
+                        if cur_movie is None:
+                            csv_writer_fails.writerow(r)
+                        else:
+                            csv_writer_done.writerow(r)
+                    except:
+                        print("Error no esperado:", sys.exc_info()[0])
+                        csv_writer_fails.writerow(r)
+                        raise
+                    finally:
+                        self.sleep_delay()
+
+                    if verbose:
+                        print("")
+# TODO: no recupera el cartel grande
+# TODO: parece que solo mantiene tags de un campo en la relacion de tags/objetos
+# TODO: la tag, titulos conocidos (akas), viene con formato titulo (lista de cosas separadas por comas, normalmente pais o idioma) ejemplo:
+# "Zombieland 2 (World-wide, English title)", "Zombieland 2: Double Tap (United Kingdom)", "Retour à Zombieland (France)", "Zombieland 2: Doppelt hält besser (Germany, German title)", "Zombieland 2: Doppelt hält besser (Germany)",
+# TODO: añadir version para catalogar Directors cut, Theatrical cut... etc...
+
+"""
+	ERROR!: Parece que no encontramos la pelicula "Dark City. Director's cut (1998)"
+	ERROR!: Parece que no encontramos la pelicula "Dark City. Theatrical's cut (1998)"
+
+"""
