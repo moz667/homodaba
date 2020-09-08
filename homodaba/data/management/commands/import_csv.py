@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson
+from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
 
 import csv
 from datetime import datetime
@@ -154,7 +154,7 @@ OPCIONALES:
         # TODO: Buscamos el titulo por los akas ? esto quizas es muy burro...
         if search_result is None and len(search_results) == 1:
             ia_movie = ia.get_movie(search_results[0].movieID)
-            if 'akas' in ia_movie:
+            if 'akas' in ia_movie.keys():
                 # FIXME: Poner por setting estos ' (Spain)'
                 for aka in ia_movie['akas']:
                     if aka == '%s (Spain)' % title:
@@ -334,7 +334,7 @@ OPCIONALES:
         
             # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
             if 'director' in r and r['director'] and verbose:
-                if not 'director' in ia_movie:
+                if not 'director' in ia_movie.keys():
                     print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
                 else:
                     ia_directors = [p['name'] for p in ia_movie['director']]
@@ -405,7 +405,7 @@ OPCIONALES:
         # 2.2.4) Para cada uno de los directores
         directors = []
 
-        if 'director' in ia_movie:
+        if 'director' in ia_movie.keys():
             for ia_person in ia_movie['director']:
                 # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
                 # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
@@ -423,7 +423,7 @@ OPCIONALES:
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
         writers = []
 
-        if 'writer' in ia_movie:
+        if 'writer' in ia_movie.keys():
             for ia_person in ia_movie['writer']:
                 lp = self.get_or_create_person(ia_person)
 
@@ -438,7 +438,7 @@ OPCIONALES:
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
         casting = []
 
-        if 'cast' in ia_movie:
+        if 'cast' in ia_movie.keys():
             for ia_person in ia_movie['cast']:
                 lp = self.get_or_create_person(ia_person)
 
@@ -455,7 +455,7 @@ OPCIONALES:
         title_preferred = None
 
         # FIXME: Poner por setting estos ' (Spain)'
-        if 'akas' in ia_movie:
+        if 'akas' in ia_movie.keys():
             for aka in ia_movie['akas']:
                 if ' (Spain)' in aka:
                     title_preferred = aka.replace(' (Spain)', '')
@@ -463,32 +463,50 @@ OPCIONALES:
         
         local_movie = Movie.objects.create(
             title=ia_movie['title'],
-            title_original=title_original if not title_original is None and title_original else ia_movie['original title'],
+            title_original=title_original if not title_original is None and title_original else self.get_original_title(ia_movie),
             title_preferred=title_preferred,
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
             summary=ia_movie.summary(),
-            poster_url=ia_movie['full-size cover url'] if 'full-size cover url' in ia_movie else None,
-            poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie else None,
+            poster_url=ia_movie['full-size cover url'] if 'full-size cover url' in ia_movie.keys() else None,
+            poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie.keys() else None,
             year=ia_movie['year'],
-            rating=ia_movie['rating'] if 'rating' in ia_movie else None,
+            rating=ia_movie['rating'] if 'rating' in ia_movie.keys() else None,
             imdb_raw_data=ia_movie.asXML(),
         )
 
-        taged = False
-        if 'akas' in ia_movie:
-            taged = True
-            local_movie.title_akas = str_tag_from_list(ia_movie['akas'])
+        tagged = False
+        if 'akas' in ia_movie.keys():
+            tagged = True
 
-        if 'genres' in ia_movie:
-            taged = True
-            local_movie.genres = str_tag_from_list(ia_movie['genres'])
+            for tag in ia_movie['akas']:
+                local_movie.title_akas.add(
+                    self.get_first_or_create_tag(
+                        TitleAka, title=tag
+                    )
+                )
+            
+        if 'genres' in ia_movie.keys():
+            tagged = True
+
+            for tag in ia_movie['genres']:
+                local_movie.genres.add(
+                    self.get_first_or_create_tag(
+                        GenreTag, name=tag
+                    )
+                )
 
         if len(tags):
-            taged = True
-            local_movie.tags = str_tag_from_list(tags)
+            tagged = True
 
-        if taged:
+            for tag in tags:
+                local_movie.tags.add(
+                    self.get_first_or_create_tag(
+                        Tag, name=tag
+                    )
+                )
+
+        if tagged:
             local_movie.save()
 
         # TODO: 
@@ -515,6 +533,26 @@ OPCIONALES:
             )
 
         return local_movie
+
+    def get_original_title(self, ia_movie):
+        if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
+            # print(ia_movie['countries'])
+            # print(ia_movie['akas'])
+            for country in ia_movie['countries']:
+                for aka in ia_movie['akas']:
+                    if aka.endswith('(%s)' % country):
+                        return aka.replace('(%s)' % country, '').strip()
+        
+        # TODO: Comentar con perico... el problema es que casi nunca viene bien...
+        # return ia_movie['original title']
+        return None
+
+    def get_first_or_create_tag(self, class_model, **kwargs):
+        results = class_model.objects.filter(**kwargs).all()
+        if results.count() > 0:
+            return results[0]
+        
+        return class_model.objects.create(**kwargs)
 
     def handle(self, *args, **options):
         if options['csv_file_help']:

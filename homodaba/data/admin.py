@@ -2,17 +2,27 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import *
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
+
+class TagAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(Tag, TagAdmin)
+
+class GenreTagAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(GenreTag, GenreTagAdmin)
+
+class TitleAkaAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(TitleAka, TitleAkaAdmin)
 
 class MovieAdmin(admin.ModelAdmin):
     list_display = ('year', 'title', 'title_original', 'title_preferred', 'imdb_id')
     """
-    TODO: Pensar que hacemos con estos...
-    title_akas
-    tags
-    genres
+    TODO: Pensar que hacemos con title_akas
     """
-    exclude = ('title_akas', 'tags', 'genres')
+    exclude = ('title_akas',)
+    filter_horizontal = ('tags','genres',)
 admin.site.register(Movie, MovieAdmin)
 
 class PersonAdmin(admin.ModelAdmin):

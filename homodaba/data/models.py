@@ -12,17 +12,41 @@ class Person(models.Model):
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "persona"
+        verbose_name_plural = "personas"
+
 class AbstractTag(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        abstract = True
 
 class Tag(AbstractTag):
-    pass
+    class Meta:
+        verbose_name = "etiqueta"
+        verbose_name_plural = "etiquetas"
 
 class GenreTag(AbstractTag):
-    pass
+    class Meta:
+        verbose_name = "género"
+        verbose_name_plural = "géneros"
 
 class TitleAka(models.Model):
     title = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = "título conocido (aka)"
+        verbose_name_plural = "títulos conocidos (akas)"
 
 class Movie(models.Model):
     MK_MOVIE = 'movie'
@@ -56,6 +80,16 @@ class Movie(models.Model):
     genres = models.ManyToManyField(GenreTag)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
+    
+    def __str__(self):
+        return self.title
+
+    def get_complete_title(self):
+        return '%s (%s)' % (self.title, str(self.year))
+
+    class Meta:
+        verbose_name = "película"
+        verbose_name_plural = "películas"
 
 class MoviePerson(models.Model):
     RT_DIRECTOR = 'director'
@@ -72,9 +106,12 @@ class MoviePerson(models.Model):
     person = models.ForeignKey(Person, on_delete=models.CASCADE, verbose_name='participante')
     role = models.CharField('Rol', max_length=20, choices=ROLE_TYPES, default=RT_DIRECTOR, null=False, blank=False)
 
+    def __str__(self):
+        return '%s -> %s' % (self.movie.get_complete_title(), self.person)
+
     class Meta:
-        verbose_name = 'participante'
-        verbose_name_plural = 'participantes'
+        verbose_name = 'reparto'
+        verbose_name_plural = 'repartos'
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'
@@ -139,4 +176,7 @@ class MovieStorageType(models.Model):
     media_format = models.CharField('Formato', max_length=20, choices=MEDIA_FORMATS, default=MF_DVD, null=False, blank=False)
     resolution = models.CharField('Resolución', max_length=20, null=True, blank=True)
     version = models.CharField('Versión', max_length=512, null=True, blank=True)
-    # TODO: añadir version para catalogar Directors cut, Theatrical cut... etc...
+
+    class Meta:
+        verbose_name = "tipo de almacenamiento"
+        verbose_name_plural = "tipos de almacenamiento"
