@@ -6,6 +6,13 @@ from .models import *
 
 class MovieAdmin(admin.ModelAdmin):
     list_display = ('year', 'title', 'title_original', 'title_preferred', 'imdb_id')
+    """
+    TODO: Pensar que hacemos con estos...
+    title_akas
+    tags
+    genres
+    """
+    exclude = ('title_akas', 'tags', 'genres')
 admin.site.register(Movie, MovieAdmin)
 
 class PersonAdmin(admin.ModelAdmin):

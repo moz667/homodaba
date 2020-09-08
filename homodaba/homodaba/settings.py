@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tagging',
+    # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
 
 X_FRAME_OPTIONS='SAMEORIGIN' # only if django version >= 3.0

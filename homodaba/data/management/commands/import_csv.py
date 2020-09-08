@@ -82,6 +82,7 @@ OPCIONALES:
     title_original: Titulo original de la película, si se suministra ignora
         el de imdb que parece que siempre lo devuelve en ingles.
 
+    version: Version de la película, (Director's cut, Theatrical's cut...) (opcional)
     """)
         exit()
 
@@ -282,6 +283,19 @@ OPCIONALES:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             if verbose:
                 print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
+            
+            self.get_or_insert_storage(
+                movie=local_movies[0], 
+                is_original=is_original, 
+                storage_type=storage_type, 
+                storage_name=storage_name, 
+                path=path, 
+                resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
+                media_format=media_format, 
+                version=r['version'] if 'version' in r and r['version'] else None, 
+                verbose=verbose
+            )
+
             return local_movies[0]
         elif local_movies.count() > 1:
             print("\tERROR!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
@@ -341,33 +355,51 @@ OPCIONALES:
                 print("\tINFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
             local_movie = local_movies[0]
         
-        # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
-        storages = MovieStorageType.objects.filter(
+        self.get_or_insert_storage(
             movie=local_movie, 
             is_original=is_original, 
             storage_type=storage_type, 
-            name=storage_name,
-            media_format=media_format,
+            storage_name=storage_name, 
+            path=path, 
+            resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
+            media_format=media_format, 
+            version=r['version'] if 'version' in r and r['version'] else None, 
+            verbose=verbose
         )
-        # de ser asi sacar mensaje notificandolo
-        if storages.count() > 0:
-            if verbose:
-                print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (title, r['year']))
-            return local_movie
-        
-        # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
-        MovieStorageType.objects.create(
-            movie=local_movie, 
+
+        # 2.6) Devolvemos la pelicula
+        return local_movie
+
+    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None, verbose=False):
+        # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
+        storages = MovieStorageType.objects.filter(
+            movie=movie, 
             is_original=is_original, 
             storage_type=storage_type, 
             name=storage_name,
             path=path,
             media_format=media_format,
-            resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None,
+            resolution=resolution,
+            version=version
         )
 
-        # 2.6) Devolvemos la pelicula
-        return local_movie
+        # de ser asi sacar mensaje notificandolo
+        if storages.count() > 0:
+            if verbose:
+                print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
+            return storages[0]
+        
+        # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
+        MovieStorageType.objects.create(
+            movie=movie, 
+            is_original=is_original, 
+            storage_type=storage_type, 
+            name=storage_name,
+            path=path,
+            media_format=media_format,
+            resolution=resolution,
+            version=version,
+        )
 
     def insert_movie(self, ia_movie, tags=[], title_original=None, verbose=False):
         # 2.2.4) Para cada uno de los directores
@@ -547,7 +579,7 @@ OPCIONALES:
 # TODO: parece que solo mantiene tags de un campo en la relacion de tags/objetos
 # TODO: la tag, titulos conocidos (akas), viene con formato titulo (lista de cosas separadas por comas, normalmente pais o idioma) ejemplo:
 # "Zombieland 2 (World-wide, English title)", "Zombieland 2: Double Tap (United Kingdom)", "Retour à Zombieland (France)", "Zombieland 2: Doppelt hält besser (Germany, German title)", "Zombieland 2: Doppelt hält besser (Germany)",
-# TODO: añadir version para catalogar Directors cut, Theatrical cut... etc...
+# este campo molaria usarlo como contexto... pero por ahora yo creo que lo vamos a dejar
 
 """
 	ERROR!: Parece que no encontramos la pelicula "Dark City. Director's cut (1998)"

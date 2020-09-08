@@ -1,8 +1,5 @@
 from django.db import models
 
-from tagging import fields as tagging_fields
-from tagging.registry import register as tagging_register
-
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
@@ -14,6 +11,18 @@ class Person(models.Model):
     is_actor = models.BooleanField('Actor', default=False, null=False, blank=False)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
+
+class AbstractTag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+class Tag(AbstractTag):
+    pass
+
+class GenreTag(AbstractTag):
+    pass
+
+class TitleAka(models.Model):
+    title = models.CharField(max_length=255, unique=True)
 
 class Movie(models.Model):
     MK_MOVIE = 'movie'
@@ -27,7 +36,6 @@ class Movie(models.Model):
     title = models.CharField('Título (Internacional)', max_length=200, null=False, blank=False)
     title_original = models.CharField('Título (Original)', max_length=200, null=True, blank=True)
     title_preferred = models.CharField('Título (Idioma preferido)', max_length=200, null=True, blank=True)
-    title_akas = tagging_fields.TagField('Otros títulos conocidos (aka)')
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
     kind = models.CharField('Clase de pélicula', max_length=20, choices=MOVIE_KINDS, default=MK_MOVIE, null=False, blank=False)
     summary = models.TextField('Resumen', null=True, blank=True)
@@ -35,29 +43,19 @@ class Movie(models.Model):
     poster_thumbnail_url = models.CharField('Cartel en miniatura (URL)', max_length=255, null=True, blank=True)
     year = models.IntegerField('Año', null=True, blank=True)
     rating = models.DecimalField('Puntuación', null=True, blank=True, max_digits=4, decimal_places=2)
+    """
+    NO SE PERMITEN varias tags con django-tagging
+    from tagging import fields as tagging_fields
+    from tagging.registry import register as tagging_register
+    title_akas = tagging_fields.TagField('Otros títulos conocidos (aka)')
     tags = tagging_fields.TagField('Etiquetas')
     genres = tagging_fields.TagField('Géneros')
     """
-    directed_by = models.TextField('Dirigida por', null=True, blank=True)
-    written_by = models.TextField('Escrita por', null=True, blank=True)
-    casting = models.TextField('Reparto', null=True, blank=True)
-    """
+    title_akas = models.ManyToManyField(TitleAka)
+    tags = models.ManyToManyField(Tag)
+    genres = models.ManyToManyField(GenreTag)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
-
-"""
-tagging_register(
-    model=Movie, 
-    tag_descriptor_attr='genres', 
-    tagged_item_manager_attr='genre_applied'
-)
-
-tagging_register(
-    model=Movie, 
-    tag_descriptor_attr='tags', 
-    tagged_item_manager_attr='taged'
-)
-"""
 
 class MoviePerson(models.Model):
     RT_DIRECTOR = 'director'
@@ -140,4 +138,5 @@ class MovieStorageType(models.Model):
     path = models.CharField('Ubicación', max_length=512, null=True, blank=True)
     media_format = models.CharField('Formato', max_length=20, choices=MEDIA_FORMATS, default=MF_DVD, null=False, blank=False)
     resolution = models.CharField('Resolución', max_length=20, null=True, blank=True)
+    version = models.CharField('Versión', max_length=512, null=True, blank=True)
     # TODO: añadir version para catalogar Directors cut, Theatrical cut... etc...
