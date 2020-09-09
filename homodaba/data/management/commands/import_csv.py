@@ -5,10 +5,12 @@ from django.utils.text import slugify
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
 
+from imdb import IMDb
+
 import csv
 from datetime import datetime
-from time import sleep
 import sys
+from time import sleep
 
 SLEEP_DELAY = 0
 
@@ -130,7 +132,7 @@ OPCIONALES:
 
     def search_movie_imdb(self, title, year, title_alt=None):
         # 2) Buscamos la pelicula con el año en IMDbPy
-        ia = IMDb()
+        ia = IMDb(reraiseExceptions=True)
         search_results = ia.search_movie('%s (%s)' % (title, year))
         search_result = None
 
@@ -169,7 +171,7 @@ OPCIONALES:
         return None
     
     def interactive_imdb_search(self, title, year, title_alt=None):
-        ia = IMDb()
+        ia = IMDb(reraiseExceptions=True)
         search_results = ia.search_movie('%s (%s)' % (title, year))
                 
         if len(search_results) == 0:
@@ -322,7 +324,7 @@ OPCIONALES:
         local_movies = Movie.objects.filter(imdb_id=search_result.movieID).all()
 
         if local_movies.count() == 0:
-            ia = IMDb()
+            ia = IMDb(reraiseExceptions=True)
             # 2.2.2) Recuperamos la pelicula de IMDbPy
             ia_movie = ia.get_movie(search_result.movieID)
 

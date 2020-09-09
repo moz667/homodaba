@@ -14,4 +14,4 @@ Lo mismo este es un caso bueno para usar las tags de django-tagging
 1. Actualizar info de peliculas en base al raw obtenido (esto se deberia poder hacer con from imdb.helpers import parseXML... pero nop)
 1. Mostrar los tipos de medios disponibles en la busqueda de pelis
 1. Mostrar los directores en la busqueda de pelis
-
+1. Busqueda por texto en participantes (peli o nombre de persona)
