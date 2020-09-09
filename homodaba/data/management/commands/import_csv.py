@@ -10,8 +10,6 @@ from datetime import datetime
 from time import sleep
 import sys
 
-from imdb import IMDb
-
 SLEEP_DELAY = 0
 
 # TODO: Mover esta funcion a algun sitio... 
@@ -574,7 +572,6 @@ OPCIONALES:
         fieldnames = []
 
         with open(options['csv_file'][0], newline='') as csvfile:
-            # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
             fieldnames = csv_reader.fieldnames
             for r in csv_reader:
@@ -590,7 +587,6 @@ OPCIONALES:
         csv_writer_done.writeheader()
 
         with open(options['csv_file'][0], newline='') as csvfile:
-            # TODO: definir delimitadores por settings
             csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
             start = not from_title
             for r in csv_reader:
@@ -613,14 +609,3 @@ OPCIONALES:
 
                     if verbose:
                         print("")
-# TODO: no recupera el cartel grande
-# TODO: parece que solo mantiene tags de un campo en la relacion de tags/objetos
-# TODO: la tag, titulos conocidos (akas), viene con formato titulo (lista de cosas separadas por comas, normalmente pais o idioma) ejemplo:
-# "Zombieland 2 (World-wide, English title)", "Zombieland 2: Double Tap (United Kingdom)", "Retour à Zombieland (France)", "Zombieland 2: Doppelt hält besser (Germany, German title)", "Zombieland 2: Doppelt hält besser (Germany)",
-# este campo molaria usarlo como contexto... pero por ahora yo creo que lo vamos a dejar
-
-"""
-	ERROR!: Parece que no encontramos la pelicula "Dark City. Director's cut (1998)"
-	ERROR!: Parece que no encontramos la pelicula "Dark City. Theatrical's cut (1998)"
-
-"""

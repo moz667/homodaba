@@ -1,4 +1,7 @@
 from django.db import models
+from django.utils.html import format_html
+
+import re
 
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
@@ -75,6 +78,7 @@ class Movie(models.Model):
     tags = tagging_fields.TagField('Etiquetas')
     genres = tagging_fields.TagField('Géneros')
     """
+    # TODO: oops... esta relacion deberia ser one2many
     title_akas = models.ManyToManyField(TitleAka)
     tags = models.ManyToManyField(Tag)
     genres = models.ManyToManyField(GenreTag)
@@ -86,6 +90,29 @@ class Movie(models.Model):
 
     def get_complete_title(self):
         return '%s (%s)' % (self.title, str(self.year))
+
+    def get_other_titles(self):
+        other_titles = []
+        if self.title_original and self.title_original != self.title:
+            other_titles.append(self.title_original)
+        if self.title_preferred and self.title_preferred != self.title:
+            other_titles.append(self.title_preferred)
+        for ta in self.title_akas.all():
+            cur_title_aka = re.compile(' \(.*').sub('', ta.title)
+            if not cur_title_aka in other_titles and cur_title_aka != self.title:
+                other_titles.append(cur_title_aka)
+
+        return ', '.join(other_titles)
+    get_other_titles.short_description = 'Otros títulos'
+
+    def get_poster_thumbnail_img(self):
+        return format_html(
+            '<a href="{}" target="_blank" class="modal-photo"><img src="{}" alt="{}" /></a>',
+            'https://www.imdb.com/title/tt%s/' % self.imdb_id if self.imdb_id else 'https://www.imdb.com/title/tt0385307/',
+            self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@._V1_SY150_CR0,0,101,150_.jpg',
+            self.title,
+        )
+    get_poster_thumbnail_img.short_description = 'Cartel'
 
     class Meta:
         verbose_name = "película"

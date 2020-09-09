@@ -1,8 +1,10 @@
 from django.contrib import admin
-
-# Register your models here.
+from django.db.models import Q
 
 from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
+
+# from easy_select2 import select2_modelform
+# MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
 
 class TagAdmin(admin.ModelAdmin):
     pass
@@ -16,13 +18,85 @@ class TitleAkaAdmin(admin.ModelAdmin):
     pass
 admin.site.register(TitleAka, TitleAkaAdmin)
 
+class CustomAbstractTagListFilter(admin.SimpleListFilter):
+    """
+    Filtro personalizado para AbstractTag
+    """
+    title = 'Filtro de tags personalizado'
+    parameter_name = 'tag'
+    tag_model = None
+    tag_filter = 'tags__id'
+
+    def lookups(self, request, model_admin):
+        filters = tuple()
+        for gt in self.tag_model.objects.order_by('name').all():
+            filters = filters + ((gt.id, gt.name),)
+
+        return filters
+ 
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(**{self.tag_filter: self.value()})
+        
+        return queryset
+    
+    class Meta:
+        abstract = True
+
+class TagListFilter(CustomAbstractTagListFilter):
+    title = 'Etiquetas'
+    parameter_name = 'tag'
+    tag_model = Tag
+    tag_filter = 'tags__id'
+
+
+class GenreListFilter(CustomAbstractTagListFilter):
+    title = 'Géneros'
+    parameter_name = 'genre'
+    tag_model = GenreTag
+    tag_filter = 'genres__id'
+
+
 class MovieAdmin(admin.ModelAdmin):
-    list_display = ('year', 'title', 'title_original', 'title_preferred', 'imdb_id')
-    """
-    TODO: Pensar que hacemos con title_akas
-    """
+    list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_other_titles', 'rating',)
+    
+    # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
-    filter_horizontal = ('tags','genres',)
+    list_filter = (TagListFilter, GenreListFilter,)
+
+    # Lo ponemos para que saque la caja de texto pero la busqueda
+    # la hacemos manualmente en get_search_results
+    search_fields = ('title',)
+
+    def get_search_results(self, request, queryset, search_term):
+        # Si No hay terminos de busqueda devolvemos el queryset tal como esta
+        if not search_term:
+            return queryset, False
+        
+        # super:
+        # No lo usamos porque no nos deja agregar como opcion el title_akas__in
+        # queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        akas_queryset = TitleAka.objects.filter(title__icontains=search_term)
+        query_title = Q(title__icontains=search_term)
+        use_distinct = False
+
+        if akas_queryset.count() > 0:
+            query_title.add(Q(title_akas__in=TitleAka.objects.filter(title__icontains=search_term)), Q.OR)
+            use_distinct = True
+
+        # Para mejorar la busqueda podemos hacer que si el search_term se trata de un numero entero de 4 cifras
+        # podria tratarse del año de producion
+        if search_term and len(search_term) == 4 and search_term >= '1000' and search_term <= '9999':
+            query_title.add(Q(year=int(search_term)), Q.OR)
+
+        # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
+        # buscar tags y generos... por ahora lo vamos a dejar asi :P
+
+        queryset = queryset.filter(query_title)
+
+        return queryset, use_distinct
+
+    # form = MovieForm
 admin.site.register(Movie, MovieAdmin)
 
 class PersonAdmin(admin.ModelAdmin):

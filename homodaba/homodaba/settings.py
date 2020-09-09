@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 'easy_select2',
     # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
 
