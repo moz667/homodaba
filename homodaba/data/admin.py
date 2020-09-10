@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import Q
 
-from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
@@ -56,13 +56,19 @@ class GenreListFilter(CustomAbstractTagListFilter):
     tag_model = GenreTag
     tag_filter = 'genres__id'
 
+class ContentRatingListFilter(CustomAbstractTagListFilter):
+    title = 'Clasificaciones de edad'
+    parameter_name = 'crs'
+    tag_model = ContentRatingTag
+    tag_filter = 'content_rating_systems__id'
+
 
 class MovieAdmin(admin.ModelAdmin):
-    list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_other_titles', 'rating',)
+    list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_other_titles', 'get_storage_types_html', 'rating',)
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
-    list_filter = (TagListFilter, GenreListFilter,)
+    list_filter = (TagListFilter, GenreListFilter, ContentRatingListFilter,)
 
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results

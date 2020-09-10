@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'admin_interface',
     'colorfield',
     'data.apps.DataConfig',
+    'tbot.apps.TbotConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

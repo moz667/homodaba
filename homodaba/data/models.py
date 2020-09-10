@@ -1,5 +1,7 @@
 from django.db import models
+from django.db.models import Q
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 import re
 
@@ -41,6 +43,13 @@ class GenreTag(AbstractTag):
         verbose_name = "género"
         verbose_name_plural = "géneros"
 
+# https://en.wikipedia.org/wiki/Motion_Picture_Association_film_rating_system
+# https://en.wikipedia.org/wiki/TV_Parental_Guidelines
+class ContentRatingTag(AbstractTag):
+    class Meta:
+        verbose_name = "clasificación de edad"
+        verbose_name_plural = "clasificaciones de edad"
+
 class TitleAka(models.Model):
     title = models.CharField(max_length=255, unique=True)
 
@@ -60,30 +69,33 @@ class Movie(models.Model):
         (MK_SERIE, 'Serie de television'),
     ]
 
-    title = models.CharField('Título (Internacional)', max_length=200, null=False, blank=False)
-    title_original = models.CharField('Título (Original)', max_length=200, null=True, blank=True)
-    title_preferred = models.CharField('Título (Idioma preferido)', max_length=200, null=True, blank=True)
+    title = models.CharField('Título (Internacional)', max_length=200, 
+        null=False, blank=False)
+    title_original = models.CharField('Título (Original)', max_length=200, 
+        null=True, blank=True)
+    title_preferred = models.CharField('Título (Idioma preferido)', 
+        max_length=200, null=True, blank=True)
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
-    kind = models.CharField('Clase de pélicula', max_length=20, choices=MOVIE_KINDS, default=MK_MOVIE, null=False, blank=False)
+    kind = models.CharField('Clase de pélicula', max_length=20, 
+        choices=MOVIE_KINDS, default=MK_MOVIE, null=False, blank=False)
     summary = models.TextField('Resumen', null=True, blank=True)
-    poster_url = models.CharField('Cartel (URL)', max_length=255, null=True, blank=True)
-    poster_thumbnail_url = models.CharField('Cartel en miniatura (URL)', max_length=255, null=True, blank=True)
+    poster_url = models.CharField('Cartel (URL)', max_length=255, null=True, 
+        blank=True)
+    poster_thumbnail_url = models.CharField('Cartel en miniatura (URL)', 
+        max_length=255, null=True, blank=True)
     year = models.IntegerField('Año', null=True, blank=True)
-    rating = models.DecimalField('Puntuación', null=True, blank=True, max_digits=4, decimal_places=2)
-    """
-    NO SE PERMITEN varias tags con django-tagging
-    from tagging import fields as tagging_fields
-    from tagging.registry import register as tagging_register
-    title_akas = tagging_fields.TagField('Otros títulos conocidos (aka)')
-    tags = tagging_fields.TagField('Etiquetas')
-    genres = tagging_fields.TagField('Géneros')
-    """
-    # TODO: oops... esta relacion deberia ser one2many
+    rating = models.DecimalField('Puntuación', null=True, blank=True, 
+        max_digits=4, decimal_places=2)
+    # TODO: oops... esta relacion deberia ser one2many VVVV
     title_akas = models.ManyToManyField(TitleAka)
+    # TODO: oops... esta relacion deberia ser one2many ^^^^
     tags = models.ManyToManyField(Tag)
     genres = models.ManyToManyField(GenreTag)
-    is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
-    imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
+    content_rating_systems = models.ManyToManyField(ContentRatingTag)
+
+    is_scraped = models.BooleanField('Scrapeado', default=False, null=False, 
+        blank=False)
+    imdb_raw_data = models.TextField('RAW data IMDB', null=True, blank=True)
     
     def __str__(self):
         return self.title
@@ -113,6 +125,25 @@ class Movie(models.Model):
             self.title,
         )
     get_poster_thumbnail_img.short_description = 'Cartel'
+
+    def get_storage_types_html(self):
+        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        if storage_types.count() == 0:
+            return ''
+
+        html = '<ul class="storage-types">'
+        for st in storage_types:
+            html = html + format_html('<li>{}</li>', st)
+        html = html + '</ul>'
+        return mark_safe(html)
+    get_storage_types_html.short_description = 'Medios'
+    
+    def get_storage_types_text(self):
+        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        if storage_types.count() == 0:
+            return ''
+
+        return ' * '.join([st.__str__() + '\n' for st in storage_types])
 
     class Meta:
         verbose_name = "película"
@@ -158,6 +189,7 @@ class MovieStorageType(models.Model):
     ]
 
     STORAGE_TYPES_AS_LIST = [k for (k, v) in STORAGE_TYPES]
+    STORAGE_TYPES_AS_DICT = {k:v for (k, v) in STORAGE_TYPES}
 
     MF_AVI = 'AVI'
     MF_BLURAY = 'BLURAY'
@@ -204,6 +236,44 @@ class MovieStorageType(models.Model):
     resolution = models.CharField('Resolución', max_length=20, null=True, blank=True)
     version = models.CharField('Versión', max_length=512, null=True, blank=True)
 
+    def __str__(self):
+        s = '(Original) ' if self.is_original else ''
+        s = s + ('(%s) ' % self.version if self.version else '')
+        s = s + (self.STORAGE_TYPES_AS_DICT[self.storage_type])
+        s = s + (' [%s]' % self.name if self.name else '')
+        s = s + (' "%s"' % self.path if self.path else '')
+        s = s + (' {%s}' % self.media_format if self.media_format != self.STORAGE_TYPES_AS_DICT[self.storage_type] else '')
+        return s
+
     class Meta:
         verbose_name = "tipo de almacenamiento"
         verbose_name_plural = "tipos de almacenamiento"
+
+def get_first_or_create_tag(class_model, **kwargs):
+    results = class_model.objects.filter(**kwargs).all()
+    if results.count() > 0:
+        return results[0]
+    
+    return class_model.objects.create(**kwargs)
+
+def populate_search_filter(queryset, search_term):
+    akas_queryset = TitleAka.objects.filter(title__icontains=search_term)
+    query_title = Q(title__icontains=search_term)
+    use_distinct = False
+
+    if akas_queryset.count() > 0:
+        query_title.add(Q(title_akas__in=TitleAka.objects.filter(title__icontains=search_term)), Q.OR)
+        use_distinct = True
+
+    # Para mejorar la busqueda podemos hacer que si el search_term se trata de un numero entero de 4 cifras
+    # podria tratarse del año de producion
+    if search_term and len(search_term) == 4 and search_term >= '1000' and search_term <= '9999':
+        query_title.add(Q(year=int(search_term)), Q.OR)
+
+    # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
+    # buscar tags y generos... por ahora lo vamos a dejar asi :P
+
+    return queryset.filter(query_title).distinct()
+
+def movie_search_filter(search_term):
+    return populate_search_filter(Movie.objects, search_term)

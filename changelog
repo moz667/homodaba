@@ -1,0 +1,7 @@
+2020-09-10:
+    * reemplazando verbose por el argumento verbosity para import_csv
+    * añadiendo clasificaciones por edad a Movie (migrate)
+    * creando ejemplo de actualizacion de datos a partir de imdb_raw_data
+    * mostrando los tipos de medios disponibles en la busqueda de pelis
+    * empezando con telegrambot (creando app a parte)
+    * creando este changelog ^_^

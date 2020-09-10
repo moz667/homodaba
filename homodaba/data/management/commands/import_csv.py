@@ -4,6 +4,7 @@ from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
+from data.models import get_first_or_create_tag
 
 from imdb import IMDb
 
@@ -13,19 +14,6 @@ import sys
 from time import sleep
 
 SLEEP_DELAY = 0
-
-# TODO: Mover esta funcion a algun sitio... 
-"""
-Convierte una lista de tags a un formato consinstente
-de django-tagging. El problema con django-tagging
-es que le vale todo... (separadas por espacios, por 
-comas, por comas y espacio...) yo soy mas partidario 
-de guardarlas siempre con el mismo formato
-El resultado dereberia ser algo asi:
-'"tag primera", "tag segunda", "tag ultima",'
-"""
-def str_tag_from_list(tag_list):
-    return '"' + '", "'.join(tag_list) + '",'
 
 class Command(BaseCommand):
     help = _('Importa datos desde un CSV')
@@ -106,11 +94,18 @@ OPCIONALES:
             action='store_true',
             help='Requiere interactuar cuando encuentre un problema, en cualquier otro caso saca informacion acerca del mismo.',
         )
+        # delimiter=';', quotechar
         parser.add_argument(
-            '--verbose',
-            action='store_true',
-            help='Detalle el proceso del tratado de peliculas.',
+            '--delimiter', default=';',
+            type=str,
+            help='Delimitador de campos para el csv (por defecto ";")',
         )
+        parser.add_argument(
+            '--quotechar', default='|',
+            type=str,
+            help='Caracter de encomillado para cadenas del csv (por defecto "|")',
+        )
+
 
     def search_movie_local_data(self, title, year):
         query_title = Q(title__iexact=title)
@@ -236,8 +231,8 @@ OPCIONALES:
         return clean_title.strip()
             
 
-    def get_or_insert_movie(self, r, interactive=False, verbose=True):
-        if verbose:
+    def get_or_insert_movie(self, r, interactive=False, verbosity=1):
+        if verbosity > 1:
             print('Tratando "%s (%s)"...' % (r['title'], r['year']))
         """
         Tenemos que averiguar primero:
@@ -281,7 +276,7 @@ OPCIONALES:
 
         if local_movies.count() == 1:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            if verbose:
+            if verbosity > 1:
                 print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
             
             self.get_or_insert_storage(
@@ -293,7 +288,7 @@ OPCIONALES:
                 resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
                 media_format=media_format, 
                 version=r['version'] if 'version' in r and r['version'] else None, 
-                verbose=verbose
+                verbosity=verbosity
             )
 
             return local_movies[0]
@@ -329,11 +324,11 @@ OPCIONALES:
             ia_movie = ia.get_movie(search_result.movieID)
 
             # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-            if ia_movie['title'] != title and verbose:
+            if ia_movie['title'] != title and verbosity > 1:
                 print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
         
             # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
-            if 'director' in r and r['director'] and verbose:
+            if 'director' in r and r['director'] and verbosity > 1:
                 if not 'director' in ia_movie.keys():
                     print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
                 else:
@@ -348,10 +343,10 @@ OPCIONALES:
                 ia_movie, 
                 tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
                 title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
-                verbose=verbose
+                verbosity=verbosity
             )
         else:
-            if verbose:
+            if verbosity > 1:
                 print("\tINFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
             local_movie = local_movies[0]
         
@@ -364,13 +359,13 @@ OPCIONALES:
             resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
             media_format=media_format, 
             version=r['version'] if 'version' in r and r['version'] else None, 
-            verbose=verbose
+            verbosity=verbosity
         )
 
         # 2.6) Devolvemos la pelicula
         return local_movie
 
-    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None, verbose=False):
+    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None, verbosity=1):
         # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
         storages = MovieStorageType.objects.filter(
             movie=movie, 
@@ -385,7 +380,7 @@ OPCIONALES:
 
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
-            if verbose:
+            if verbosity > 1:
                 print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
             return storages[0]
         
@@ -401,7 +396,7 @@ OPCIONALES:
             version=version,
         )
 
-    def insert_movie(self, ia_movie, tags=[], title_original=None, verbose=False):
+    def insert_movie(self, ia_movie, tags=[], title_original=None, verbosity=1):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
@@ -417,7 +412,7 @@ OPCIONALES:
                     lp.save()
                 
                 directors.append(lp)
-        elif verbose:
+        elif verbosity > 1:
             print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
@@ -432,7 +427,7 @@ OPCIONALES:
                     lp.save()
                 
                 writers.append(lp)
-        elif verbose:
+        elif verbosity > 1:
             print('\tINFO: No encontramos escritores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
@@ -447,7 +442,7 @@ OPCIONALES:
                     lp.save()
                 
                 casting.append(lp)
-        elif verbose:
+        elif verbosity > 1:
             print('\tINFO: No encontramos casting para la pelicula "%s"' % ia_movie['title'])
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
@@ -481,7 +476,7 @@ OPCIONALES:
 
             for tag in ia_movie['akas']:
                 local_movie.title_akas.add(
-                    self.get_first_or_create_tag(
+                    get_first_or_create_tag(
                         TitleAka, title=tag
                     )
                 )
@@ -491,7 +486,7 @@ OPCIONALES:
 
             for tag in ia_movie['genres']:
                 local_movie.genres.add(
-                    self.get_first_or_create_tag(
+                    get_first_or_create_tag(
                         GenreTag, name=tag
                     )
                 )
@@ -501,7 +496,7 @@ OPCIONALES:
 
             for tag in tags:
                 local_movie.tags.add(
-                    self.get_first_or_create_tag(
+                    get_first_or_create_tag(
                         Tag, name=tag
                     )
                 )
@@ -547,21 +542,22 @@ OPCIONALES:
         # return ia_movie['original title']
         return None
 
-    def get_first_or_create_tag(self, class_model, **kwargs):
-        results = class_model.objects.filter(**kwargs).all()
-        if results.count() > 0:
-            return results[0]
-        
-        return class_model.objects.create(**kwargs)
-
     def handle(self, *args, **options):
         if options['csv_file_help']:
             self.csv_file_help()
         
         if not 'csv_file' in options or not options['csv_file'] or not options['csv_file'][0]:
-            self.help()
+            self.print_help('manage.py', __name__)
             return
-        
+
+        csv_delimiter = ';'
+        if 'delimiter' in options and options['delimiter'] and options['delimiter'][0]:
+            csv_delimiter = options['delimiter'][0]
+
+        csv_quotechar = '|'
+        if 'quotechar' in options and options['quotechar'] and options['quotechar'][0]:
+            csv_quotechar = options['quotechar'][0]
+
         if 'imdba_delay' in options and options['imdba_delay'] and options['imdba_delay'][0] > 0:
             global SLEEP_DELAY
             SLEEP_DELAY = options['imdba_delay'][0]
@@ -570,11 +566,11 @@ OPCIONALES:
         from_title = ' '.join(from_title) if from_title else None
 
         interactive = options['interactive']
-        verbose = options['verbose']
+        verbosity = options['verbosity']
         fieldnames = []
 
         with open(options['csv_file'][0], newline='') as csvfile:
-            csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
+            csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
             fieldnames = csv_reader.fieldnames
             for r in csv_reader:
                 self.validate(r)
@@ -583,13 +579,13 @@ OPCIONALES:
 
         csv_fails = open('fail-%s.csv' % now.strftime('%Y%m%d-%H%M%S'), 'w', newline='')
         csv_done = open('done-%s.csv' % now.strftime('%Y%m%d-%H%M%S'), 'w', newline='')
-        csv_writer_fails = csv.DictWriter(csv_fails, fieldnames=fieldnames, delimiter=';', quotechar='|')
-        csv_writer_done = csv.DictWriter(csv_done, fieldnames=fieldnames, delimiter=';', quotechar='|')
+        csv_writer_fails = csv.DictWriter(csv_fails, fieldnames=fieldnames, delimiter=csv_delimiter, quotechar=csv_quotechar)
+        csv_writer_done = csv.DictWriter(csv_done, fieldnames=fieldnames, delimiter=csv_delimiter, quotechar=csv_quotechar)
         csv_writer_fails.writeheader()
         csv_writer_done.writeheader()
 
         with open(options['csv_file'][0], newline='') as csvfile:
-            csv_reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
+            csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
             start = not from_title
             for r in csv_reader:
                 if from_title and from_title == r['title']:
@@ -597,7 +593,7 @@ OPCIONALES:
 
                 if start:
                     try:
-                        cur_movie = self.get_or_insert_movie(r, interactive=interactive, verbose=verbose)
+                        cur_movie = self.get_or_insert_movie(r, interactive=interactive, verbosity=verbosity)
                         if cur_movie is None:
                             csv_writer_fails.writerow(r)
                         else:
@@ -609,5 +605,5 @@ OPCIONALES:
                     finally:
                         self.sleep_delay()
 
-                    if verbose:
+                    if verbosity > 1:
                         print("")

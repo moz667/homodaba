@@ -3,6 +3,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson
+from data.models import movie_search_filter
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -37,6 +38,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 TBOT_TOKEN = 'TBOT_TOKEN'
+LIMIT_MOVIES = 50
 
 class Command(BaseCommand):
     help = _('Arranca el bot the telegram')
@@ -58,26 +60,50 @@ de datos (actualmente "%s") """ % self.home_name)
         """TODO: mensaje de ayuda"""
         update.message.reply_text('TODO: DISPLAY HELP!')
 
+    def print_movies(self, movies, update):
+        s = ''
+        for m in movies:
+            s = s + 'id:%s "%s"\n' % (m.id, m.get_complete_title())
+            s = s + m.get_storage_types_text()
+
+        update.message.reply_text(s)
+
     def list_movies(self, update, context):
-        """TODO: mensaje de ayuda"""
-        update.message.reply_text('TODO: LIST MOVIES!')
+        # TODO: hacer algo para resolver el problema
+        # de que son muchos, opciones:
+        #   - Paginar (creando un boton que pida mas)
+        #   - Generar un CSV y mandarlo (o ponerlo en algun sitio si no permite)
+        #       "https://core.telegram.org/bots/api#sending-files"
+        update.message.reply_text("""El problema con la lista de peliculas es 
+que son demasiadas... asi que solo te voy a sacar las primeras %s""" % str(LIMIT_MOVIES))
+        self.print_movies(Movie.objects.all()[:LIMIT_MOVIES], update)
 
     def search(self, update, context):
-        """TODO: busqueda de pelis"""
-        update.message.reply_text('TODO: SEARCH MOVIES!')
-        update.message.reply_text(update.message.text)
+        if not update or not update.message or not update.message.text:
+            return self.list_movies(update, context)
+        
+        search_term = update.message.text
+        movies = movie_search_filter(search_term).all()
+
+        if movies.count() == 0:
+            update.message.reply_text("""No encontramos películas con el término "%s".""" % search_term)
+        elif movies.count() > LIMIT_MOVIES:
+            update.message.reply_text("""Hemos encontrado mas de "%s" películas.""" % str(LIMIT_MOVIES))
+            self.print_movies(movies[:LIMIT_MOVIES], update)
+        else:
+            self.print_movies(movies, update)
+        # update.message.reply_text('TODO: SEARCH MOVIES!')
+        # update.message.reply_text(update.message.text)
 
     def handle(self, *args, **options):
         token = os.getenv(TBOT_TOKEN, False)
-        if not token and (not 'token' in options or not options['token'] or not options['token'][0]):
-            self.help()
+        if not token and (not 'token' in options or not options['token']):
+            self.print_help('manage.py', __name__)
             return
 
-        if 'home_name' in options and (not options['home_name'] or not options['home_name'][0]):
-            self.help()
-            return
-        
-        self.home_name = options['home_name'][0] if 'home_name' in options else self.home_name
+        token = options['token'] if 'token' in options else token
+      
+        self.home_name = options['home_name'] if 'home_name' in options and options['home_name'] else self.home_name
         
         """Start the bot."""
         # Create the Updater and pass it your bot's token.

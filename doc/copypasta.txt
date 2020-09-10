@@ -81,3 +81,16 @@ URL DEL IMDB: https://www.imdb.com/name/nm0905154/
 >>> from imdb.helpers import parseXML
 >>> the_10k = parseXML(DataMovie.objects.get(id=1).imdb_raw_data)
 """
+
+# YA NO SE USA!
+"""
+Convierte una lista de tags a un formato consinstente
+de django-tagging. El problema con django-tagging
+es que le vale todo... (separadas por espacios, por 
+comas, por comas y espacio...) yo soy mas partidario 
+de guardarlas siempre con el mismo formato
+El resultado dereberia ser algo asi:
+'"tag primera", "tag segunda", "tag ultima",'
+"""
+def str_tag_from_list(tag_list):
+    return '"' + '", "'.join(tag_list) + '",'
