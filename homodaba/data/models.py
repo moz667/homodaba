@@ -17,6 +17,12 @@ class Person(models.Model):
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
+    def get_imdb_url(self):
+        if self.imdb_id:
+            return 'https://www.imdb.com/name/nm%s/' % self.imdb_id
+        
+        return None
+
     def __str__(self):
         return self.name
 
@@ -110,12 +116,29 @@ class Movie(models.Model):
         if self.title_preferred and self.title_preferred != self.title:
             other_titles.append(self.title_preferred)
         for ta in self.title_akas.all():
-            cur_title_aka = re.compile(' \(.*').sub('', ta.title)
-            if not cur_title_aka in other_titles and cur_title_aka != self.title:
-                other_titles.append(cur_title_aka)
+            other_titles.append(ta.title)
 
         return ', '.join(other_titles)
     get_other_titles.short_description = 'Otros títulos'
+
+    def get_persons(self, role=None):
+        query = Q(movie=self)
+        if role:
+            query.add(Q(role=role), Q.AND)
+        mmpp = MoviePerson.objects.filter(query).all()
+        persons = []
+        for mp in mmpp:
+            persons.append(mp.person)
+        return persons
+    
+    def get_directors(self):
+        return self.get_persons(MoviePerson.RT_DIRECTOR)
+    
+    def get_writers(self):
+        return self.get_persons(MoviePerson.RT_WRITER)
+
+    def get_actors(self):
+        return self.get_persons(MoviePerson.RT_ACTOR)
 
     def get_poster_thumbnail_img(self):
         return format_html(
@@ -137,6 +160,18 @@ class Movie(models.Model):
         html = html + '</ul>'
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
+
+    def get_storage_types_html_tg(self):
+        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        if storage_types.count() == 0:
+            return ''
+
+        html = '<pre>'
+        for st in storage_types:
+            html = html + format_html('    * {}\n', st)
+        html = html + '</pre>\n'
+        return mark_safe(html)
+    get_storage_types_html_tg.short_description = 'Medios (para telegram)'
     
     def get_storage_types_text(self):
         storage_types = MovieStorageType.objects.filter(movie=self).all()
@@ -256,24 +291,60 @@ def get_first_or_create_tag(class_model, **kwargs):
     
     return class_model.objects.create(**kwargs)
 
-def populate_search_filter(queryset, search_term):
-    akas_queryset = TitleAka.objects.filter(title__icontains=search_term)
-    query_title = Q(title__icontains=search_term)
+def populate_search_filter(queryset, search_term, use_use_distinct=False):
+    # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
+    # para varios
+    # TODO: tambien deberiamos implementar algun motor de busqueda molon
+    # como elasticsearch o algo por el estilo (postgres tiene algo)
+    # https://docs.djangoproject.com/en/dev/ref/contrib/postgres/search/
+    # https://medium.com/crehana/r%C3%A1pido-o-m%C3%A1s-r%C3%A1pido-django-con-elasticsearch-517ddc5c1a6f
+    # el principal problema es que me parece demasiado para el objetivo de este 
+    # proyecto :P
+    contains_quote = False
+
+    year_str = None
+
+    if search_term.find('(') > 0 and search_term.find(')') > 0:
+        year_str = re.compile('.*\(|\)').sub('', search_term)
+        search_term = re.compile(' \(.*').sub('', search_term).strip()
+
+    if search_term.startswith('"'):
+        contains_quote = True
+        search_term = search_term[1:]
+    if search_term.endswith('"'):
+        contains_quote = True
+        search_term = search_term[:-1]
+
+    if not contains_quote:
+        query_title = Q(title__icontains=search_term)
+    else:
+        query_title = Q(title__iexact=search_term)
+        query_title.add(Q(title__icontains=' ' + search_term), Q.OR)
+        query_title.add(Q(title__icontains=search_term + ' '), Q.OR)
+
     use_distinct = False
 
-    if akas_queryset.count() > 0:
-        query_title.add(Q(title_akas__in=TitleAka.objects.filter(title__icontains=search_term)), Q.OR)
+    if TitleAka.objects.filter(query_title).all().count() > 0:
+        query_title = Q(title_akas__in=TitleAka.objects.filter(query_title))
+        if not contains_quote:
+            query_title.add(Q(title__icontains=search_term), Q.OR)
+        else:
+            query_title.add(Q(title__iexact=search_term), Q.OR)
+        # query_title.add(Q(title_akas__in=TitleAka.objects.filter(query_title)), Q.OR)
         use_distinct = True
 
-    # Para mejorar la busqueda podemos hacer que si el search_term se trata de un numero entero de 4 cifras
-    # podria tratarse del año de producion
-    if search_term and len(search_term) == 4 and search_term >= '1000' and search_term <= '9999':
-        query_title.add(Q(year=int(search_term)), Q.OR)
+    if year_str:
+        query_title_new = Q(year=int(year_str))
+        query_title_new.add(query_title, Q.AND)
+        query_title = query_title_new
 
     # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
-    # buscar tags y generos... por ahora lo vamos a dejar asi :P
+    # buscar tags y generos... por ahora lo vamos a dejar asi
 
-    return queryset.filter(query_title).distinct()
+    if use_use_distinct:
+        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title), use_distinct
+    else:
+        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title)
 
 def movie_search_filter(search_term):
     return populate_search_filter(Movie.objects, search_term)

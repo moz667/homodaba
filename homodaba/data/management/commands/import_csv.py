@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka
+from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
 from imdb import IMDb
@@ -490,6 +490,26 @@ OPCIONALES:
                         GenreTag, name=tag
                     )
                 )
+
+        if 'certificates' in ia_movie.keys():
+            valid_certs = []
+            if len(ia_movie['certificates']) > 0:
+                for c in ia_movie['certificates']:
+                    if c and c.startswith('United States:'):
+                        valid_cert = c.replace('United States:', '')
+                        if not valid_cert in valid_certs:
+                            valid_certs.append(valid_cert)
+
+            if len(valid_certs) > 0:
+                tagged = True
+                for vc in valid_certs:
+                    local_movie.content_rating_systems.add(
+                        get_first_or_create_tag(
+                            ContentRatingTag, name=vc
+                        )
+                    )
+            elif verbosity > 1:
+                print('INFO: No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
         if len(tags):
             tagged = True

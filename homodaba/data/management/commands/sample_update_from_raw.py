@@ -24,7 +24,6 @@ class Command(BaseCommand):
         """
         Para este ejemplo lo que vamos a hacer es actualizar el content_rating_systems... 
         que se me olvido en el import_csv :P
-        TODO: meterlo en el import_csv
         """
         for movie in Movie.objects.all():
             # Si ya tiene content_rating_systems pasamos de el
@@ -49,7 +48,7 @@ class Command(BaseCommand):
                                 valid_certs.append(valid_cert)
                 
                 if len(valid_certs) == 0:
-                    print('INFO: No se encontraron certs para "%s"' % movie.get_complete_title())
+                    print('INFO: No se encontraron clasificaciones de edad para "%s"' % movie.get_complete_title())
                 else:
                     for vc in valid_certs:
                         movie.content_rating_systems.add(

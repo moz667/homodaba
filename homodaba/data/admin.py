@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.db.models import Q
 
 from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
+from .models import populate_search_filter
 
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
@@ -79,28 +80,7 @@ class MovieAdmin(admin.ModelAdmin):
         if not search_term:
             return queryset, False
         
-        # super:
-        # No lo usamos porque no nos deja agregar como opcion el title_akas__in
-        # queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        akas_queryset = TitleAka.objects.filter(title__icontains=search_term)
-        query_title = Q(title__icontains=search_term)
-        use_distinct = False
-
-        if akas_queryset.count() > 0:
-            query_title.add(Q(title_akas__in=TitleAka.objects.filter(title__icontains=search_term)), Q.OR)
-            use_distinct = True
-
-        # Para mejorar la busqueda podemos hacer que si el search_term se trata de un numero entero de 4 cifras
-        # podria tratarse del año de producion
-        if search_term and len(search_term) == 4 and search_term >= '1000' and search_term <= '9999':
-            query_title.add(Q(year=int(search_term)), Q.OR)
-
-        # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
-        # buscar tags y generos... por ahora lo vamos a dejar asi :P
-
-        queryset = queryset.filter(query_title)
-
-        return queryset, use_distinct
+        return populate_search_filter(queryset, search_term, use_use_distinct=True)
 
     # form = MovieForm
 admin.site.register(Movie, MovieAdmin)
