@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -26,7 +27,6 @@ SECRET_KEY = 'i5epe(6@wo&%ibm753urf2ch^j0j8*3!npet-1e5$g^q44fzlq'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -44,6 +44,18 @@ INSTALLED_APPS = [
     # 'easy_select2',
     # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
+
+elasticsearch_hosts = os.getenv("ES_DSL_HOSTS", False)
+if elasticsearch_hosts:
+    INSTALLED_APPS.append('django_elasticsearch_dsl')
+
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': elasticsearch_hosts
+        },
+    }
+else:
+    ELASTICSEARCH_DSL = False
 
 X_FRAME_OPTIONS='SAMEORIGIN' # only if django version >= 3.0
 

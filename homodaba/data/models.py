@@ -3,8 +3,6 @@ from django.db.models import Q
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-import re
-
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
@@ -120,6 +118,14 @@ class Movie(models.Model):
 
         return ', '.join(other_titles)
     get_other_titles.short_description = 'Otros títulos'
+
+    def get_directed_by(self):
+        directed_by = []
+        for d in self.get_directors():
+            directed_by.append(d.name)
+        
+        return ', '.join(directed_by)
+    get_directed_by.short_description = 'Dirigida por'
 
     def get_persons(self, role=None):
         query = Q(movie=self)
@@ -291,60 +297,3 @@ def get_first_or_create_tag(class_model, **kwargs):
     
     return class_model.objects.create(**kwargs)
 
-def populate_search_filter(queryset, search_term, use_use_distinct=False):
-    # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
-    # para varios
-    # TODO: tambien deberiamos implementar algun motor de busqueda molon
-    # como elasticsearch o algo por el estilo (postgres tiene algo)
-    # https://docs.djangoproject.com/en/dev/ref/contrib/postgres/search/
-    # https://medium.com/crehana/r%C3%A1pido-o-m%C3%A1s-r%C3%A1pido-django-con-elasticsearch-517ddc5c1a6f
-    # el principal problema es que me parece demasiado para el objetivo de este 
-    # proyecto :P
-    contains_quote = False
-
-    year_str = None
-
-    if search_term.find('(') > 0 and search_term.find(')') > 0:
-        year_str = re.compile('.*\(|\)').sub('', search_term)
-        search_term = re.compile(' \(.*').sub('', search_term).strip()
-
-    if search_term.startswith('"'):
-        contains_quote = True
-        search_term = search_term[1:]
-    if search_term.endswith('"'):
-        contains_quote = True
-        search_term = search_term[:-1]
-
-    if not contains_quote:
-        query_title = Q(title__icontains=search_term)
-    else:
-        query_title = Q(title__iexact=search_term)
-        query_title.add(Q(title__icontains=' ' + search_term), Q.OR)
-        query_title.add(Q(title__icontains=search_term + ' '), Q.OR)
-
-    use_distinct = False
-
-    if TitleAka.objects.filter(query_title).all().count() > 0:
-        query_title = Q(title_akas__in=TitleAka.objects.filter(query_title))
-        if not contains_quote:
-            query_title.add(Q(title__icontains=search_term), Q.OR)
-        else:
-            query_title.add(Q(title__iexact=search_term), Q.OR)
-        # query_title.add(Q(title_akas__in=TitleAka.objects.filter(query_title)), Q.OR)
-        use_distinct = True
-
-    if year_str:
-        query_title_new = Q(year=int(year_str))
-        query_title_new.add(query_title, Q.AND)
-        query_title = query_title_new
-
-    # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
-    # buscar tags y generos... por ahora lo vamos a dejar asi
-
-    if use_use_distinct:
-        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title), use_distinct
-    else:
-        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title)
-
-def movie_search_filter(search_term):
-    return populate_search_filter(Movie.objects, search_term)

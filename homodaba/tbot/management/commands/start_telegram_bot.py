@@ -5,7 +5,7 @@ from django.utils.translation import gettext as _
 from django.utils.html import format_html
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson
-from data.models import movie_search_filter
+from data.search import movie_search_filter
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
@@ -63,7 +63,6 @@ de datos (actualmente "%s") """ % self.home_name)
     def help_command(self, update, context):
         if not update:
             return
-        """TODO: mensaje de ayuda"""
         update.message.reply_html("""
 <b>/help: </b> Muestra este mensaje.
 <b>[/search] texto [(año)]: </b> Busca peliculas que coincidan con texto (opcionalmente del año entre parentesis). Si se especifica el texto entre comillas dobles, busca términos exactos.
@@ -168,7 +167,7 @@ de datos (actualmente "%s") """ % self.home_name)
         # TODO: hacer algo para resolver el problema
         # de que son muchos, opciones:
         #   - Paginar (creando un boton que pida mas)
-        #   - Generar un CSV y mandarlo (o ponerlo en algun sitio si no permite)
+        #   - Generar un CSV y mandarlo (poniendolo en MEDIA)
         #       "https://core.telegram.org/bots/api#sending-files"
         update.message.reply_text("""El problema con la lista de peliculas es que son demasiadas... asi que solo te voy a sacar las primeras %s""" % str(LIMIT_MOVIES))
         self.print_movies(Movie.objects.all()[:LIMIT_MOVIES], update)
