@@ -16,7 +16,7 @@ class MovieDocument(Document):
     })
 
     tags = fields.NestedField(properties={
-        'name': fields.TextField(),
+        'name': fields.KeywordField(),
         'pk': fields.IntegerField(),
     })
 
@@ -41,16 +41,20 @@ class MovieDocument(Document):
         'pk': fields.IntegerField(),
     })
 
-    def _prepare_persons(self, persons):
-        persons = []
+    # TODO: ojo!!! esto es para que solo indexe los primeros X
+    #def get_queryset(self):
+    #    return super().get_queryset()[:50]
 
-        for p in persons:
-            persons.append({
+    def _prepare_persons(self, cur_persons):
+        ret_persons = []
+
+        for p in cur_persons:
+            ret_persons.append({
                 'pk': p.id,
                 'name': p.name,
             })
 
-        return persons
+        return ret_persons
 
     def prepare_directors(self, movie):
         return self._prepare_persons(movie.get_directors())
@@ -81,7 +85,7 @@ class MovieDocument(Document):
             'title_preferred',
             'imdb_id',
             'year',
-            'summary',
+            # 'summary', TODO: he quitado summary por ahora para afinar busquedas por otros campos
         ]
 
         # Ignore auto updating of Elasticsearch when a model is saved

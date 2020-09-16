@@ -1,10 +1,10 @@
 #!/bin/bash
 
-MANAGE="python homodaba/manage.py"
+source ./env.sh || exit 1
 
 if [ ! -e "homodaba/db.sqlite3" ]; then
-    $MANAGE migrate
-    $MANAGE createsuperuser
+    $DJANGO_MANAGE migrate
+    $DJANGO_MANAGE createsuperuser
 fi
 
-$MANAGE runserver
+$DJANGO_MANAGE runserver

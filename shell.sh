@@ -1,3 +1,5 @@
 #!/bin/bash
 
-python homodaba/manage.py shell
+source ./env.sh || exit 1
+
+$DJANGO_MANAGE shell

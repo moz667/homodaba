@@ -1,11 +1,11 @@
 #!/bin/bash
 
-MANAGE="python homodaba/manage.py"
+source ./env.sh || exit 1
 
 if [ -z "$1" ]
 then
-    $MANAGE import_csv --help
+    $DJANGO_MANAGE import_csv --help
     exit
 fi
 
-$MANAGE import_csv $*
+$DJANGO_MANAGE import_csv $*

@@ -7,6 +7,8 @@
 ##        uswds, U.S. WEB DESIGN STANDARDS THEME
 ##    mas info: [https://pypi.org/project/django-admin-interface/]
 
+source ./env.sh || exit 1
+
 AVAILABLE_THEMES="django bootstrap foundation uswds"
 THEME=""
 
@@ -26,30 +28,27 @@ if [ "$1" == "--help" ]
 then
     cat $0 | grep "^##"
     exit
-elif [ "$1" != "" ]
-then
-    THEME="$1"
 fi
 
-if [ "$THEME" != "" ]
+$DJANGO_MANAGE migrate
+
+if [ "$1" != "" ]
 then
+    THEME="$1"
+
     is_theme_available
     IS_THEME_AVAILABLE=$?
 
     if [ "$IS_THEME_AVAILABLE" == "0" ]
     then
-        echo "ERROR: Ese theme no esta disponible"
-        cat $0 | grep "^##"
+        echo "ERROR: Ese theme no esta disponible, los themes disponibles son:"
+        for theme in $AVAILABLE_THEMES
+        do
+            echo $theme
+        done
         exit
     fi
-fi
 
-MANAGE="python homodaba/manage.py"
-
-$MANAGE migrate
-
-if [ "$THEME" != "" ]
-then
-    $MANAGE loaddata admin_interface_theme_$THEME.json
+    $DJANGO_MANAGE loaddata admin_interface_theme_$THEME.json
     echo " * Recuerda que tienes que reiniciar el servicio para que se apliquen los cambios."
 fi

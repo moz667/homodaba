@@ -90,9 +90,14 @@ class MovieAdmin(admin.ModelAdmin):
         if 'crs' in request.GET.keys():
             if request.GET['crs']:
                 crs_filter = int(request.GET['crs'])
+
+        tag_filter = None
+        if 'tag' in request.GET.keys():
+            if request.GET['tag']:
+                tag_filter = int(request.GET['tag'])
         # OJO: Esto es solo para DSL ^^^^
         
-        return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter)
+        return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter)
 
     # form = MovieForm
 admin.site.register(Movie, MovieAdmin)
