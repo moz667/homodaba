@@ -13,8 +13,9 @@ if ELASTICSEARCH_DSL:
 
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, year=None):
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
-        # TODO: stats de la busqueda (total encontrados para la paginacion) 
+        # TODO: stats de la busqueda (total encontrados para la paginacion)
         # TODO: paginacion
+        # TODO: Analizadores de terminos para permitir busquedas por texto parcial
 
         use_distinct = False
 
@@ -23,6 +24,8 @@ if ELASTICSEARCH_DSL:
         # puede ser que busquemos solo por año, (XXXX) en ese caso no tendremos
         # mas terminos de busqueda
         if search_term:
+            # Los objects se pueden consultar directamente sobre la consulta 
+            # principal, como directores, escritores actores...
             query.should.append(DSL_Q("multi_match", query=search_term, 
                 fields=["title^4", "directors.name^3", "writers.name^2", "casting.name^2"]
             ))
@@ -42,6 +45,7 @@ if ELASTICSEARCH_DSL:
                     )
                 ))
         
+        # Para los nested hay que hacer una query especifica del tipo "nested"
         if tag:
             query.must.append(DSL_Q("nested", path="tags", 
                 query=DSL_Q("match", tags__pk=tag)
@@ -60,6 +64,7 @@ if ELASTICSEARCH_DSL:
         if year:
             query.must.append(DSL_Q("match", year=year))
         
+        print(query)
         # print(MovieDocument.search().query(query).to_dict())
 
         # Por ahora hasta 100 registros (paginacion de la admin)

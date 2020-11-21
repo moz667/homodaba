@@ -6,6 +6,8 @@ from django.utils.text import slugify
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
+from data.utils.imdbpy_facade import facade_search
+
 from imdb import IMDb
 
 import csv
@@ -94,7 +96,6 @@ OPCIONALES:
             action='store_true',
             help='Requiere interactuar cuando encuentre un problema, en cualquier otro caso saca informacion acerca del mismo.',
         )
-        # delimiter=';', quotechar
         parser.add_argument(
             '--delimiter', default=';',
             type=str,
@@ -125,11 +126,34 @@ OPCIONALES:
         if SLEEP_DELAY:
             sleep(SLEEP_DELAY)
 
-    def search_movie_imdb(self, title, year, title_alt=None):
+    def match_movie(self, search_results, title, year, director=None):
+        matches = []
+        slugify_title = slugify(title)
+
+        for sr in search_results:
+            """
+            sr.keys()[0] == 'title', es para evitar talk-shows y otros programas especiales... por lo visto en ellos no mete primero el title
+            """
+            if sr.keys()[0] == 'title' and 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
+                matches.append(sr)
+        
+        total_matches = len(matches)
+
+        if total_matches > 1:
+            # TODO: Buscamos por director?
+            print("Se han encontrado mas de un resultado para %s (%s)" % (title, year))
+        elif total_matches == 0:
+            print("NO se han encontrado resultados para %s (%s)" % (title, year))
+            return None
+        elif total_matches == 1:
+            return matches[0]
+        
+
+
+    def search_movie_imdb(self, title, year, title_alt=None, director=None):
         # 2) Buscamos la pelicula con el año en IMDbPy
         ia = IMDb(reraiseExceptions=True)
         search_results = ia.search_movie('%s (%s)' % (title, year))
-        search_result = None
 
         slugify_title = slugify(title)
 
@@ -147,6 +171,8 @@ OPCIONALES:
 
         """
         # TODO: Buscamos el titulo por los akas ? esto quizas es muy burro...
+        search_result = None
+
         if search_result is None and len(search_results) == 1:
             ia_movie = ia.get_movie(search_results[0].movieID)
             if 'akas' in ia_movie.keys():
@@ -160,7 +186,7 @@ OPCIONALES:
         # Buscamos el titulo por el alt si lo tiene
         if title_alt:
             self.sleep_delay()
-            return self.search_movie_imdb(title_alt, year)
+            return self.search_movie_imdb(title_alt, year, director=director)
         
         # No encontramos ni una...
         return None
@@ -229,19 +255,20 @@ OPCIONALES:
             clean_title = title.split('.')[-1]
 
         return clean_title.strip()
-            
 
-    def get_or_insert_movie(self, r, interactive=False, verbosity=1):
-        if verbosity > 1:
-            print('Tratando "%s (%s)"...' % (r['title'], r['year']))
+    def get_or_insert_movie(self, r, interactive=False):
+        print('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        
         """
         Tenemos que averiguar primero:
         1) Si se trata de una peli original
         2) El archivo donde se almacena si no lo es
         """
         title = r['title']
+        title_alt = None
         title_alt=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
         storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
+        director = r['director'] if 'director' in r and r['director'] else None
         is_original = True if not storage_name else False
 
         storage_type = MovieStorageType.ST_DVD
@@ -268,87 +295,59 @@ OPCIONALES:
                 elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION:
                     path = path + ".%s" % media_format.lower()
 
-        # 1) Buscamos si ya esta dada de alta la pelicula para ese año en la bbdd
-        # search_movie_local_data(self, title, year, storage_name=None, path=None, media_format=None):
-        local_movies = self.search_movie_local_data(
+        facade_result = facade_search(
             title=title, year=r['year'], 
+            title_alt=title_alt,
+            director=director,
+            storage_type=storage_type,
+            storage_name=storage_name,
+            path=path
         )
 
-        if local_movies.count() == 1:
-            # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            if verbosity > 1:
-                print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
-            
-            self.get_or_insert_storage(
-                movie=local_movies[0], 
-                is_original=is_original, 
-                storage_type=storage_type, 
-                storage_name=storage_name, 
-                path=path, 
-                resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
-                media_format=media_format, 
-                version=r['version'] if 'version' in r and r['version'] else None, 
-                verbosity=verbosity
-            )
-
-            return local_movies[0]
-        elif local_movies.count() > 1:
-            print("\tERROR!: Parece que hemos encontrado varias películas con el título '%s' del año '%s'" % (title, r['year']))
-            return None
-
-        # 2) Buscamos la pelicula con el año en IMDbPy
-        search_result = self.search_movie_imdb(
-            title, r['year'], title_alt=title_alt
-        )
-
-        if search_result is None:
+        if not facade_result:
             if not interactive:
                 print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
                 return None
             else:
-                search_reult = self.interactive_imdb_search(
-                    title, r['year'], title_alt=title_alt
+                # TODO: Modo interactivo
+                #search_result = self.interactive_imdb_search(
+                #    title, r['year'], title_alt=title_alt
+                #)
+                #if search_result is None:
+                #    # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
+                #    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
+                #    return None
+                return None
+        
+        version = r['version'] if 'version' in r and r['version'] else None
+        resolution = r['resolution'] if 'resolution' in r and r['resolution'] else None
+
+        if facade_result.is_local_data:
+            # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
+            print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
+
+            # Solo insertamos storage si no fue una coincidencia de storage :P
+            if not facade_result.storage_match:
+                self.get_or_insert_storage(
+                    movie=facade_result.movie, 
+                    is_original=is_original, 
+                    storage_type=storage_type, 
+                    storage_name=storage_name, 
+                    path=path, 
+                    resolution=resolution, 
+                    media_format=media_format, 
+                    version=version, 
                 )
 
-        if search_result is None:
-            # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
-            print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-            return None
-        
-        # Tambien puede ocurrirnos que esa pelicula ya este dada de alta
-        local_movies = Movie.objects.filter(imdb_id=search_result.movieID).all()
+            return facade_result.movie
+       
+        self.trace_validate_imdb_movie(facade_result.movie, title, director=director)
 
-        if local_movies.count() == 0:
-            ia = IMDb(reraiseExceptions=True)
-            # 2.2.2) Recuperamos la pelicula de IMDbPy
-            ia_movie = ia.get_movie(search_result.movieID)
-
-            # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-            if ia_movie['title'] != title and verbosity > 1:
-                print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
-        
-            # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
-            if 'director' in r and r['director'] and verbosity > 1:
-                if not 'director' in ia_movie.keys():
-                    print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
-                else:
-                    ia_directors = [p['name'] for p in ia_movie['director']]
-
-                    for director_name in r['director'].split(','):
-                        if not director_name in ia_directors:
-                            # Esto es para que revises tu csv!!!
-                            print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
-
-            local_movie = self.insert_movie(
-                ia_movie, 
-                tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
-                title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
-                verbosity=verbosity
-            )
-        else:
-            if verbosity > 1:
-                print("\tINFO: La pelicula '%s' del año '%s' ya esta dada de alta en la bbdd con el imdb_id '%s'" % (title, r['year'], search_result.movieID))
-            local_movie = local_movies[0]
+        local_movie = self.insert_movie(
+            facade_result.movie, 
+            tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
+            title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
+        )
         
         self.get_or_insert_storage(
             movie=local_movie, 
@@ -356,16 +355,33 @@ OPCIONALES:
             storage_type=storage_type, 
             storage_name=storage_name, 
             path=path, 
-            resolution=r['resolution'] if 'resolution' in r and r['resolution'] else None, 
+            resolution=resolution, 
             media_format=media_format, 
-            version=r['version'] if 'version' in r and r['version'] else None, 
-            verbosity=verbosity
+            version=version, 
         )
 
         # 2.6) Devolvemos la pelicula
         return local_movie
 
-    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None, verbosity=1):
+    def trace_validate_imdb_movie(self, imdb_mobie, title, director=None):
+        # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
+        if imdb_mobie['title'] != title:
+            print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, imdb_mobie['title']))
+    
+        # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
+        if director:
+            if not 'director' in imdb_mobie.keys():
+                print('\tINFO: No encontramos directores para la pelicula "%s"' % imdb_mobie['title'])
+            else:
+                ia_directors = [p['name'] for p in imdb_mobie['director']]
+
+                for director_name in director.split(','):
+                    if not director_name in ia_directors:
+                        # Esto es para que revises tu csv!!!
+                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+
+
+    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None):
         # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
         storages = MovieStorageType.objects.filter(
             movie=movie, 
@@ -380,8 +396,7 @@ OPCIONALES:
 
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
-            if verbosity > 1:
-                print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
+            print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
             return storages[0]
         
         # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
@@ -396,7 +411,7 @@ OPCIONALES:
             version=version,
         )
 
-    def insert_movie(self, ia_movie, tags=[], title_original=None, verbosity=1):
+    def insert_movie(self, ia_movie, tags=[], title_original=None):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
@@ -412,7 +427,7 @@ OPCIONALES:
                     lp.save()
                 
                 directors.append(lp)
-        elif verbosity > 1:
+        else:
             print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
@@ -427,7 +442,7 @@ OPCIONALES:
                     lp.save()
                 
                 writers.append(lp)
-        elif verbosity > 1:
+        else:
             print('\tINFO: No encontramos escritores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
@@ -442,7 +457,7 @@ OPCIONALES:
                     lp.save()
                 
                 casting.append(lp)
-        elif verbosity > 1:
+        else:
             print('\tINFO: No encontramos casting para la pelicula "%s"' % ia_movie['title'])
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
@@ -508,7 +523,7 @@ OPCIONALES:
                             ContentRatingTag, name=vc
                         )
                     )
-            elif verbosity > 1:
+            else:
                 print('INFO: No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
         if len(tags):
@@ -586,7 +601,8 @@ OPCIONALES:
         from_title = ' '.join(from_title) if from_title else None
 
         interactive = options['interactive']
-        verbosity = options['verbosity']
+        # TODO: Por ahora no vamos a usar verbosity
+        # verbosity = options['verbosity']
         fieldnames = []
 
         with open(options['csv_file'][0], newline='') as csvfile:
@@ -613,7 +629,7 @@ OPCIONALES:
 
                 if start:
                     try:
-                        cur_movie = self.get_or_insert_movie(r, interactive=interactive, verbosity=verbosity)
+                        cur_movie = self.get_or_insert_movie(r, interactive=interactive)
                         if cur_movie is None:
                             csv_writer_fails.writerow(r)
                         else:
@@ -625,5 +641,4 @@ OPCIONALES:
                     finally:
                         self.sleep_delay()
 
-                    if verbosity > 1:
-                        print("")
+                    print("")
