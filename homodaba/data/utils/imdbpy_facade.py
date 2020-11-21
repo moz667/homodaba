@@ -82,14 +82,14 @@ def match_movie_by_director(search_results, director, year):
     for director_name in director.split(','):
         slugify_directors.append(clean_string(director_name))
 
-    print(slugify_directors)
+    # TODO: traza print(slugify_directors)
 
     for sr in search_results:
         movie = IMDB_API.get_movie(sr.movieID)
         if 'director' in movie.keys():
             movie_directors = [clean_string(p['name']) for p in movie['director']]
 
-            print(movie_directors)
+            # TODO: traza print(movie_directors)
             # Con que coincida un director damos la pelicula como buena
             for slugify_director in slugify_directors:
                 if slugify_director in movie_directors and 'year' in movie and int(movie['year']) == int(year):
