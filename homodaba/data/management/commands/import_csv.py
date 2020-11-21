@@ -108,16 +108,6 @@ OPCIONALES:
         )
 
 
-    def search_movie_local_data(self, title, year):
-        query_title = Q(title__iexact=title)
-        query_title.add(Q(title_original__iexact=title), Q.OR)
-        query_title.add(Q(title_preferred__iexact=title), Q.OR)
-
-        query = Q(query_title)
-        query_title.add(Q(year=year), Q.AND)
-        
-        return Movie.objects.filter(query).all()
-
     # TODO: no demasiado elegante... 
     # esta funcion es para retrasar las llamadas a imdba
     def sleep_delay(self):
@@ -126,71 +116,6 @@ OPCIONALES:
         if SLEEP_DELAY:
             sleep(SLEEP_DELAY)
 
-    def match_movie(self, search_results, title, year, director=None):
-        matches = []
-        slugify_title = slugify(title)
-
-        for sr in search_results:
-            """
-            sr.keys()[0] == 'title', es para evitar talk-shows y otros programas especiales... por lo visto en ellos no mete primero el title
-            """
-            if sr.keys()[0] == 'title' and 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
-                matches.append(sr)
-        
-        total_matches = len(matches)
-
-        if total_matches > 1:
-            # TODO: Buscamos por director?
-            print("Se han encontrado mas de un resultado para %s (%s)" % (title, year))
-        elif total_matches == 0:
-            print("NO se han encontrado resultados para %s (%s)" % (title, year))
-            return None
-        elif total_matches == 1:
-            return matches[0]
-        
-
-
-    def search_movie_imdb(self, title, year, title_alt=None, director=None):
-        # 2) Buscamos la pelicula con el año en IMDbPy
-        ia = IMDb(reraiseExceptions=True)
-        search_results = ia.search_movie('%s (%s)' % (title, year))
-
-        slugify_title = slugify(title)
-
-        for sr in search_results:
-            if 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
-                return sr
-        
-        self.sleep_delay()
-        search_results = ia.search_movie(title)
- 
-        # TODO: El problema es que el titulo este en español o algo por el estilo... 
-        for sr in search_results:
-            if 'year' in sr and int(sr['year']) == int(year) and slugify(sr['title']) == slugify_title:
-                return sr
-
-        """
-        # TODO: Buscamos el titulo por los akas ? esto quizas es muy burro...
-        search_result = None
-
-        if search_result is None and len(search_results) == 1:
-            ia_movie = ia.get_movie(search_results[0].movieID)
-            if 'akas' in ia_movie.keys():
-                # FIXME: Poner por setting estos ' (Spain)'
-                for aka in ia_movie['akas']:
-                    if aka == '%s (Spain)' % title:
-                        search_result = search_result[0]
-                        break
-        """
-
-        # Buscamos el titulo por el alt si lo tiene
-        if title_alt:
-            self.sleep_delay()
-            return self.search_movie_imdb(title_alt, year, director=director)
-        
-        # No encontramos ni una...
-        return None
-    
     def interactive_imdb_search(self, title, year, title_alt=None):
         ia = IMDb(reraiseExceptions=True)
         search_results = ia.search_movie('%s (%s)' % (title, year))
