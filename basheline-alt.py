@@ -75,12 +75,12 @@ class BashelineCleaner:
     def process_altTitle(self):
         title_fields=['title','title_preferred']
         for title in title_fields:
-            alttitle_exist = process_altTitle.alttitle_regex.match(self.row[title])
+            alttitle_exist = self.process_altTitle.alttitle_regex.match(self.row[title])
             if alttitle_exist:
                 trimmed_title = alttitle_exist.group(1)
                 self.row[title] = trimmed_title
                 alttitle = alttitle_exist.group(2)
-                alttitle_is_a_version = process_altTitle.version_regex.search(alttitle)
+                alttitle_is_a_version = self.process_altTitle.version_regex.search(alttitle)
                 if alttitle_is_a_version:
                     self.row['version'] = alttitle
                 else:
