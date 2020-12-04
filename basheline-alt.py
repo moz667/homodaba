@@ -35,12 +35,14 @@ class BashelineCleaner:
 
         self.add_storage_type()
         self.set_subpath_as_tag()
+        self.fix_titles()
         self.process_altTitle()
         self.process_007Films()
         self.process_AlienFilms()
         self.process_HarryPotterFilms()
         self.process_StarWarsFilms()
         self.set_additionalyears_as_tag()
+        self.fix_years()
 
         return self.row
 
@@ -132,6 +134,42 @@ class BashelineCleaner:
             self.add_tag(order)
             self.row['title'] = trimmed_title
     process_StarWarsFilms.regex = re.compile(r'(Episode [A-Z]{1,4})\. (.*)')                # Episode XXXX. Title
+
+    def fix_years(self):
+        affected_films = [['Bajarse al Moro', 1989],
+                ['Cidade de Deus', 2002],
+                ['Crime Wave', 1953],
+                ['Ex Machina', 2014],
+                ['Once', 2007],
+                ['The Deadly Affair', 1967],
+                ['The Offence', 1973]]
+        for affected_film in affected_films:
+            if affected_film[0].lower() == self.row['title'].lower():
+                self.row['year'] = affected_film[1]
+
+    def fix_titles(self):
+        # Wrong Titles
+        films_with_wrong_titles= [["Startime 1x27 Incident at a Corner", "Startime Incident at a Corner"],
+                ["Dark City. Director's cut", "Dark City (Director's cut)"],
+                ["Dark City. Theatrical's cut", "Dark City (Theatrical's cut)"],
+                ["Ed. B-N. Night of the Living Dead", "Night of the Living Dead (Black and White version)"],
+                ["Ed. Coloreada. Night of the Living Dead", "Night of the Living Dead (Colorized version)"]]
+        for affected_film in films_with_wrong_titles:
+            if affected_film[0].lower() == self.row['title'].lower():
+                self.row['title'] = affected_film[1]
+
+        # Juan Antonio Bayona -> J.A. Bayona
+        affected_director=['Juan Antonio Bayona', 'J.A. Bayona'] 
+        if affected_director[0].lower() == self.row['director'].lower():
+            self.row['director'] = affected_director[1]
+
+        # Superman II (Richard Donner, 2006) -> Superman II (Richard Donner edition) (Richard Lester, 1980 y 2006)
+        affected_film=['Superman II', '2006'] 
+        if (affected_film[0].lower() == self.row['title'].lower()) and (self.row['year'] == affected_film[1]):
+            self.row['title'] = 'Superman II (Richard Donner edition)'
+            self.row['year'] = '1980 y 2006'
+            self.row['director'] = 'Richard Lester'
+
 
     """
     TODO: Borrar, no se usa
