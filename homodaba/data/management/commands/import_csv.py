@@ -288,17 +288,17 @@ OPCIONALES:
         # 2.6) Devolvemos la pelicula
         return local_movie
 
-    def trace_validate_imdb_movie(self, imdb_mobie, title, director=None):
+    def trace_validate_imdb_movie(self, imdb_movie, title, director=None):
         # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-        if imdb_mobie['title'] != title:
-            print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, imdb_mobie['title']))
+        if imdb_movie['title'] != title:
+            print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, imdb_movie['title']))
     
         # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
         if director:
-            if not 'director' in imdb_mobie.keys():
-                print('\tINFO: No encontramos directores para la pelicula "%s"' % imdb_mobie['title'])
+            if not 'director' in imdb_movie.keys():
+                print('\tINFO: trace_validate_imdb_movie: No encontramos directores para la pelicula "%s"' % imdb_movie['title'])
             else:
-                ia_directors = [p['name'] for p in imdb_mobie['director']]
+                ia_directors = [p['name'] for p in imdb_movie['director']]
 
                 for director_name in director.split(','):
                     if not director_name in ia_directors:
@@ -353,7 +353,7 @@ OPCIONALES:
                 
                 directors.append(lp)
         else:
-            print('\tINFO: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+            print('\tINFO: insert_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
         writers = []

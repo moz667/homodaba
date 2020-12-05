@@ -116,7 +116,7 @@ def match_movie(search_results, title, year, director=None):
     
     # Si solo hemos encontrado un tier1 asumimos que es el bueno
     if len(matches_tier1) == 1:
-        return matches_tier1[0]
+        return IMDB_API.get_movie(matches_tier1[0].movieID)
 
     # Sumamos todos los matches dando prioridad por tier
     matches = matches_tier1 + matches
