@@ -77,10 +77,18 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     # asi que lo damos por perdido
     return None
 
+def reverse_name(name):
+    first = name.split()[0]
+    second = " ".join(name.split()[1::])
+    reverse_name = " ".join([second, first])
+    return reverse_name
+
 def match_movie_by_director(search_results, director, year):
     slugify_directors = []
     for director_name in director.split(','):
         slugify_directors.append(clean_string(director_name))
+        # Añadimos el director con "Nombre Apellidos" como "Apellidos Nombre" para direcores asiáticos
+        slugify_directors.append(clean_string(reverse_name(director_name)))
 
     # TODO: traza print(slugify_directors)
 
