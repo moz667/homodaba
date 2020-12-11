@@ -25,3 +25,5 @@ tag por cada peli dentro de una saga :P)
         nos evitamos el tener que borrar debutantes..
     - Pensar mas opciones...
 1. Documentar (uff... que pereza  ^ _ ^)
+1. Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".
+1. Ver qué hacemos con las películas que no están en IMDB.
