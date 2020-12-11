@@ -35,7 +35,6 @@ class BashelineCleaner:
 
         self.add_storage_type()
         self.set_subpath_as_tag()
-        self.fix_titles()
         self.process_altTitle()
         self.process_007Films()
         self.process_AlienFilms()
@@ -43,6 +42,7 @@ class BashelineCleaner:
         self.process_StarWarsFilms()
         self.set_additionalyears_as_tag()
         self.fix_years()
+        self.fix_titles()
 
         return self.row
 
@@ -142,6 +142,8 @@ class BashelineCleaner:
                 ['Ex Machina', 2014],
                 ['Once', 2007],
                 ['The Deadly Affair', 1967],
+                ['Two Cars, One Night', 2003],
+                ['Toy Story 3', 2010],
                 ['The Offence', 1973]]
         for affected_film in affected_films:
             if affected_film[0].lower() == self.row['title'].lower():
@@ -150,33 +152,82 @@ class BashelineCleaner:
     def fix_titles(self):
         # Wrong Titles
         films_with_wrong_titles= [["Startime 1x27 Incident at a Corner", "Startime Incident at a Corner"],
-                ["Dark City. Director's cut", "Dark City (Director's cut)"],
-                ["Dark City. Theatrical's cut", "Dark City (Theatrical's cut)"],
-                ["Ed. B-N. Night of the Living Dead", "Night of the Living Dead (Black and White version)"],
-                ["Ed. Coloreada. Night of the Living Dead", "Night of the Living Dead (Colorized version)"]]
+                ['The Snapper', 'Screen Two - The Snapper'],
+                ['Silent Hill. Revelation 3D', 'Silent Hill: Revelation'],
+                ['Kung fu', 'Kung Fu Hustle'],
+                ["Dark City. Director's cut", 'Dark City', "Director's cut"],
+                ["Dark City. Theatrical's cut", 'Dark City', "Theatrical's cut"],
+                ['Birdman', 'Birdman or (The Unexpected Virtue of Ignorance)'],
+                ['Huozhe', 'Huo Zhe'],
+                ['Ak-Nyeo', 'Aknyeo'],
+                ['Face Off', 'Face/Off'],
+                ['Dont Look Back', 'Bob Dylan: Dont Look Back'],
+                ['V.H.S.', 'V/H/S'],
+                ['50-50', '50/50'],
+                ['Sin City. A Dame to Kill For', "Frank Miller's Sin City: A Dame to Kill For"],
+                ['The Empire Strikes Back', 'Star Wars: Episode V - The Empire Strikes Back'],
+                ['Return of the Jedi', 'Star Wars: Episode VI - Return of the Jedi'],
+                ['The Last Jedi', 'Star Wars: Episode VIII - The Last Jedi'],
+                ['The Phantom Menace', 'Star Wars: Episode I - The Phantom Menace'],
+                ['Rogue One', 'Rogue One: A Star Wars Story'],
+                ['Dracula', "Bram Stoker's Dracula"],
+                ['Dark Phoenix', 'X-Men: Dark Phoenix'],
+                ['Extraterrestre', 'Extraterrestrial'],
+                ['Un cuento chino', 'Chinese Take-Out'],
+                ['El bar', 'The Bar'],
+                ['Dolor y gloria', 'Pain and Glory'],
+                ['Amama', 'When a Tree Falls'],
+                ['Smultronstället', 'Wild Strawberries'],
+                ['Alien³', 'Alien 3'],
+                ['Hwal', 'The Bow'],
+                ['Oro', 'Gold'],
+                ['Ils', 'Them'],
+                ['Das Experiment', 'The Experiment'],
+                ['Il traditore', 'The Traitor'],
+                ["J'accuse", 'An Officer and a Spy'],
+                ['Noruwei no mori', 'Norwegian Wood'],
+                ['Ohayô', 'Good Morning'],
+                ['Yao a yao yao dao waipo qiao', 'Shanghai Triad'],
+                ['Ying', 'Shadow'],
+                ['Ray', 'Paradise'],
+                ['Zimna wojna', 'Cold War'],
+                ['Kokuhaku', 'Confessions']]
         for affected_film in films_with_wrong_titles:
             if affected_film[0].lower() == self.row['title'].lower():
                 self.row['title'] = affected_film[1]
+                # If the title includes the version
+                if len(affected_film) >= 3:
+                    self.row['version'] = affected_film[2]
 
-        # Juan Antonio Bayona -> J.A. Bayona
-        affected_director=['Juan Antonio Bayona', 'J.A. Bayona'] 
-        if affected_director[0].lower() == self.row['director'].lower():
-            self.row['director'] = affected_director[1]
+        # Wrong Directors
+        affected_directors=[['Juan Antonio Bayona', 'J.A. Bayona'],
+                ['Andrey Tarkovskiy', 'Andrei Tarkovsky'],
+                ['Wong Kar Wai', 'Wong Kar-Wai'],
+                ['Shion Sono', 'Sion Sono'],
+                ['Jennifer Yuh', 'Jennifer Yuh Nelson'],
+                ['Andrés Muschietti', 'Andy Muschietti'],
+                ['Jaihong Juhn', 'Jai-hong Juhn'],
+                ['Víctor González', 'Fernando Meirelles, Kátia Lund']]
+        for affected_director in affected_directors:
+            if affected_director[0].lower() == self.row['director'].lower():
+                self.row['director'] = affected_director[1]
+
+        # Wrong title and wrong director
+        affected_movies=[['Lik Wong', 'Riki-Oh: The Story of Ricky', 'Ngai Choi Lam'],
+                ['Wu xia', 'Dragon', 'Peter Ho-Sun Chan']]
+        for affected_movie in affected_movies:
+            if affected_movie[0].lower() == self.row['title'].lower():
+                self.row['title'] = affected_movie[1]
+                self.row['director'] = affected_movie[2]
 
         # Superman II (Richard Donner, 2006) -> Superman II (Richard Donner edition) (Richard Lester, 1980 y 2006)
         affected_film=['Superman II', '2006'] 
         if (affected_film[0].lower() == self.row['title'].lower()) and (self.row['year'] == affected_film[1]):
-            self.row['title'] = 'Superman II (Richard Donner edition)'
-            self.row['year'] = '1980 y 2006'
+            self.row['title'] = 'Superman II'
+            self.row['version'] = 'Richard Donner edition'
+            self.row['year'] = '1980'
+            self.add_tag('2006')
             self.row['director'] = 'Richard Lester'
-
-
-    """
-    TODO: Borrar, no se usa
-    def add_fake_path(self):
-        if (not self.row['path']) and (self.row['storage_type'] ==  'hard-drive'):
-            self.row['path'] = '/FakePath/' + self.row['title'] + ' - ' + self.row['title_preferred'] + ' (' + self.row['director'] + ', ' + self.row['year'] + ').' + self.row['media_format']
-    """
 
 def generate_file(fin, fout, csv_quotechar, csv_delimiter):
     writer = csv.DictWriter(fout, fieldnames = csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
