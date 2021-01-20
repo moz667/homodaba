@@ -31,6 +31,29 @@ def validateFiles(filenames):
 
 class rawFilesParser:
     VALID_EXTENSIONS = ['avi', 'mkv', 'mp4', 'm4v', 'm2ts', 'mts', 'iso', 'm4a']
+    GARBAGE_TITLES = ['Title', 'Título Original', 'Miss Congeniality 4']
+    USEFUL_FIELDS = ['title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'storage_type', 'storage_name', 'tags', 'version', 'path', 'subpath',
+    'filename']
+
+    def discardGarbageTitles(self, movie):
+        title = movie['title']
+        if any(bad_title.lower() == title.lower() for bad_title in rawFilesParser.GARBAGE_TITLES):
+            movie['ignored'] = True
+
+    def add_tag(self, movie, tag):
+        if not 'tags' in movie or movie['tags'] == '':
+            movie['tags'] = tag
+        else:
+            movie['tags'] = movie['tags'] + ',' + tag
+
+    def set_subpath_as_tag(self, row):
+        titlewithpath = self.set_subpath_as_tag.regex.match(row['title'])
+        if titlewithpath:
+            subpath = titlewithpath.group(1)
+            trimmed_title = titlewithpath.group(2)
+            self.add_tag(row,subpath)
+            row['title'] = trimmed_title
+    set_subpath_as_tag.regex = re.compile(r'(.*)/(.*)')                                  # subpath/Title
 
     def readCSVFiles(self, input_csvfiles, csv_quotechar, csv_delimiter):
         raw_csv = []
@@ -42,24 +65,32 @@ class rawFilesParser:
         self.raw_csv = raw_csv
         print ('CSV list length',len(self.raw_csv))
 
+    def translateHeaders(self, row):
+        row['title'] = row['Título Original']
+        row['title_preferred'] = row['Titulo traducido']
+        row['director'] = row['Director']
+        row['year'] = row['Año']
+        row['resolution'] = row['Resolución']
+        row['media_format'] = row['Formato']
+        row['storage_type'] = row['Formato'].lower()
+        row['storage_name'] = row['Localizacion']
+        row['path'] = ''
+        row['filename'] = ''
+
     def processCSVFiles(self):
         for row in self.raw_csv:
             rawText = str(row)
+            self.translateHeaders(row)
+            self.set_subpath_as_tag(row)
+            self.process_altTitle(row)
             movie = {}
             movie['rawText'] = rawText
             movie['ignored'] = False
-            movie['storage_name'] = row['Localizacion']
-            movie['title'] = row['Título Original']
-            movie['title_preferred'] = row['Titulo traducido']
-            movie['director'] = row['Director']
-            movie['year'] = row['Año']
-            movie['resolution'] = row['Resolución']
-            movie['media_format'] = row['Formato']
-            movie['path'] = ''
-            movie['subpath'] = ''
-            movie['filename'] = ''
-            movie['tags'] = ''
-            self.movies[rawText] = movie
+            for field in self.USEFUL_FIELDS:
+                if field in row: movie[field] = row[field]
+            self.discardGarbageTitles(movie)
+            if not movie['ignored']:
+                self.movies[rawText] = movie
 
     def readTXTFiles(self, input_txtfiles):
         raw_txt = []
@@ -70,8 +101,6 @@ class rawFilesParser:
         print ('TXT list length',len(self.raw_txt))
 
     def processTXTFiles(self):
-        ignored = 0
-        processed = 0
         self.movies = {}
         for txtline in self.raw_txt:
             movie = {}
@@ -79,13 +108,6 @@ class rawFilesParser:
             movie['ignored'] = False
             if not movie['ignored']: self.processMovie (movie)
             if not movie['ignored']: self.movies[txtline] = movie
-            if movie['ignored']:
-                ignored = ignored + 1
-            else:
-                processed = processed + 1
-        print ('Total movies:',len(self.movies))
-        print (' Ignored:',ignored)
-        print (' Processed:',processed)
 
     def splitPath(self, movie):
         path,name = os.path.split(os.path.abspath(movie['rawText']))
@@ -108,7 +130,8 @@ class rawFilesParser:
                 subpath = ""
             movie['storage_name'] = storage_name
             movie['isHD'] = isHD
-            movie['tags'] = subpath
+            self.add_tag(movie, subpath)
+            movie['storage_type'] = 'hard-drive'
         else:
             movie['ignored'] = True
     processPath.regex = re.compile(r'/media/bpk/(HDD-Pelis-[0-9]{3})/([HS]D)(?:/(.*))?')
@@ -183,6 +206,22 @@ class rawFilesParser:
             movie['title_preferred'] = ''
     getTitles.regex = re.compile(r'(.*)(?: - (.*))')
 
+    def process_altTitle(self,movie):
+        title_fields=['title','title_preferred']
+        for title in title_fields:
+            alttitle_exist = self.process_altTitle.alttitle_regex.match(movie[title])
+            if alttitle_exist:
+                trimmed_title = alttitle_exist.group(1)
+                movie[title] = trimmed_title
+                alttitle = alttitle_exist.group(2)
+                alttitle_is_a_version = self.process_altTitle.version_regex.search(alttitle)
+                if alttitle_is_a_version:
+                    movie['version'] = alttitle
+                else:
+                    self.add_tag(movie, alttitle)
+    process_altTitle.alttitle_regex = re.compile(r'(.*) \((.*)\)')                  # Tile (Alt. Title)
+    process_altTitle.version_regex = re.compile(r'(edition|version|censor|cut)', re.IGNORECASE)
+
     def processMovie(self, movie):
         if not movie['ignored']: self.splitPath(movie)
         if not movie['ignored']: self.processPath(movie)
@@ -191,15 +230,12 @@ class rawFilesParser:
         if not movie['ignored']: self.getResolution(movie)
         if not movie['ignored']: self.getMediaFormat(movie)
         if not movie['ignored']: self.getTitles(movie)
+        if not movie['ignored']: self.process_altTitle(movie)
+        if not movie['ignored']: self.discardGarbageTitles(movie)
 
 class csvCleaner:
-    GARBAGE_TITLES = ['Title', 'Título Original', 'Miss Congeniality 4']
-
     def process(self, row):
         self.row = row
-        self.add_storage_type()
-        self.set_subpath_as_tag()
-        self.process_altTitle()
         self.process_007Films()
         self.process_AlienFilms()
         self.process_HarryPotterFilms()
@@ -215,45 +251,6 @@ class csvCleaner:
         else:
             tags = self.row['tags']
             self.row['tags'] = tags + ',' + tag
-
-    def is_procesable(self, title):
-        if any(bad_title.lower() == title.lower() for bad_title in csvCleaner.GARBAGE_TITLES):
-            return False
-        return True
-
-    def add_storage_type(self):
-        if self.row['storage_name']  == 'Original':
-            self.row['storage_type'] = self.row['media_format'].lower()
-        elif self.add_storage_type.regex.match( self.row['storage_name'] ):
-            self.row['storage_type'] =  'hard-drive'
-        else:
-            raise TypeError("Couldn't identify storage_type for", self.row['storage_name'])
-    add_storage_type.regex = re.compile(r'HDD-Pelis-[0-9]{3}')
-
-    def set_subpath_as_tag(self):
-        titlewithpath = self.set_subpath_as_tag.regex.match(self.row['title'])
-        if titlewithpath:
-            subpath = titlewithpath.group(1)
-            trimmed_title = titlewithpath.group(2)
-            self.add_tag(subpath)
-            self.row['title'] = trimmed_title
-    set_subpath_as_tag.regex = re.compile(r'([^/]+)/(.*)')                                  # subpath/Title
-
-    def process_altTitle(self):
-        title_fields=['title','title_preferred']
-        for title in title_fields:
-            alttitle_exist = self.process_altTitle.alttitle_regex.match(self.row[title])
-            if alttitle_exist:
-                trimmed_title = alttitle_exist.group(1)
-                self.row[title] = trimmed_title
-                alttitle = alttitle_exist.group(2)
-                alttitle_is_a_version = self.process_altTitle.version_regex.search(alttitle)
-                if alttitle_is_a_version:
-                    self.row['version'] = alttitle
-                else:
-                    self.add_tag(alttitle)
-    process_altTitle.alttitle_regex = re.compile(r'([^\(]+) \(([^\)]+)\)')                  # Tile (Alt. Title)
-    process_altTitle.version_regex = re.compile(r'(edition|version|censor|cut)', re.IGNORECASE)
 
     def process_007Films(self):
         film007 = self.process_007Films.regex.match(self.row['title'])
@@ -421,10 +418,9 @@ def generate_file(rawMovies, fout, csv_quotechar, csv_delimiter):
         else:
             movie['path'] = rawMovie['path'] + '/' + rawMovie['filename']
 
-        if bashelineCleaner.is_procesable(movie['title']):
-            writer.writerow(
-                bashelineCleaner.process(movie)
-            )
+        writer.writerow(
+            bashelineCleaner.process(movie)
+        )
 
 def main(args):
     '''
