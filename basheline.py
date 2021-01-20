@@ -144,6 +144,7 @@ class BashelineCleaner:
                 ['The Deadly Affair', 1967],
                 ['Two Cars, One Night', 2003],
                 ['Toy Story 3', 2010],
+                ['Grounded', 2012],
                 ['The Offence', 1973]]
         for affected_film in affected_films:
             if affected_film[0].lower() == self.row['title'].lower():
