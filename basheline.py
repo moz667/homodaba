@@ -4,35 +4,199 @@ import argparse
 import csv
 import sys
 import re
+import os
 
-csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'tags']
-
+input_csv_header = ['Localizacion', 'Título Original', 'Titulo traducido', 'Director', 'Año', 'Resolución', 'Formato']
+output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'tags']
 
 def parse_arguments(args):
     parser = argparse.ArgumentParser(description='Bas[h]eline. Because even IMDB needs some lube ^_^')
-    parser.add_argument("-i", "--inputcsv", nargs='+', required=True, help="Input CSV. The CSV File that is going to be processed")
+    parser.add_argument("-i", "--input", nargs='+', required=True, help="Input TXT and CSV files. The files that are going to be processed")
     parser.add_argument("-o", "--outputcsv", nargs='+', required=True, help="Output CSV. Sanitised CSV File that is going to be generated")
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     return parser.parse_args()
 
-def print_first_lines(csvfile, csv_quotechar, csv_delimiter):
-    print ('\ncsvfile: ',csvfile)
-    csv_reader = csv.DictReader(csvfile, fieldnames = csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
-    fieldnames = csv_reader.fieldnames
-    print ('fields: ', fieldnames)
-    i=0
-    for row in csv_reader:
-        i+=1
-        if i>=10:
-            break
-        print ('Line %d: %s' % (i,row)  )
+def validateFiles(filenames):
+    csvFiles = []
+    txtFiles = []
+    for file in filenames:
+        base, ext = os.path.splitext(file)
+        if ext.lower() == '.csv':
+            csvFiles.append(file)
+        elif ext.lower() == '.txt':
+            txtFiles.append(file)
+        else:
+            raise argparse.ArgumentTypeError('File must have a csv or txt extension', file)
+    return csvFiles, txtFiles
 
-class BashelineCleaner:
-    GARBAGE_TITLES = ['Título Original', 'Miss Congeniality 4']
+class rawFilesParser:
+    VALID_EXTENSIONS = ['avi', 'mkv', 'mp4', 'm4v', 'm2ts', 'mts', 'iso', 'm4a']
+
+    def readCSVFiles(self, input_csvfiles, csv_quotechar, csv_delimiter):
+        raw_csv = []
+        for csvfile in input_csvfiles:
+            with open(csvfile, 'r', newline='') as input_csv:
+                reader = csv.DictReader(input_csv, fieldnames = input_csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
+                for row in reader:
+                    raw_csv.append(row)
+        self.raw_csv = raw_csv
+        print ('CSV list length',len(self.raw_csv))
+
+    def processCSVFiles(self):
+        for row in self.raw_csv:
+            rawText = str(row)
+            movie = {}
+            movie['rawText'] = rawText
+            movie['ignored'] = False
+            movie['storage_name'] = row['Localizacion']
+            movie['title'] = row['Título Original']
+            movie['title_preferred'] = row['Titulo traducido']
+            movie['director'] = row['Director']
+            movie['year'] = row['Año']
+            movie['resolution'] = row['Resolución']
+            movie['media_format'] = row['Formato']
+            movie['path'] = ''
+            movie['subpath'] = ''
+            movie['filename'] = ''
+            movie['tags'] = ''
+            self.movies[rawText] = movie
+
+    def readTXTFiles(self, input_txtfiles):
+        raw_txt = []
+        for txtfile in input_txtfiles:
+            with open(txtfile, 'r', newline='') as input_txt:
+                raw_txt += input_txt.readlines()
+        self.raw_txt = raw_txt
+        print ('TXT list length',len(self.raw_txt))
+
+    def processTXTFiles(self):
+        ignored = 0
+        processed = 0
+        self.movies = {}
+        for txtline in self.raw_txt:
+            movie = {}
+            movie['rawText'] = txtline
+            movie['ignored'] = False
+            if not movie['ignored']: self.processMovie (movie)
+            if not movie['ignored']: self.movies[txtline] = movie
+            if movie['ignored']:
+                ignored = ignored + 1
+            else:
+                processed = processed + 1
+        print ('Total movies:',len(self.movies))
+        print (' Ignored:',ignored)
+        print (' Processed:',processed)
+
+    def splitPath(self, movie):
+        path,name = os.path.split(os.path.abspath(movie['rawText']))
+        movie['filename'] = name.rstrip("\n")
+        movie['path'] = path
+
+    def processPath(self, movie):
+        pathSplit = self.processPath.regex.match(movie['path'])
+        if pathSplit:
+            storage_name = pathSplit.group(1)
+            definition = pathSplit.group(2)
+            subpath = pathSplit.group(3)
+            if definition == 'SD':
+                isHD = False
+            elif definition == 'HD':
+                isHD = True
+            else:
+                raise TypeError("Couldn't identify if isHD/isSD for", movie['path'])
+            if not subpath:
+                subpath = ""
+            movie['storage_name'] = storage_name
+            movie['isHD'] = isHD
+            movie['tags'] = subpath
+        else:
+            movie['ignored'] = True
+    processPath.regex = re.compile(r'/media/bpk/(HDD-Pelis-[0-9]{3})/([HS]D)(?:/(.*))?')
+
+    def checkExtension(self,movie):
+        extension = movie['extension']
+        if extension and not any(validExtension.lower() == extension.lower() for validExtension in rawFilesParser.VALID_EXTENSIONS):
+            movie['ignored'] = True
+        elif extension:
+            movie['extension'] = extension.upper()
+        else:
+            movie['extension'] = ''
+
+    def splitFilename(self, movie):
+        nameSplit = self.splitFilename.splitTitle.match(movie['filename'])
+        if nameSplit:
+            movie['titles'] = nameSplit.group(1)
+            movie['directorsAndYears'] = nameSplit.group(2)
+            movie['resolution'] = nameSplit.group(3)
+            movie['extension'] = nameSplit.group(4)
+            typeAlt = nameSplit.group(5) # Some Files are named "XXXXX DVD" when a DVD is located in HD (WTF!)
+            if typeAlt:
+                movie['media_format'] = typeAlt
+                movie['extension'] = ''
+                movie['isHD'] = False
+            else:
+                movie['media_format'] = ''
+                self.checkExtension(movie)
+        else:
+            movie['ignored'] = True
+    splitFilename.splitTitle = re.compile(r'(.*) (\(.*, (?:[0-9]{4}(?: y [0-9]{4})?)\)) ?(720p|1080p|2160p|1080i|1080|2160)?(?:(?:\.([a-zA-Z0-9]*))| (DVD))?$', re.MULTILINE )
+
+    def getDirectorAndYears(self, movie):
+        directorYearsSplit = self.getDirectorAndYears.regex.match(movie['directorsAndYears'])
+        if directorYearsSplit:
+            movie['director'] = directorYearsSplit.group(1)
+            movie['year'] = directorYearsSplit.group(2)
+        else:
+            raise TypeError("Unable to find Director, year within:", movie['directorsAndYears'])
+    getDirectorAndYears.regex = re.compile(r'\((.*), ([0-9]{4}( y [0-9]{4})?)\)')
+
+    def getResolution(self, movie):
+        if not movie['resolution'] and movie['isHD'] and (movie['extension'] == '' or movie['extension'] == 'ISO')  :
+            movie['resolution'] = "1080p"
+        elif not movie['resolution']:
+            movie['resolution'] = ''
+
+    def getMediaFormat(self, movie):
+        extension = movie['extension']
+        if not movie['extension'] and movie['resolution'] == "1080p":
+            movie['media_format'] = 'BLURAY'
+        elif extension == 'ISO' and movie['resolution'] == "1080p":
+            movie['media_format'] = 'BLURAY-ISO'
+        elif not movie['extension'] and not movie['isHD']:
+            movie['media_format'] = 'DVD'
+        elif extension == 'ISO'  and not movie['isHD']:
+            movie['media_format'] = 'DVD-ISO'
+        elif not movie['extension'] and movie['resolution'] == "2160p":
+            movie['media_format'] = 'ULTRA-BLURAY'
+        elif extension == 'ISO'  and movie['resolution'] == "2160p":
+            movie['media_format'] = 'ULTRA-BLURAY-ISO'
+        else:
+            movie['media_format'] = extension
+
+    def getTitles(self, movie):
+        if ' - ' in movie['titles']: # It has two titles: "Title - title_preferred"
+            titles = self.getTitles.regex.match(movie['titles'])
+            movie['title'] = titles.group(1)
+            movie['title_preferred'] = titles.group(2)
+        else: # It has one title
+            movie['title'] = movie['titles']
+            movie['title_preferred'] = ''
+    getTitles.regex = re.compile(r'(.*)(?: - (.*))')
+
+    def processMovie(self, movie):
+        if not movie['ignored']: self.splitPath(movie)
+        if not movie['ignored']: self.processPath(movie)
+        if not movie['ignored']: self.splitFilename(movie)
+        if not movie['ignored']: self.getDirectorAndYears(movie)
+        if not movie['ignored']: self.getResolution(movie)
+        if not movie['ignored']: self.getMediaFormat(movie)
+        if not movie['ignored']: self.getTitles(movie)
+
+class csvCleaner:
+    GARBAGE_TITLES = ['Title', 'Título Original', 'Miss Congeniality 4']
 
     def process(self, row):
         self.row = row
-
         self.add_storage_type()
         self.set_subpath_as_tag()
         self.process_altTitle()
@@ -43,18 +207,17 @@ class BashelineCleaner:
         self.set_additionalyears_as_tag()
         self.fix_years()
         self.fix_titles()
-
         return self.row
 
     def add_tag(self, tag):
-        tags = self.row['tags']
-        if tags:
-            self.row['tags'] = tags + ',' + tag
-        else:
+        if self.row['tags'] == '':
             self.row['tags'] = tag
+        else:
+            tags = self.row['tags']
+            self.row['tags'] = tags + ',' + tag
 
-    def is_procesable(self, row):
-        if any(bad_title.lower() == row['title'].lower() for bad_title in BashelineCleaner.GARBAGE_TITLES):
+    def is_procesable(self, title):
+        if any(bad_title.lower() == title.lower() for bad_title in csvCleaner.GARBAGE_TITLES):
             return False
         return True
 
@@ -63,6 +226,8 @@ class BashelineCleaner:
             self.row['storage_type'] = self.row['media_format'].lower()
         elif self.add_storage_type.regex.match( self.row['storage_name'] ):
             self.row['storage_type'] =  'hard-drive'
+        else:
+            raise TypeError("Couldn't identify storage_type for", self.row['storage_name'])
     add_storage_type.regex = re.compile(r'HDD-Pelis-[0-9]{3}')
 
     def set_subpath_as_tag(self):
@@ -232,32 +397,57 @@ class BashelineCleaner:
             self.add_tag('2006')
             self.row['director'] = 'Richard Lester'
 
-def generate_file(fin, fout, csv_quotechar, csv_delimiter):
-    writer = csv.DictWriter(fout, fieldnames = csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
-    reader = csv.DictReader(fin, fieldnames = csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
+def generate_file(rawMovies, fout, csv_quotechar, csv_delimiter):
+    writer = csv.DictWriter(fout, fieldnames = output_csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
     writer.writeheader()
+    bashelineCleaner = csvCleaner()
 
-    basheline_cleaner = BashelineCleaner()
+    for film in rawMovies.movies:
+        rawMovie = rawMovies.movies[film]
+        movie = {}
+        if 'title' in rawMovie:             movie['title'] = rawMovie['title']
+        if 'storage_name' in rawMovie:      movie['storage_name'] = rawMovie['storage_name']
+        if 'director' in rawMovie:          movie['director'] = rawMovie['director']
+        if 'year' in rawMovie:              movie['year'] = rawMovie['year']
+        if 'resolution' in rawMovie:        movie['resolution'] = rawMovie['resolution']
+        if 'media_format' in rawMovie:      movie['media_format'] = rawMovie['media_format']
+        if 'title_preferred' in rawMovie:   movie['title_preferred'] = rawMovie['title_preferred']
+        if 'storage_type' in rawMovie:      movie['storage_type'] = rawMovie['storage_type']
+        if 'version' in rawMovie:           movie['version'] = rawMovie['version']
+        if 'tags' in rawMovie:              movie['tags'] = rawMovie['tags']
+        #Tricky: OutputCSV considers 'path' as the absolute name
+        if rawMovie['path'] == '':
+            movie['path'] = rawMovie['filename']
+        else:
+            movie['path'] = rawMovie['path'] + '/' + rawMovie['filename']
 
-    for row in reader:
-        if basheline_cleaner.is_procesable(row):
+        if bashelineCleaner.is_procesable(movie['title']):
             writer.writerow(
-                basheline_cleaner.process(row)
+                bashelineCleaner.process(movie)
             )
 
 def main(args):
-    input_csvfile=args.inputcsv[0]
+    '''
+    Input files:
+         TXT Files contain bulk data in HDDs. Similar to: 'find /path > bulkFile.txt'
+         CSV Files contain a custom list (physical media)
+    '''
+    input_files=args.input
     output_csvfile=args.outputcsv[0]
+    input_csvfiles, input_txtfiles = validateFiles(input_files)
 
     csv_quotechar = '|'
     csv_delimiter = ';'
 
-    with open(input_csvfile, 'r', newline='') as input_csv, open(output_csvfile, 'w+', newline='') as output_csv:
-        generate_file(input_csv, output_csv, csv_quotechar, csv_delimiter)
+    rawMovies = rawFilesParser()
+    rawMovies.readTXTFiles(input_txtfiles)
+    rawMovies.processTXTFiles()
 
-    #with open(output_csvfile, 'r', newline='') as output_csv:
-    #    print_first_lines(output_csv, csv_quotechar, csv_delimiter)
+    rawMovies.readCSVFiles(input_csvfiles, csv_quotechar, csv_delimiter)
+    rawMovies.processCSVFiles()
 
+    with open(output_csvfile, 'w+', newline='') as output_csv:
+        generate_file(rawMovies, output_csv, csv_quotechar, csv_delimiter)
 
 if __name__ == '__main__':
     arguments = parse_arguments(sys.argv[1:])
