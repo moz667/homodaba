@@ -32,7 +32,6 @@ def validateFiles(filenames):
 class filesParser:
     VALID_EXTENSIONS = ['avi', 'mkv', 'mp4', 'm4v', 'm2ts', 'mts', 'iso', 'm4a']
     GARBAGE_TITLES = ['Title', 'Título Original', 'Miss Congeniality 4']
-    USEFUL_FIELDS = ['title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'storage_type', 'storage_name', 'tags', 'version', 'path', 'subpath']
 
     def gatherMovies(self, txtMovies, csvMovies):
         self.movies = {**txtMovies.movies, **csvMovies.movies}
@@ -47,7 +46,7 @@ class filesParser:
             else:
                 originMovie['path'] = originMovie['path'] + '/' + originMovie['filename']
             movie = {}
-            for field in self.USEFUL_FIELDS:
+            for field in output_csv_header:
                 if field in originMovie: movie[field] = originMovie[field]
             self.movies[row] = movie
 
@@ -140,7 +139,7 @@ class csvFilesParser(filesParser):
             movie['rawText'] = rawText
             movie['ignored'] = False
             movie['filename'] = row['filename']
-            for field in self.USEFUL_FIELDS:
+            for field in output_csv_header:
                 if field in row: movie[field] = row[field]
             self.discardGarbageTitles(movie)
             self.set_additionalyears_as_tag(movie)
