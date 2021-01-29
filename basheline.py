@@ -350,6 +350,7 @@ class csvCleaner(filesParser):
                 ['Huozhe', 'Huo Zhe'],
                 ['Ak-Nyeo', 'Aknyeo'],
                 ['Alien³', 'Alien 3'],
+                ['Hikari', 'Hacia la luz'],
                 ['Dracula', "Bram Stoker's Dracula"],
                 ["Dark City. Director's cut", 'Dark City', "Director's cut"],
                 ["Dark City. Theatrical's cut", 'Dark City', "Theatrical's cut"],
@@ -372,6 +373,7 @@ class csvCleaner(filesParser):
                 ['El bar', 'The Bar'],
                 ['Dolor y gloria', 'Pain and Glory'],
                 ['Amama', 'When a Tree Falls'],
+                ['Sydney', 'Hard Eight'],
                 ['Smultronstället', 'Wild Strawberries'],
                 ['Hwal', 'The Bow'],
                 ['Oro', 'Gold'],
@@ -392,6 +394,12 @@ class csvCleaner(filesParser):
                 # If the title includes the version
                 if len(affected_film) >= 3:
                     self.row['version'] = affected_film[2]
+
+        # Wrong Titles (exists more than once)
+        films_with_wrong_titles= [["El faro", "1998", "El faro del sur"]]
+        for affected_film in films_with_wrong_titles:
+            if affected_film[0].lower() == self.row['title'].lower() and affected_film[1] == self.row['year']:
+                self.row['title'] = affected_film[2]
 
         # Wrong Directors
         affected_directors=[['Juan Antonio Bayona', 'J.A. Bayona'],
