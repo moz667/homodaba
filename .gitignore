@@ -130,3 +130,7 @@ dmypy.json
 
 # csv files
 *.csv
+
+# VIM swap files
+*.swp
+*.swo
