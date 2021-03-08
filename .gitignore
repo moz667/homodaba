@@ -128,8 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# csv files
+# Internal files
 *.csv
+*.json
 
 # VIM swap files
 *.swp

@@ -1,3 +1,12 @@
+2021-03-08:
+  * Añadido soporte a fichero JSON con los campos que se quieren cambiar. El formato debe ser similar a:
+    ```
+    [
+    {"search": {"title": "The Phantom Menace"}, "replace": {"title": "Star Wars: Episode I - The Phantom Menace"}},
+    {"search": {"title": "Superman II", "year": "2006"}, "replace": {"title": "Superman II", "version": "Richard Donner edition", "year": "1980", "tag": "2006", "director": "Richard Lester"}}
+    ]
+    ```
+
 2021-02-16:
   * Django config cambiada para escuchar en la red local.
   * SECRET_KEY sacada del código. Debe estar definida como variable de

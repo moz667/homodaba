@@ -5,6 +5,7 @@ import csv
 import sys
 import re
 import os
+import json
 
 input_csv_header = ['Localizacion', 'Título Original', 'Titulo traducido', 'Director', 'Año', 'Resolución', 'Formato']
 output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'tags']
@@ -13,6 +14,7 @@ def parse_arguments(args):
     parser = argparse.ArgumentParser(description='Bas[h]eline. Because even IMDB needs some lube ^_^')
     parser.add_argument("-i", "--input", nargs='+', required=True, help="Input TXT and CSV files. The files that are going to be processed")
     parser.add_argument("-o", "--outputcsv", nargs='+', required=True, help="Output CSV. Sanitised CSV File that is going to be generated")
+    parser.add_argument("-f", "--fixedfilms", nargs='+', required=False, help="[OPT] Input JSON. File containing film fields to correct")
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     return parser.parse_args()
 
@@ -50,8 +52,14 @@ class filesParser:
                 if field in originMovie: movie[field] = originMovie[field]
             self.movies[row] = movie
 
-    def fixOriginErrors(self):
-        basheline_cleaner = csvCleaner()
+    def fixOriginErrors(self, file_json):
+        base, ext = os.path.splitext(file_json)
+        if ext.lower() != '.json':
+            raise argparse.ArgumentTypeError('File must have a json extension', file_json)
+        with open(file_json, 'r', newline='') as films_to_correct:
+            moviespatch = json.load(films_to_correct)
+
+        basheline_cleaner = csvCleaner(moviespatch)
         for row in self.movies:
             movie = self.movies[row]
             basheline_cleaner.process(movie)
@@ -277,17 +285,18 @@ class txtFilesParser(filesParser):
     getTitles.regex = re.compile(r'(.*)(?: - (.*))')
 
 class csvCleaner(filesParser):
-    def __init__(self):
+    def __init__(self, moviespatch):
+        self.patch = moviespatch
         super().__init__()
 
     def process(self, row):
+        self.mismatched_movies = []
         self.row = row
         self.process_007Films()
         self.process_AlienFilms()
         self.process_HarryPotterFilms()
         self.process_StarWarsFilms()
-        self.fix_years()
-        self.fix_titles()
+        self.fix_movies()
         return self.row
 
     def process_007Films(self):
@@ -326,110 +335,22 @@ class csvCleaner(filesParser):
             self.row['title'] = trimmed_title
     process_StarWarsFilms.regex = re.compile(r'(Episode [A-Z]{1,4})\. (.*)')                # Episode XXXX. Title
 
-    def fix_years(self):
-        affected_films = [['Bajarse al Moro', 1989],
-                ['Cidade de Deus', 2002],
-                ['Crime Wave', 1953],
-                ['Ex Machina', 2014],
-                ['Once', 2007],
-                ['The Deadly Affair', 1967],
-                ['Two Cars, One Night', 2003],
-                ['Toy Story 3', 2010],
-                ['Grounded', 2012],
-                ['The Offence', 1973]]
-        for affected_film in affected_films:
-            if affected_film[0].lower() == self.row['title'].lower():
-                self.row['year'] = affected_film[1]
-
-    def fix_titles(self):
-        # Wrong Titles
-        films_with_wrong_titles= [["Startime 1x27 Incident at a Corner", "Startime Incident at a Corner"],
-                ['The Snapper', 'Screen Two - The Snapper'],
-                ['Kung fu', 'Kung Fu Hustle'],
-                ['Birdman', 'Birdman or (The Unexpected Virtue of Ignorance)'],
-                ['Huozhe', 'Huo Zhe'],
-                ['Ak-Nyeo', 'Aknyeo'],
-                ['Alien³', 'Alien 3'],
-                ['Hikari', 'Hacia la luz'],
-                ['Dracula', "Bram Stoker's Dracula"],
-                ["Dark City. Director's cut", 'Dark City', "Director's cut"],
-                ["Dark City. Theatrical's cut", 'Dark City', "Theatrical's cut"],
-                # We need to change them because of the use of forbidden characters: ":" o "/"
-                ['Silent Hill. Revelation 3D', 'Silent Hill: Revelation'],
-                ['Face Off', 'Face/Off'],
-                ['Dont Look Back', 'Bob Dylan: Dont Look Back'],
-                ['V.H.S.', 'V/H/S'],
-                ['50-50', '50/50'],
-                ['Sin City. A Dame to Kill For', "Frank Miller's Sin City: A Dame to Kill For"],
-                ['The Empire Strikes Back', 'Star Wars: Episode V - The Empire Strikes Back'],
-                ['Return of the Jedi', 'Star Wars: Episode VI - Return of the Jedi'],
-                ['The Last Jedi', 'Star Wars: Episode VIII - The Last Jedi'],
-                ['The Phantom Menace', 'Star Wars: Episode I - The Phantom Menace'],
-                ['Rogue One', 'Rogue One: A Star Wars Story'],
-                ['Dark Phoenix', 'X-Men: Dark Phoenix'],
-                # We need to use the "World-wide (English title)" instead of the "original title".
-                ['Extraterrestre', 'Extraterrestrial'],
-                ['Un cuento chino', 'Chinese Take-Out'],
-                ['El bar', 'The Bar'],
-                ['Dolor y gloria', 'Pain and Glory'],
-                ['Amama', 'When a Tree Falls'],
-                ['Sydney', 'Hard Eight'],
-                ['Smultronstället', 'Wild Strawberries'],
-                ['Hwal', 'The Bow'],
-                ['Oro', 'Gold'],
-                ['Ils', 'Them'],
-                ['Das Experiment', 'The Experiment'],
-                ['Il traditore', 'The Traitor'],
-                ["J'accuse", 'An Officer and a Spy'],
-                ['Noruwei no mori', 'Norwegian Wood'],
-                ['Ohayô', 'Good Morning'],
-                ['Yao a yao yao dao waipo qiao', 'Shanghai Triad'],
-                ['Ying', 'Shadow'],
-                ['Ray', 'Paradise'],
-                ['Zimna wojna', 'Cold War'],
-                ['Kokuhaku', 'Confessions']]
-        for affected_film in films_with_wrong_titles:
-            if affected_film[0].lower() == self.row['title'].lower():
-                self.row['title'] = affected_film[1]
-                # If the title includes the version
-                if len(affected_film) >= 3:
-                    self.row['version'] = affected_film[2]
-
-        # Wrong Titles (exists more than once)
-        films_with_wrong_titles= [["El faro", "1998", "El faro del sur"]]
-        for affected_film in films_with_wrong_titles:
-            if affected_film[0].lower() == self.row['title'].lower() and affected_film[1] == self.row['year']:
-                self.row['title'] = affected_film[2]
-
-        # Wrong Directors
-        affected_directors=[['Juan Antonio Bayona', 'J.A. Bayona'],
-                ['Andrey Tarkovskiy', 'Andrei Tarkovsky'],
-                ['Wong Kar Wai', 'Wong Kar-Wai'],
-                ['Shion Sono', 'Sion Sono'],
-                ['Jennifer Yuh', 'Jennifer Yuh Nelson'],
-                ['Andrés Muschietti', 'Andy Muschietti'],
-                ['Jaihong Juhn', 'Jai-hong Juhn'],
-                ['Víctor González', 'Fernando Meirelles, Kátia Lund']]
-        for affected_director in affected_directors:
-            if affected_director[0].lower() == self.row['director'].lower():
-                self.row['director'] = affected_director[1]
-
-        # Wrong title and wrong director
-        affected_movies=[['Lik Wong', 'Riki-Oh: The Story of Ricky', 'Ngai Choi Lam'],
-                ['Wu xia', 'Dragon', 'Peter Ho-Sun Chan']]
-        for affected_movie in affected_movies:
-            if affected_movie[0].lower() == self.row['title'].lower():
-                self.row['title'] = affected_movie[1]
-                self.row['director'] = affected_movie[2]
-
-        # Superman II (Richard Donner, 2006) -> Superman II (Richard Donner edition) (Richard Lester, 1980 y 2006)
-        affected_film=['Superman II', '2006'] 
-        if (affected_film[0].lower() == self.row['title'].lower()) and (self.row['year'] == affected_film[1]):
-            self.row['title'] = 'Superman II'
-            self.row['version'] = 'Richard Donner edition'
-            self.row['year'] = '1980'
-            self.add_tag(self.row,'2006')
-            self.row['director'] = 'Richard Lester'
+    def fix_movies(self):
+        for affected_film in self.patch:
+            search = affected_film['search']
+            replace = affected_film['replace']
+            match = True
+            for field in search:
+                search_content = search[field]
+                if not search_content.lower() == self.row[field].lower():
+                    match = False
+            if match:
+                for field in replace:
+                    replace_content = replace[field]
+                    if field == 'tag':
+                        self.add_tag(self.row,replace_content)
+                    else:
+                        self.row[field] = replace_content
 
 def generate_file(movies, fout, csv_quotechar, csv_delimiter):
     writer = csv.DictWriter(fout, fieldnames = output_csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
@@ -447,6 +368,11 @@ def main(args):
     '''
     input_files=args.input
     output_csvfile=args.outputcsv[0]
+    if args.fixedfilms is not None:
+        films_to_correct=args.fixedfilms[0]
+    else:
+        films_to_correct = None
+
     input_csvfiles, input_txtfiles = validateFiles(input_files)
 
     csv_quotechar = '|'
@@ -462,7 +388,8 @@ def main(args):
 
     movies = filesParser()
     movies.gatherMovies(txtMovies, csvMovies)
-    movies.fixOriginErrors()
+    if films_to_correct:
+        movies.fixOriginErrors(films_to_correct)
 
     with open(output_csvfile, 'w+', newline='') as output_csv:
         generate_file(movies, output_csv, csv_quotechar, csv_delimiter)
