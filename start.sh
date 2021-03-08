@@ -7,4 +7,4 @@ if [ ! -e "homodaba/db.sqlite3" ]; then
     $DJANGO_MANAGE createsuperuser
 fi
 
-$DJANGO_MANAGE runserver
+$DJANGO_MANAGE runserver $LOCALNETIP:8000

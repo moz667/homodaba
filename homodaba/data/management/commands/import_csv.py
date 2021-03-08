@@ -303,7 +303,7 @@ OPCIONALES:
                 for director_name in director.split(','):
                     if not director_name in ia_directors:
                         # Esto es para que revises tu csv!!!
-                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s" % (director_name, title))
+                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s'" % (director_name, title))
 
 
     def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None):
