@@ -30,6 +30,7 @@ then
     exit
 fi
 
+pip install -r python-requirements.txt -q
 $DJANGO_MANAGE migrate
 
 if [ "$1" != "" ]
