@@ -17,15 +17,13 @@ elif [ ! "$(docker ps -q -f name=$ES_CONTAINER_NAME)" ]; then
     docker run  --name $ES_CONTAINER_NAME -d -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" $ES_CONTAINER_VERSION
 fi
 
-if [ "$(docker ps -aq -f status=exited -f name=$ES_CONTAINER_NAME)" ] || [ ! "$(docker ps -q -f name=$ES_CONTAINER_NAME)" ]; then
-    # Si queremos hacer rebuild, tenemos que esperar a que termine de arrancar el ES
-    if [ "$1" == "--rebuild"]
-    then
-        echo "Esperando a que termine de arrancar ElasticSearch..."
-        sleep 30
-        echo "Reconstruyendo indices ElasticSearch..."
-        bash rebuild-es.sh
-    fi
+# Si queremos hacer rebuild, tenemos que esperar a que termine de arrancar el ES
+if [ "$1" == "--rebuild" ]
+then
+    echo "Esperando a que termine de arrancar ElasticSearch..."
+    sleep 30
+    echo "Reconstruyendo indices ElasticSearch..."
+    bash rebuild-es.sh
 fi
 
 bash start.sh
