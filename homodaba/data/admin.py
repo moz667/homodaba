@@ -1,11 +1,23 @@
 from django.contrib import admin
 from django.db.models import Q
+from django.shortcuts import reverse
+from django.urls import path
+
+from admin_auto_filters.filters import AutocompleteFilter
 
 from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from .search import populate_search_filter
+from .views import MoviePersonDirectorJsonView, PersonDirectorJsonView
 
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
+
+class DirectorFilter(AutocompleteFilter):
+    title = 'Director' # display title
+    field_name = 'directors' # name of the foreign key field
+
+    def get_autocomplete_url(self, request, model_admin):
+        return reverse('admin:json_autocomplete_director_search')
 
 class TagAdmin(admin.ModelAdmin):
     pass
@@ -69,16 +81,29 @@ class MovieAdmin(admin.ModelAdmin):
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
-    list_filter = (TagListFilter, GenreListFilter, ContentRatingListFilter,)
+    list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
 
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results
     search_fields = ('title',)
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('json/autocomplete/director/search/', self.admin_site.admin_view(
+                    PersonDirectorJsonView.as_view(model_admin=self)
+                ),
+                name='json_autocomplete_director_search'
+            ),
+        ]
+        return custom_urls + urls
+
     def get_search_results(self, request, queryset, search_term):
         # Si No hay terminos de busqueda devolvemos el queryset tal como esta
         if not search_term:
-            return queryset, False
+            # Hace un distinct() porque las busquedas con el filtro de director
+            # devolvia duplicados
+            return queryset.distinct(), False
 
         # OJO: Esto es solo para DSL VVVVV
         genre_filter = None
@@ -95,9 +120,14 @@ class MovieAdmin(admin.ModelAdmin):
         if 'tag' in request.GET.keys():
             if request.GET['tag']:
                 tag_filter = int(request.GET['tag'])
+
+        director_filter = None
+        if 'directors__pk__exact' in request.GET.keys():
+            if request.GET['directors__pk__exact']:
+                director_filter = int(request.GET['directors__pk__exact'])
         # OJO: Esto es solo para DSL ^^^^
         
-        return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter)
+        return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter, director=director_filter)
 
     # form = MovieForm
 admin.site.register(Movie, MovieAdmin)

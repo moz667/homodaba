@@ -11,7 +11,7 @@ if ELASTICSEARCH_DSL:
     from .documents import MovieDocument
     from elasticsearch_dsl import Q as DSL_Q
 
-    def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, year=None):
+    def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, year=None, director=None):
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
         # TODO: stats de la busqueda (total encontrados para la paginacion)
         # TODO: paginacion
@@ -50,7 +50,20 @@ if ELASTICSEARCH_DSL:
             query.must.append(DSL_Q("nested", path="tags", 
                 query=DSL_Q("match", tags__pk=tag)
             )) 
-        
+
+        if director:
+            query.must.append(DSL_Q("nested", path="directors", 
+                query=DSL_Q("match", directors__pk=director)
+            ))
+            # TODO: investigar. Esto son intentos de hacer el filtro por director
+            # que no ha funcionado ni uno... revisar documents.py
+            # Al final use el filtro como tag que parece que funciona :P
+            # 
+            # query.must.append(DSL_Q("match", directors__pk=director))
+            # query.must.append(DSL_Q("multi_match", 
+            #    query=director, fields=["director.pk"]
+            # ))
+
         if genre:
             query.must.append(DSL_Q("nested", path="genres", 
                 query=DSL_Q("match", genres__pk=genre)
@@ -103,8 +116,6 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
             query_title.add(Q(title__icontains=' ' + search_term), Q.OR)
             query_title.add(Q(title__icontains=search_term + ' '), Q.OR)
 
-        
-
         if TitleAka.objects.filter(query_title).all().count() > 0:
             query_title = Q(title_akas__in=TitleAka.objects.filter(query_title))
             if not contains_quote:
@@ -154,11 +165,11 @@ def extract_year(search_term):
     
     return None, search_term
 
-def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None):
+def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, director=None):
     year, search_term = extract_year(search_term)
 
     if ELASTICSEARCH_DSL:
-        return populate_search_filter_dsl(queryset, search_term, use_use_distinct=use_use_distinct, genre=genre, content_rating_system=content_rating_system, tag=tag, year=year)
+        return populate_search_filter_dsl(queryset, search_term, use_use_distinct=use_use_distinct, genre=genre, content_rating_system=content_rating_system, tag=tag, year=year, director=director)
 
     return populate_search_filter_model(queryset, search_term, use_use_distinct, year=year)
 

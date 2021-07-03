@@ -5,6 +5,7 @@ El nombre viene de la afficción de bpk a dar por saco... (es coña ^ _ ^ viene 
 HOme MOvie DAtaBAse)
 
 #### TODO: (Lista con cosas pendientes)
+1. Documentar el pyenv homodaba : homodaba (created from 3.8.3)
 1. Añadir campo para orden de visionado (para que bpk no este metiendo una 
 tag por cada peli dentro de una saga :P)
 1. Problema con los akas (si buscas love te saca pelis con el titulo en sloveno)

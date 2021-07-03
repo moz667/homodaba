@@ -26,7 +26,9 @@ class MovieDocument(Document):
     })
 
     # Para las personas no veo otra forma de hacerlo... VVVV 
-    directors = fields.ObjectField(properties={
+    # TODO: Investigar. Para el nuevo filtro por director, no consegui hacerlo 
+    # funcionar como ObjectField pero si funciona como NestedField... NPI!
+    directors = fields.NestedField(properties={
         'name': fields.TextField(),
         'pk': fields.IntegerField(),
     })

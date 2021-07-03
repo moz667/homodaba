@@ -15,6 +15,8 @@ class Person(models.Model):
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
+    movies_as_director = models.ManyToManyField('Movie', through='MoviePersonDirectorProxy')
+
     def get_imdb_url(self):
         if self.imdb_id:
             return 'https://www.imdb.com/name/nm%s/' % self.imdb_id
@@ -96,6 +98,8 @@ class Movie(models.Model):
     tags = models.ManyToManyField(Tag)
     genres = models.ManyToManyField(GenreTag)
     content_rating_systems = models.ManyToManyField(ContentRatingTag)
+
+    directors = models.ManyToManyField(Person, through='MoviePersonDirectorProxy')
 
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, 
         blank=False)
@@ -211,6 +215,16 @@ class MoviePerson(models.Model):
     class Meta:
         verbose_name = 'reparto'
         verbose_name_plural = 'repartos'
+
+class MoviePersonDirectorManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(role=MoviePerson.RT_DIRECTOR)
+
+class MoviePersonDirectorProxy(MoviePerson):
+    class Meta:
+        proxy = True
+    
+    objects = MoviePersonDirectorManager()
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'
