@@ -16,10 +16,19 @@ export LOCALNETIP='127.0.0.1'
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 export ALLOWED_HOSTS='127.0.0.1'
 
+# Mira primero en $VIRTUAL_ENV si existe un env.sh y lo importa
 if [ -e $VIRTUAL_ENV/env.sh ]; then
-  source $VIRTUAL_ENV/env.sh
+    source $VIRTUAL_ENV/env.sh
 fi
 
+# Sobreescribe con lo que tengamos dentro de .venv (archivo oculto para que git)
+# no lo pille
+if [ -e .venv ]; then
+    source .venv
+fi
+
+# Comprueba al final si tenemos definida la variable que no tiene valor 
+# por defecto SECRET_KEY... de no tenerla tenemos que notificar y salirnos
 if [ "$SECRET_KEY" == "" ]; then
     echo -e " * La variable SECRET_KEY es obligatoria * \n\
 mas info: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key\n\
