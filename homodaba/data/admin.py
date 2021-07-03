@@ -7,7 +7,7 @@ from admin_auto_filters.filters import AutocompleteFilter
 
 from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from .search import populate_search_filter
-from .views import MoviePersonDirectorJsonView, PersonDirectorJsonView
+from .views import PersonDirectorJsonView
 
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})

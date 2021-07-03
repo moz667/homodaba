@@ -15,7 +15,8 @@ class Person(models.Model):
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
     imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
-    movies_as_director = models.ManyToManyField('Movie', through='MoviePersonDirectorProxy')
+    # TODO: Borrar... no se esta usando
+    # movies_as_director = models.ManyToManyField('Movie', through='MoviePersonDirectorProxy')
 
     def get_imdb_url(self):
         if self.imdb_id:
@@ -99,6 +100,9 @@ class Movie(models.Model):
     genres = models.ManyToManyField(GenreTag)
     content_rating_systems = models.ManyToManyField(ContentRatingTag)
 
+    # Esto tiene miga... para mantener la relacion m2m a Person a traves de 
+    # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
+    # del proxy: MoviePersonDirectorProxy
     directors = models.ManyToManyField(Person, through='MoviePersonDirectorProxy')
 
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, 
@@ -216,6 +220,10 @@ class MoviePerson(models.Model):
         verbose_name = 'reparto'
         verbose_name_plural = 'repartos'
 
+# Manager y Proxy para las relaciones que se pudieran sacar
+# de directores solo (role=MoviePerson.RT_DIRECTOR), esto se hace
+# para simplificar este tipo de relaciones (ahora mismo se esta usando
+# para sacar directors en Movie)
 class MoviePersonDirectorManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(role=MoviePerson.RT_DIRECTOR)
@@ -225,6 +233,7 @@ class MoviePersonDirectorProxy(MoviePerson):
         proxy = True
     
     objects = MoviePersonDirectorManager()
+# ^^^^^^^^^^^^
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'
