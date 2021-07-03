@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = True
 
 LOCALNETIP = os.getenv("LOCALNETIP")
-ALLOWED_HOSTS = [LOCALNETIP,'127.0.0.1']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', LOCALNETIP).split()
 
 # Application definition
 
