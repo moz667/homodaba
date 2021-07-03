@@ -16,8 +16,8 @@ export LOCALNETIP='127.0.0.1'
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 export ALLOWED_HOSTS='127.0.0.1'
 
-if [ -e .venv ]; then
-    source .venv
+if [ -e $VIRTUAL_ENV/env.sh ]; then
+  source $VIRTUAL_ENV/env.sh
 fi
 
 if [ "$SECRET_KEY" == "" ]; then
