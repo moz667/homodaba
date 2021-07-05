@@ -3,7 +3,7 @@ from django.db.models import Q, Max, Min
 import re
 from datetime import datetime
 
-from .models import Movie, TitleAka
+from .models import Movie, TitleAka, MoviePerson
 
 from homodaba.settings import ELASTICSEARCH_DSL
 
@@ -81,7 +81,7 @@ if ELASTICSEARCH_DSL:
         # print(MovieDocument.search().query(query).to_dict())
 
         # Por ahora hasta 100 registros (paginacion de la admin)
-        s = MovieDocument.search().query(query)[:1000]
+        s = MovieDocument.search().query(query)[:100]
         queryset = s.to_queryset()
         # Si el order_by es solo el campo -pk... entonces se trata del orde por defecto
         # asi que pasamos de el...
@@ -93,7 +93,7 @@ if ELASTICSEARCH_DSL:
         else:
             return queryset.distinct() if use_distinct else queryset
 
-def populate_search_filter_model(queryset, search_term, use_use_distinct=False, year=None):
+def populate_search_filter_model(queryset, search_term, use_use_distinct=False, year=None, director=None):
     # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
     # para varios
     contains_quote = False
@@ -133,6 +133,14 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
         
         query_title = query_title_new
 
+    # TODO: mirar get_search_results en admin.py
+    if director:
+        movie_ids = []
+        for mp in MoviePerson.objects.filter(person__pk=director, role=MoviePerson.RT_DIRECTOR).all():
+            movie_ids.append(mp.movie.id)
+        
+        queryset = queryset.filter(id__in=movie_ids)
+
     # FIXME: investigar... Puede ocurrir que no tenga title del todo?
     # creo que no... pero por si aca :P
     if not query_title:
@@ -171,7 +179,7 @@ def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=
     if ELASTICSEARCH_DSL:
         return populate_search_filter_dsl(queryset, search_term, use_use_distinct=use_use_distinct, genre=genre, content_rating_system=content_rating_system, tag=tag, year=year, director=director)
 
-    return populate_search_filter_model(queryset, search_term, use_use_distinct, year=year)
+    return populate_search_filter_model(queryset, search_term, use_use_distinct, year=year, director=director)
 
 def movie_search_filter(search_term):
     return populate_search_filter(Movie.objects, search_term)

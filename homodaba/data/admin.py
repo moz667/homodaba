@@ -99,6 +99,28 @@ class MovieAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def get_search_results(self, request, queryset, search_term):
+        director_filter = None
+        # TODO: Cuando buscamos por director sin search term tampoco podemos tirar de 
+        # la queryset ya que lo hace mal...
+        # Esto es un fallo de como esta definido el proxy directors en Movie o
+        # algo que hace mal django... npi...
+        # Para solucionarlo lo que hacemos es buscar los ids a pelo de la peli en los que
+        # el director es realmente ese y filtramos por ese id... 
+        # Ejemplos que cascan:
+        #   "Richard Donner", saca 4 pelis si no filtramos por  id ya que sale en otra
+        #   peli en otro papel que no es director... :P
+        if 'directors__pk__exact' in request.GET.keys():
+            if request.GET['directors__pk__exact']:
+                director_filter = int(request.GET['directors__pk__exact'])
+                movie_ids = []
+                for mp in MoviePerson.objects.filter(person__pk=director_filter, role=MoviePerson.RT_DIRECTOR).all():
+                    movie_ids.append(mp.movie.id)
+                
+                queryset = queryset.filter(id__in=movie_ids)
+                # print(queryset.query)
+                # print(dir(queryset))
+                # print(movie_ids)
+
         # Si No hay terminos de busqueda devolvemos el queryset tal como esta
         if not search_term:
             # Hace un distinct() porque las busquedas con el filtro de director
@@ -120,11 +142,6 @@ class MovieAdmin(admin.ModelAdmin):
         if 'tag' in request.GET.keys():
             if request.GET['tag']:
                 tag_filter = int(request.GET['tag'])
-
-        director_filter = None
-        if 'directors__pk__exact' in request.GET.keys():
-            if request.GET['directors__pk__exact']:
-                director_filter = int(request.GET['directors__pk__exact'])
         # OJO: Esto es solo para DSL ^^^^
         
         return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter, director=director_filter)
