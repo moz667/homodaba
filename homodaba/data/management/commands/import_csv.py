@@ -250,6 +250,12 @@ OPCIONALES:
         if facade_result.is_local_data:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
+            if verbosity > 2:
+                print('\tDEBUG:',
+                         '\n\t\ttitle: ',                           getattr(facade_result.movie, 'title'),
+                         '\n\t\ttitle_original: ',                 getattr(facade_result.movie, 'title_original'),
+                         '\n\t\ttitle_preferred: ',                 getattr(facade_result.movie, 'title_preferred'),
+                         '\n\t\timdb_id: ',                         getattr(facade_result.movie, 'imdb_id'))
 
             # Solo insertamos storage si no fue una coincidencia de storage :P
             if not facade_result.storage_match:
@@ -526,8 +532,8 @@ OPCIONALES:
         from_title = ' '.join(from_title) if from_title else None
 
         interactive = options['interactive']
-        # TODO: Por ahora no vamos a usar verbosity
-        # verbosity = options['verbosity']
+        global verbosity
+        verbosity = options['verbosity']
         fieldnames = []
 
         with open(options['csv_file'][0], newline='') as csvfile:
