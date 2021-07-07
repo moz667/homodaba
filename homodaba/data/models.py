@@ -3,6 +3,14 @@ from django.db.models import Q
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+class ImdbCache(models.Model):
+    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
+    search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
+    raw_data = models.TextField('Raw Data', null=True, blank=True)
+
+    def __str__(self):
+        return self.imdb_id if self.imdb_id else self.search_query
+
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)

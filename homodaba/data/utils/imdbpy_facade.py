@@ -1,13 +1,53 @@
 from django.db.models import Q
 from django.utils.text import slugify
 
-from data.models import Movie, MovieStorageType
+from data.models import Movie, MovieStorageType, ImdbCache
 
 from imdb import IMDb
 
+import pickle
 import re
 
 IMDB_API = IMDb(reraiseExceptions=True)
+
+import codecs
+
+def serialize(obj):
+    return codecs.encode(pickle.dumps(obj), "base64").decode()
+
+def unserialize(str_obj):
+    return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
+
+def get_imdb_movie(imdb_id):
+    cache_data = ImdbCache.objects.filter(imdb_id=imdb_id).all()
+
+    if cache_data.count() == 1:
+        return unserialize(cache_data[0].raw_data)
+    
+    imdb_movie = IMDB_API.get_movie(imdb_id)
+
+    ImdbCache.objects.create(
+        imdb_id=imdb_id,
+        raw_data=serialize(imdb_movie)
+    )
+
+    return imdb_movie
+
+def search_imdb_movies(search_query):
+    cache_data = ImdbCache.objects.filter(search_query=search_query).all()
+
+    if cache_data.count() == 1:
+        return unserialize(cache_data[0].raw_data)
+    
+    imdb_results = IMDB_API.search_movie(search_query)
+
+    ImdbCache.objects.create(
+        search_query=search_query,
+        raw_data=serialize(imdb_results)
+    )
+
+    return imdb_results
+
 
 class FacadeResult:
     is_local_data = False
@@ -16,18 +56,44 @@ class FacadeResult:
     movie_match = False
     movie = None
 
+    @staticmethod
+    def local_data(movie):
+        facade_result = FacadeResult()
+        facade_result.is_local_data = True
+        facade_result.movie_match = True
+        facade_result.movie = movie
+
+        return facade_result
+
 def clean_string(value):
     s = re.sub(r'[\.:;,\-\[\]\(\)\{\}¿¡]+', ' ', value)
     return re.sub(r'-', ' ', slugify(s))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None):
+    storage_name=None, path=None, imdb_id=None):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
     Devuelve un FacadeResult si ha encontrado alguna coincidencia
     en cualquier otro caso devuelve None
     """
+
+    # Buscamos por imdb_id primero (easy)
+    if not imdb_id is None:
+        movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all()
+        if movies_local_data.count() == 1:
+            return FacadeResult.local_data(movies_local_data[0])
+        else:
+            # Esto siempre deberia devolver un resultado... si no lo devuelve es 
+            # que el id esta mal :P
+            imdb_movie = get_imdb_movie(imdb_id)
+
+            facade_result = FacadeResult()
+            facade_result.is_imdb_data = True
+            facade_result.movie = imdb_movie
+
+            return facade_result
+
     
     # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
     # si se trata de una peli almacenada en el disco
@@ -95,7 +161,7 @@ def match_movie_by_director(search_results, director, year):
     # TODO: traza print(slugify_directors)
 
     for sr in search_results:
-        movie = IMDB_API.get_movie(sr.movieID)
+        movie = get_imdb_movie(sr.movieID)
         if 'director' in movie.keys():
             movie_directors = [clean_string(p['name']) for p in movie['director']]
 
@@ -126,7 +192,7 @@ def match_movie(search_results, title, year, director=None):
     
     # Si solo hemos encontrado un tier1 asumimos que es el bueno
     if len(matches_tier1) == 1:
-        return IMDB_API.get_movie(matches_tier1[0].movieID)
+        return get_imdb_movie(matches_tier1[0].movieID)
 
     # Sumamos todos los matches dando prioridad por tier
     matches = matches_tier1 + matches
@@ -146,7 +212,7 @@ def match_movie(search_results, title, year, director=None):
             trace_results(search_results)
             return None
     
-    return IMDB_API.get_movie(matches[0].movieID)
+    return get_imdb_movie(matches[0].movieID)
 
 def trace_results(search_results):
     for sr in search_results:
@@ -155,17 +221,17 @@ def trace_results(search_results):
 
 def search_movie_imdb(title, year, title_alt=None, director=None):
     # Buscamos por titulo y año en IMDB
-    search_results = IMDB_API.search_movie('%s (%s)' % (title, year))
+    search_results = search_imdb_movies('%s (%s)' % (title, year))
 
     if len(search_results) == 0:
         print(clean_string(title))
-        search_results = IMDB_API.search_movie('%s (%s)' % (clean_string(title), year))
+        search_results = search_imdb_movies('%s (%s)' % (clean_string(title), year))
     
     if len(search_results) == 0:
-        search_results = IMDB_API.search_movie(title)
+        search_results = search_imdb_movies(title)
     
     if len(search_results) == 0:
-        search_results = IMDB_API.search_movie(clean_string(title))
+        search_results = search_imdb_movies(clean_string(title))
     
     # Si aun no lo encontramos por el titulo principal, 
     # buscamos por el alt (si lo tiene)
@@ -195,22 +261,3 @@ def search_movie_local_data(title, year, title_alt=None):
     # print(query)
     
     return Movie.objects.filter(query).all()
-
-
-
-    
-"""
-COPY PASTA!!!
-
-# TODO: BORRAR, antiguo codigo para buscar el titulo por los akas
-search_result = None
-
-if search_result is None and len(search_results) == 1:
-    ia_movie = IMDB_API.get_movie(search_results[0].movieID)
-    if 'akas' in ia_movie.keys():
-        # FIXME: Poner por setting estos ' (Spain)'
-        for aka in ia_movie['akas']:
-            if aka == '%s (Spain)' % title:
-                search_result = search_result[0]
-                break
-"""

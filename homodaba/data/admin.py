@@ -5,7 +5,7 @@ from django.urls import path
 
 from admin_auto_filters.filters import AutocompleteFilter
 
-from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, ImdbCache
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
@@ -18,6 +18,10 @@ class DirectorFilter(AutocompleteFilter):
 
     def get_autocomplete_url(self, request, model_admin):
         return reverse('admin:json_autocomplete_director_search')
+
+class ImdbCacheAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(ImdbCache, ImdbCacheAdmin)
 
 class TagAdmin(admin.ModelAdmin):
     pass

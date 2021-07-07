@@ -8,21 +8,17 @@ from data.models import get_first_or_create_tag
 
 from data.utils.imdbpy_facade import facade_search
 
-from imdb import IMDb
-
 import csv
 from datetime import datetime
 import sys
 from time import sleep
 
+from .utils import trace_validate_imdb_movie, get_imdb_original_title
+
+verbosity = 0
 SLEEP_DELAY = 0
 
-class Command(BaseCommand):
-    help = _('Importa datos desde un CSV')
-
-    def csv_file_help(self):
-        # TODO: Si te lo quieres currar mas bpk... be my guest ;D
-        print("""
+HELP_TEXT = """
 Descripcion de los campos del csv:
 
 OBLIGATORIOS:
@@ -31,6 +27,9 @@ OBLIGATORIOS:
     year: Año de estreno (OBLIGATORIO)
 
 OPCIONALES:
+    imdb_id: Identificador de imdb para forzar la busqueda de esa peli (por defecto: 
+        None) (opcional)
+
     storage_name: identificador del almacenamiento (nombre del disco duro, 
         carpeta compartida...) (opcional, aunque hay que tener en cuenta
         que si no se define, ó es 'Original', tomara que el medio es 
@@ -73,15 +72,33 @@ OPCIONALES:
         el de imdb que parece que siempre lo devuelve en ingles.
 
     version: Version de la película, (Director's cut, Theatrical's cut...) (opcional)
-    """)
+"""
+
+class Command(BaseCommand):
+    help = _('Importa datos desde un CSV')
+
+    """
+    Pinta la ayuda y sale
+    """
+    def csv_file_help(self):
+        print(HELP_TEXT)
         exit()
 
+    """
+    Valida los datos de una fila del csv, si hay algun error lanza Exception
+
+    Ahora mismo solo valida que tenga titulo (title) y año (year)
+    """
     def validate(self, r):
         if not 'title' in r or not r['title']:
             raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
         if not 'year' in r or not r['year']:
             raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
 
+    """
+    Argumentos del comando:
+
+    """
     def add_arguments(self, parser):
         parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
         parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a tratar desde la fila que se titule igual que el valor de este parametro.""")
@@ -90,11 +107,6 @@ OPCIONALES:
             '--csv-file-help',
             action='store_true',
             help='Ayuda ampliada acerca del archivo csv.',
-        )
-        parser.add_argument(
-            '--interactive',
-            action='store_true',
-            help='Requiere interactuar cuando encuentre un problema, en cualquier otro caso saca informacion acerca del mismo.',
         )
         parser.add_argument(
             '--delimiter', default=';',
@@ -115,50 +127,6 @@ OPCIONALES:
 
         if SLEEP_DELAY:
             sleep(SLEEP_DELAY)
-
-    def interactive_imdb_search(self, title, year, title_alt=None):
-        ia = IMDb(reraiseExceptions=True)
-        search_results = ia.search_movie('%s (%s)' % (title, year))
-                
-        if len(search_results) == 0:
-            search_results = ia.search_movie(title)
-        
-        if len(search_results) == 0 and title_alt:
-            return self.interactive_imdb_search(title_alt, year)
-
-        if len(search_results) > 0:
-            print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, year))
-            i = 1
-            for sr in search_results:
-                print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
-                i = i + 1
-            print("\tn) Para continuar con el siguiente")
-            print("\tq) Para salir")
-
-            input_return = ''
-            while not input_return:
-                input_return = input("")
-
-                if input_return == 'q':
-                    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                    exit()
-                elif input_return == 'n':
-                    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                    return None
-                else:
-                    try:
-                        input_return = int(input_return)
-                        if not (input_return > 0 and input_return <= len(search_results)):
-                            print("\tERROR!: Ese valor no es posible.")
-                            input_return = ""
-                    except ValueError:
-                        print("\tERROR!: Ese valor no es posible.")
-                        input_return = ""
-            
-            return search_results[int(input_return) - 1]
-        
-        # No encontramos ni una...
-        return None
 
     def get_or_create_person(self, ia_person):
         local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
@@ -181,7 +149,7 @@ OPCIONALES:
 
         return clean_title.strip()
 
-    def get_or_insert_movie(self, r, interactive=False):
+    def get_or_insert_movie(self, r):
         print('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         """
@@ -190,11 +158,11 @@ OPCIONALES:
         2) El archivo donde se almacena si no lo es
         """
         title = r['title']
-        title_alt = None
-        title_alt=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
+        title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
         storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
         director = r['director'] if 'director' in r and r['director'] else None
         is_original = True if not storage_name else False
+        imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
 
         storage_type = MovieStorageType.ST_DVD
         if 'storage_type' in r and r['storage_type']:
@@ -226,38 +194,33 @@ OPCIONALES:
             director=director,
             storage_type=storage_type,
             storage_name=storage_name,
-            path=path
+            path=path,
+            imdb_id=imdb_id,
         )
 
         if not facade_result:
-            if not interactive:
-                print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
-                return None
-            else:
-                # TODO: Modo interactivo
-                #search_result = self.interactive_imdb_search(
-                #    title, r['year'], title_alt=title_alt
-                #)
-                #if search_result is None:
-                #    # 2.1) Si no la encontramos, sacamos un mensaje y devolvemos None (FIN)
-                #    print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, r['year']))
-                #    return None
-                return None
-        
+            print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
+            return None
+
         version = r['version'] if 'version' in r and r['version'] else None
         resolution = r['resolution'] if 'resolution' in r and r['resolution'] else None
 
         if facade_result.is_local_data:
+            global verbosity
+            
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
-            if verbosity > 2:
-                print('\tDEBUG:',
-                         '\n\t\ttitle: ',                           getattr(facade_result.movie, 'title'),
-                         '\n\t\ttitle_original: ',                 getattr(facade_result.movie, 'title_original'),
-                         '\n\t\ttitle_preferred: ',                 getattr(facade_result.movie, 'title_preferred'),
-                         '\n\t\timdb_id: ',                         getattr(facade_result.movie, 'imdb_id'))
 
-            # Solo insertamos storage si no fue una coincidencia de storage :P
+            if verbosity > 2:
+                print(
+                    '\tDEBUG:',
+                    '\n\t\ttitle: ',               getattr(facade_result.movie, 'title'),
+                    '\n\t\ttitle_original: ',      getattr(facade_result.movie, 'title_original'),
+                    '\n\t\ttitle_preferred: ',     getattr(facade_result.movie, 'title_preferred'),
+                    '\n\t\timdb_id: ',             getattr(facade_result.movie, 'imdb_id')
+                )
+
+            # Solo insertamos storage si no fue una coincidencia de storage
             if not facade_result.storage_match:
                 self.get_or_insert_storage(
                     movie=facade_result.movie, 
@@ -272,7 +235,7 @@ OPCIONALES:
 
             return facade_result.movie
        
-        self.trace_validate_imdb_movie(facade_result.movie, title, director=director)
+        trace_validate_imdb_movie(facade_result.movie, title, director=director)
 
         local_movie = self.insert_movie(
             facade_result.movie, 
@@ -295,24 +258,6 @@ OPCIONALES:
         # 2.6) Devolvemos la pelicula
         return local_movie
 
-    def trace_validate_imdb_movie(self, imdb_movie, title, director=None):
-        # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-        if imdb_movie['title'] != title:
-            print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, imdb_movie['title']))
-    
-        # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
-        if director:
-            if not 'director' in imdb_movie.keys():
-                print('\tINFO: trace_validate_imdb_movie: No encontramos directores para la pelicula "%s"' % imdb_movie['title'])
-            else:
-                ia_directors = [p['name'] for p in imdb_movie['director']]
-
-                for director_name in director.split(','):
-                    if not director_name in ia_directors:
-                        # Esto es para que revises tu csv!!!
-                        print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s'" % (director_name, title))
-
-
     def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None):
         # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
         storages = MovieStorageType.objects.filter(
@@ -325,10 +270,6 @@ OPCIONALES:
             resolution=resolution,
             version=version
         )
-
-        print(movie)
-        print(storage_name)
-        print(path)
 
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
@@ -406,18 +347,9 @@ OPCIONALES:
                         title_preferred = aka.replace(' (Spain)', '')
                         break
         
-        """
-        print(dir(ia_movie))
-        print("title_original" if not title_original is None and title_original else "self.get_original_title(ia_movie)")
-        print(title_original if not title_original is None and title_original else self.get_original_title(ia_movie))
-        print("title_preferred")
-        print(title_preferred)
-        exit()
-        """
-        
         local_movie = Movie.objects.create(
             title=ia_movie['title'],
-            title_original=title_original if not title_original is None and title_original else self.get_original_title(ia_movie),
+            title_original=title_original if not title_original is None and title_original else get_imdb_original_title(ia_movie),
             title_preferred=title_preferred,
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
@@ -483,7 +415,6 @@ OPCIONALES:
         if tagged:
             local_movie.save()
 
-        # TODO: 
         # 2.4) Damos de alta las relaciones entre peliculas y personas de todas las recuperadas antes (directores, escritores, casting...)
         for d in directors:
             MoviePerson.objects.create(
@@ -508,20 +439,6 @@ OPCIONALES:
 
         return local_movie
 
-    def get_original_title(self, ia_movie):
-        if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
-            # print(ia_movie['countries'])
-            # print(ia_movie['akas'])
-            for country in ia_movie['countries']:
-                for aka in ia_movie['akas']:
-                    if aka.endswith('(%s)' % country):
-                        print(aka)
-                        return aka.replace('(%s)' % country, '').strip()
-        
-        # TODO: Comentar con perico... el problema es que casi nunca viene bien...
-        # return ia_movie['original title']
-        return None
-
     def handle(self, *args, **options):
         if options['csv_file_help']:
             self.csv_file_help()
@@ -545,7 +462,6 @@ OPCIONALES:
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
 
-        interactive = options['interactive']
         global verbosity
         verbosity = options['verbosity']
         fieldnames = []
@@ -567,21 +483,23 @@ OPCIONALES:
 
         with open(options['csv_file'][0], newline='') as csvfile:
             csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
+            
             start = not from_title
-            for r in csv_reader:
+
+            for csv_row in csv_reader:
                 if from_title and from_title == r['title']:
                     start = True
 
                 if start:
                     try:
-                        cur_movie = self.get_or_insert_movie(r, interactive=interactive)
+                        cur_movie = self.get_or_insert_movie(csv_row)
                         if cur_movie is None:
-                            csv_writer_fails.writerow(r)
+                            csv_writer_fails.writerow(csv_row)
                         else:
-                            csv_writer_done.writerow(r)
+                            csv_writer_done.writerow(csv_row)
                     except:
                         print("Error no esperado:", sys.exc_info()[0])
-                        csv_writer_fails.writerow(r)
+                        csv_writer_fails.writerow(csv_row)
                         raise
                     finally:
                         self.sleep_delay()
