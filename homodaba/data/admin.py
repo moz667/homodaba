@@ -156,6 +156,9 @@ admin.site.register(Person, PersonAdmin)
 class MovieStorageTypeAdmin(admin.ModelAdmin):
     list_display = ('get_movie_title', 'is_original', 'storage_type', 'media_format', 'resolution')
     list_filter = ('storage_type', 'media_format', )
+
+    search_fields = ('path',)
+
     def get_movie_title(self, obj):
         return obj.movie.title
     get_movie_title.short_description = 'Pelicula'
