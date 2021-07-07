@@ -50,6 +50,8 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     # los campos tipicos de titulo y año
     movies_local_data = search_movie_local_data(title, year, title_alt)
 
+    # print(movies_local_data)
+
     if movies_local_data.count() == 1:
         facade_result = FacadeResult()
         facade_result.is_local_data = True
@@ -189,6 +191,8 @@ def search_movie_local_data(title, year, title_alt=None):
 
     query = Q(query_title)
     query_title.add(Q(year=year), Q.AND)
+    
+    # print(query)
     
     return Movie.objects.filter(query).all()
 

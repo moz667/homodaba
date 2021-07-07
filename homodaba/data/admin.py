@@ -28,7 +28,7 @@ class GenreTagAdmin(admin.ModelAdmin):
 admin.site.register(GenreTag, GenreTagAdmin)
 
 class TitleAkaAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('title',)
 admin.site.register(TitleAka, TitleAkaAdmin)
 
 class CustomAbstractTagListFilter(admin.SimpleListFilter):

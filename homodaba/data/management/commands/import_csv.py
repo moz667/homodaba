@@ -278,6 +278,7 @@ OPCIONALES:
             facade_result.movie, 
             tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
             title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
+            title_preferred=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None,
         )
         
         self.get_or_insert_storage(
@@ -325,6 +326,10 @@ OPCIONALES:
             version=version
         )
 
+        print(movie)
+        print(storage_name)
+        print(path)
+
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
             print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
@@ -342,7 +347,7 @@ OPCIONALES:
             version=version,
         )
 
-    def insert_movie(self, ia_movie, tags=[], title_original=None):
+    def insert_movie(self, ia_movie, tags=[], title_original=None, title_preferred=None):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
@@ -393,14 +398,22 @@ OPCIONALES:
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
         # buscamos el titulo preferido:
-        title_preferred = None
-
-        # FIXME: Poner por setting estos ' (Spain)'
-        if 'akas' in ia_movie.keys():
-            for aka in ia_movie['akas']:
-                if ' (Spain)' in aka:
-                    title_preferred = aka.replace(' (Spain)', '')
-                    break
+        if title_preferred is None:
+            # FIXME: Poner por setting estos ' (Spain)'
+            if 'akas' in ia_movie.keys():
+                for aka in ia_movie['akas']:
+                    if ' (Spain)' in aka:
+                        title_preferred = aka.replace(' (Spain)', '')
+                        break
+        
+        """
+        print(dir(ia_movie))
+        print("title_original" if not title_original is None and title_original else "self.get_original_title(ia_movie)")
+        print(title_original if not title_original is None and title_original else self.get_original_title(ia_movie))
+        print("title_preferred")
+        print(title_preferred)
+        exit()
+        """
         
         local_movie = Movie.objects.create(
             title=ia_movie['title'],
@@ -502,6 +515,7 @@ OPCIONALES:
             for country in ia_movie['countries']:
                 for aka in ia_movie['akas']:
                     if aka.endswith('(%s)' % country):
+                        print(aka)
                         return aka.replace('(%s)' % country, '').strip()
         
         # TODO: Comentar con perico... el problema es que casi nunca viene bien...
