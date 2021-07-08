@@ -9,7 +9,6 @@ from data.models import get_first_or_create_tag
 from data.utils.imdbpy_facade import facade_search
 
 import csv
-from datetime import datetime
 import sys
 
 from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate
@@ -99,8 +98,6 @@ class Command(BaseCommand):
     """
     def add_arguments(self, parser):
         parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
-        parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a tratar desde la fila que se titule igual que el valor de este parametro.""")
-        parser.add_argument('--imdba-delay', nargs='+', type=int, help="""Retardo entre llamadas al imdb (util si te da muchos errores de conexion).""")
         parser.add_argument(
             '--csv-file-help',
             action='store_true',
@@ -117,79 +114,24 @@ class Command(BaseCommand):
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
     
-    def clean_path_no_extension_and_title(self, title):
-        clean_title = title
-        if '/' in clean_title:
-            clean_title = title.split('/')[-1]
-        if '.' in clean_title:
-            clean_title = title.split('.')[-1]
-
-        return clean_title.strip()
-
-    def check_movie(self, r):
+    def check_movie(self, mst, csv_file, csv_newline='', csv_delimiter=';', csv_quotechar='|'):
         # print('Tratando "%s (%s)"...' % (r['title'], r['year']))
-        
-        title = r['title']
-        title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
-        storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
-        director = r['director'] if 'director' in r and r['director'] else None
-        is_original = True if not storage_name else False
-        imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
+        with open(csv_file, newline=csv_newline) as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
 
-        storage_type = MovieStorageType.ST_DVD
-        if 'storage_type' in r and r['storage_type']:
-            if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
-                print('\tWARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
-            else:
-                storage_type = r['storage_type']
-        
-        media_format = MovieStorageType.MF_DVD
-        if 'media_format' in r and r['media_format']:
-            if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
-                print('\tWARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
-            else:
-                media_format = r['media_format']
-
-        path = r['path'] if not is_original and 'path' in r and r['path'] else None
-
-        if not is_original and not path and 'path_no_extension' in r and r['path_no_extension']:
-            path = r['path_no_extension']
-            if media_format:
-                if media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_ISO_EXTENSION:
-                    path = path + ".iso"
-                elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION:
-                    path = path + ".%s" % media_format.lower()
-
-        version = r['version'] if 'version' in r and r['version'] else None
-        resolution = r['resolution'] if 'resolution' in r and r['resolution'] else None
-
-        # TODO: chequear !!!
-
-        # Las originales no podemos chequearlas
-        if is_original:
-            return
-        
-        # print(title)
-        mmsstt = MovieStorageType.objects.filter(
-            is_original=is_original, 
-            storage_type=storage_type, 
-            name=storage_name,
-            path=path,
-            media_format=media_format,
-            resolution=resolution,
-            version=version,
-        ).all()
-
-        if mmsstt.count() == 0:
-            print("\tERROR: No encontramos el mst para la pelicula '%s'" % title)
-        elif mmsstt.count() > 1:
-            print("\tERROR: Hemos encontramos varios mst para la pelicula '%s'" % title)
-        else:
-            if int(r['year']) != int(mmsstt[0].movie.year):
-                print("\tERROR: La pelicula '%s' es de un año distinto (%s) vs (%s) en la bbdd." % (title, r['year'], mmsstt[0].movie.year))
-            if title != mmsstt[0].movie.title:
-                print("\tERROR: La pelicula '%s' tiene un titulo distinto (%s) en la bbdd." % (title,  mmsstt[0].movie.title))
-
+            for r in csv_reader:
+                if r['path'] == mst.path and r['title'] == mst.movie.title:
+                    # print("\tOK: La pelicula '%s' tiene el mismo titulo (%s) que en la bbdd." % (r['title'],  mst.movie.title))
+                    return
+            
+            print("\tERROR: Posible coincidencia de duplicados '%s'" % (mst.movie.title))
+            
+            mmsstt = MovieStorageType.objects.filter(
+                movie=mst.movie
+            ).all()
+            for m in mmsstt:
+                print('\t\t(%s)%s' % (m.storage_type, m.path))
+    
     def handle(self, *args, **options):
         if options['csv_file_help']:
             self.csv_file_help()
@@ -197,6 +139,7 @@ class Command(BaseCommand):
         if not 'csv_file' in options or not options['csv_file'] or not options['csv_file'][0]:
             self.print_help('manage.py', __name__)
             return
+        csv_file = options['csv_file'][0]
 
         csv_delimiter = ';'
         if 'delimiter' in options and options['delimiter'] and options['delimiter'][0]:
@@ -205,9 +148,6 @@ class Command(BaseCommand):
         csv_quotechar = '|'
         if 'quotechar' in options and options['quotechar'] and options['quotechar'][0]:
             csv_quotechar = options['quotechar'][0]
-
-        from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
-        from_title = ' '.join(from_title) if from_title else None
 
         global verbosity
         verbosity = options['verbosity']
@@ -219,20 +159,16 @@ class Command(BaseCommand):
             for r in csv_reader:
                 self.validate(r)
         
-        now = datetime.now()
+        for movie in Movie.objects.all():
+            mmsstt = MovieStorageType.objects.filter(
+                movie=movie
+            ).all()
 
-        with open(options['csv_file'][0], newline='') as csvfile:
-            csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
-            
-            start = not from_title
+            if mmsstt.count() == 0:
+                print("\tERROR: No encontramos el mst para la pelicula '%s'" % movie.title)
+            elif mmsstt.count() > 1:
+                # print("\tERROR: Hemos encontramos varios mst para la pelicula '%s'" % movie.title)
 
-            for csv_row in csv_reader:
-                if from_title and from_title == csv_row['title']:
-                    start = True
-                
-                if start:
-                    try:
-                        self.check_movie(csv_row)
-                    except:
-                        print("Error no esperado:", sys.exc_info()[0])
-                        raise
+                for mst in mmsstt:
+                    if not mst.is_original:
+                        self.check_movie(mst, csv_file, csv_delimiter=csv_delimiter, csv_quotechar=csv_quotechar)
