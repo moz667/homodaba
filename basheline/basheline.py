@@ -8,7 +8,7 @@ import os
 import json
 
 input_csv_header = ['Localizacion', 'Título Original', 'Titulo traducido', 'Director', 'Año', 'Resolución', 'Formato']
-output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'tags']
+output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'imdb_id', 'tags' ]
 
 def parse_arguments(args):
     parser = argparse.ArgumentParser(description='Bas[h]eline. Because even IMDB needs some lube ^_^')
@@ -302,38 +302,30 @@ class csvCleaner(filesParser):
     def process_007Films(self):
         film007 = self.process_007Films.regex.match(self.row['title'])
         if film007:
-            prefix = film007.group(1)
-            trimmed_title = film007.group(2)
-            self.add_tag(self.row, prefix)
+            trimmed_title = film007.group(1)
             self.row['title'] = trimmed_title
-    process_007Films.regex = re.compile(r'(007\. [0-9]{2}\.) (.*)')                         # 007. XX. Title
+    process_007Films.regex = re.compile(r'007\. [0-9]{2}\. (.*)')                         # 007. XX. Title
 
     def process_AlienFilms(self):
         filmalien = self.process_AlienFilms.regex.match(self.row['title'])
         if filmalien:
-            prefix = filmalien.group(1)
-            trimmed_title = filmalien.group(2)
-            self.add_tag(self.row,prefix)
+            trimmed_title = filmalien.group(1)
             self.row['title'] = trimmed_title
-    process_AlienFilms.regex = re.compile(r'(Alien [0-9])\. (.*)')                          # Alien XX. Title
+    process_AlienFilms.regex = re.compile(r'Alien [0-9]\. (.*)')                          # Alien XX. Title
 
     def process_HarryPotterFilms(self):
         filmharrypotter = self.process_HarryPotterFilms.regex.match(self.row['title'])
         if filmharrypotter:
-            order = 'Harry Potter ' + filmharrypotter.group(2)
-            trimmed_title = filmharrypotter.group(1) + filmharrypotter.group(3)
-            self.add_tag(self.row,order)
+            trimmed_title = filmharrypotter.group(1) + filmharrypotter.group(2)
             self.row['title'] = trimmed_title
-    process_HarryPotterFilms.regex = re.compile(r'(Harry Potter )([A-Z]{1,4})\. (.*)')      # Harry Potter XX. Title
+    process_HarryPotterFilms.regex = re.compile(r'(Harry Potter )[A-Z]{1,4}\. (.*)')      # Harry Potter XX. Title
 
     def process_StarWarsFilms(self):
         filmstarwars = self.process_StarWarsFilms.regex.match(self.row['title'])
         if filmstarwars:
-            order = 'Star Wars. ' + filmstarwars.group(1)
-            trimmed_title = filmstarwars.group(2)
-            self.add_tag(self.row,order)
+            trimmed_title = filmstarwars.group(1)
             self.row['title'] = trimmed_title
-    process_StarWarsFilms.regex = re.compile(r'(Episode [A-Z]{1,4})\. (.*)')                # Episode XXXX. Title
+    process_StarWarsFilms.regex = re.compile(r'Episode [A-Z]{1,4}\. (.*)')                # Episode XXXX. Title
 
     def fix_movies(self):
         for affected_film in self.patch:
