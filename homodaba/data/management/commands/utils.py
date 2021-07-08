@@ -12,8 +12,15 @@ from imdb import IMDb
 
 import csv
 from datetime import datetime
+import re
 import sys
 from time import sleep
+
+def normalize_age_certificate(raw_certificate):
+    if '::' in raw_certificate:
+        return re.compile('::.*').sub('', raw_certificate)
+    
+    return raw_certificate
 
 """
 Por chorra que pueda parecer, recuperar el titulo original de una peli

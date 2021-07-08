@@ -13,7 +13,7 @@ from datetime import datetime
 import sys
 from time import sleep
 
-from .utils import trace_validate_imdb_movie, get_imdb_original_title
+from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate
 
 verbosity = 0
 SLEEP_DELAY = 0
@@ -394,11 +394,12 @@ class Command(BaseCommand):
             if len(valid_certs) > 0:
                 tagged = True
                 for vc in valid_certs:
-                    local_movie.content_rating_systems.add(
-                        get_first_or_create_tag(
-                            ContentRatingTag, name=vc
-                        )
+                    vc_tag = get_first_or_create_tag(
+                        ContentRatingTag, name=normalize_age_certificate(vc)
                     )
+
+                    if not vc_tag in local_movie.content_rating_systems.all():
+                        local_movie.content_rating_systems.add(vc_tag)
             else:
                 print('INFO: No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
@@ -461,6 +462,7 @@ class Command(BaseCommand):
         
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
+        print(from_title)
 
         global verbosity
         verbosity = options['verbosity']
@@ -487,9 +489,9 @@ class Command(BaseCommand):
             start = not from_title
 
             for csv_row in csv_reader:
-                if from_title and from_title == r['title']:
+                if from_title and from_title == csv_row['title']:
                     start = True
-
+                
                 if start:
                     try:
                         cur_movie = self.get_or_insert_movie(csv_row)
