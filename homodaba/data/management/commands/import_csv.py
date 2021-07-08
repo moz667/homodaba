@@ -11,12 +11,10 @@ from data.utils.imdbpy_facade import facade_search
 import csv
 from datetime import datetime
 import sys
-from time import sleep
 
 from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate
 
 verbosity = 0
-SLEEP_DELAY = 0
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -119,14 +117,6 @@ class Command(BaseCommand):
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
 
-
-    # TODO: no demasiado elegante... 
-    # esta funcion es para retrasar las llamadas a imdba
-    def sleep_delay(self):
-        global SLEEP_DELAY
-
-        if SLEEP_DELAY:
-            sleep(SLEEP_DELAY)
 
     def get_or_create_person(self, ia_person):
         local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
@@ -456,10 +446,6 @@ class Command(BaseCommand):
         if 'quotechar' in options and options['quotechar'] and options['quotechar'][0]:
             csv_quotechar = options['quotechar'][0]
 
-        if 'imdba_delay' in options and options['imdba_delay'] and options['imdba_delay'][0] > 0:
-            global SLEEP_DELAY
-            SLEEP_DELAY = options['imdba_delay'][0]
-        
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
         print(from_title)
@@ -503,7 +489,5 @@ class Command(BaseCommand):
                         print("Error no esperado:", sys.exc_info()[0])
                         csv_writer_fails.writerow(csv_row)
                         raise
-                    finally:
-                        self.sleep_delay()
 
                     print("")
