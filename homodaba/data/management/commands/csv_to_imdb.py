@@ -16,10 +16,13 @@ import sys
 from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate, clean_csv_data, csv_validate
 from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.py
 
+
 verbosity = 0
 
+# TODO: Buscar diferencias en year y director?
+
 class Command(BaseCommand):
-    help = _('Importa datos desde un CSV')
+    help = _('Localiza cambios entre el csv e imdb y los saca como un archivo json.')
 
     """
     Pinta la ayuda y sale
@@ -33,8 +36,8 @@ class Command(BaseCommand):
 
     """
     def add_arguments(self, parser):
-        parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
-        parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a tratar desde la fila que se titule igual que el valor de este parametro.""")
+        parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a comprobar.""")
+        parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a comprobar desde la fila que se titule igual que el valor de este parametro.""")
         parser.add_argument(
             '--csv-file-help',
             action='store_true',
