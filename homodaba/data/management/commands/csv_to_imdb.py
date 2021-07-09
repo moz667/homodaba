@@ -101,6 +101,7 @@ class Command(BaseCommand):
             json_obj['db_info']['title'] = m.title
             json_obj['db_info']['imdb_id'] = m.imdb_id
             json_obj['db_info']['db_id'] = m.id
+            json_obj['db_info']['year'] = m.year
         else:
             print('\tWARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
 
