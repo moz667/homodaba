@@ -14,7 +14,8 @@ def parse_arguments(args):
     parser = argparse.ArgumentParser(description='Bas[h]eline. Because even IMDB needs some lube ^_^')
     parser.add_argument("-i", "--input", nargs='+', required=True, help="Input TXT and CSV files. The files that are going to be processed")
     parser.add_argument("-o", "--outputcsv", nargs='+', required=True, help="Output CSV. Sanitised CSV File that is going to be generated")
-    parser.add_argument("-f", "--fixedfilms", nargs='+', required=False, help="[OPT] Input JSON. File containing film fields to correct")
+    parser.add_argument("-p", "--patchedfilms", nargs='+', required=False, help="[OPT] Input JSON. File containing film fields to correct")
+    parser.add_argument("-m", "--imdbjson", nargs='+', required=False, help="[OPT] Input JSON. File mapping unaligned CSV titles with IMDB")
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     return parser.parse_args()
 
@@ -59,11 +60,40 @@ class filesParser:
         with open(file_json, 'r', newline='') as films_to_correct:
             moviespatch = json.load(films_to_correct)
 
-        basheline_cleaner = csvCleaner(moviespatch)
+        basheline_cleaner = csvCleaner(moviespatch, movieswithIMDB)
         for row in self.movies:
             movie = self.movies[row]
             basheline_cleaner.process(movie)
             self.movies[row] = movie
+
+    def fixOriginErrors(self, *args):
+        patchedTitles_json = args[0]
+        if (len(args) == 2):
+            titlesWithIMDBID_json = args[1]
+        else:
+            titlesWithIMDBID_json = None
+
+        base, ext = os.path.splitext(patchedTitles_json)
+        if ext.lower() != '.json':
+            raise argparse.ArgumentTypeError('File must have a json extension', patchedTitles_json)
+        with open(patchedTitles_json, 'r', newline='') as films_to_correct:
+            moviespatch = json.load(films_to_correct)
+
+        if titlesWithIMDBID_json is not None:
+            base, ext = os.path.splitext(titlesWithIMDBID_json)
+            if ext.lower() != '.json':
+                raise argparse.ArgumentTypeError('File must have a json extension', titlesWithIMDBID_json)
+            with open(titlesWithIMDBID_json, 'r', newline='') as films_w_imdb:
+                movieswithIMDBID = json.load(films_w_imdb)
+        else:
+            movieswithIMDBID = {}
+
+        basheline_cleaner = csvCleaner(moviespatch, movieswithIMDBID)
+        for row in self.movies:
+            movie = self.movies[row]
+            basheline_cleaner.process(movie)
+            self.movies[row] = movie
+
 
     def set_additionalyears_as_tag (self,movie):
         severalyears = self.set_additionalyears_as_tag.regex.match(movie['year'])
@@ -285,12 +315,12 @@ class txtFilesParser(filesParser):
     getTitles.regex = re.compile(r'(.*)(?: - (.*))')
 
 class csvCleaner(filesParser):
-    def __init__(self, moviespatch):
+    def __init__(self, moviespatch, movieswithunmatchedtitles):
         self.patch = moviespatch
+        self.unmatchedtitles = movieswithunmatchedtitles
         super().__init__()
 
     def process(self, row):
-        self.mismatched_movies = []
         self.row = row
         self.process_007Films()
         self.process_AlienFilms()
@@ -328,6 +358,7 @@ class csvCleaner(filesParser):
     process_StarWarsFilms.regex = re.compile(r'Episode [A-Z]{1,4}\. (.*)')                # Episode XXXX. Title
 
     def fix_movies(self):
+        # Movies patched manually
         for affected_film in self.patch:
             search = affected_film['search']
             replace = affected_film['replace']
@@ -343,6 +374,33 @@ class csvCleaner(filesParser):
                         self.add_tag(self.row,replace_content)
                     else:
                         self.row[field] = replace_content
+
+        # Adding IMDB_ID to CSV -> Detected using csv_to_imdb
+        imdb_id = ''
+        matchAll = 0
+        matchTitle = 0
+        matchTitleAndYear = 0
+
+        for affected_film in self.unmatchedtitles:
+            searchCSV = affected_film['search']
+            replace = affected_film['replace']
+
+
+            search['director'] = searchCSV['director_csv']
+            search['title'] = searchCSV['title_csv']
+            if searchCSV['title_preferred_csv'] is not None:
+                search['title_preferred'] = searchCSV['title_preferred_csv']
+            search['year'] = searchCSV['year_csv']
+
+            match = True
+            for field in search:
+                search_content = search[field]
+                if not search_content.lower() == self.row[field].lower():
+                    match = False
+            if match and imdb_id == '':
+                print ('IMDB:', replace['imdb_id'])
+                self.row['imdb_id'] = replace['imdb_id']
+
 
 def generate_file(movies, fout, csv_quotechar, csv_delimiter):
     writer = csv.DictWriter(fout, fieldnames = output_csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
@@ -360,10 +418,15 @@ def main(args):
     '''
     input_files=args.input
     output_csvfile=args.outputcsv[0]
-    if args.fixedfilms is not None:
-        films_to_correct=args.fixedfilms[0]
+    if args.patchedfilms is not None:
+        films_to_correct=args.patchedfilms[0]
     else:
         films_to_correct = None
+
+    if args.imdbjson is not None:
+        films_to_add_imdbid=args.imdbjson[0]
+    else:
+        films_to_add_imdbid = None
 
     input_csvfiles, input_txtfiles = validateFiles(input_files)
 
@@ -380,8 +443,10 @@ def main(args):
 
     movies = filesParser()
     movies.gatherMovies(txtMovies, csvMovies)
-    if films_to_correct:
+    if films_to_correct and not films_to_add_imdbid:
         movies.fixOriginErrors(films_to_correct)
+    if (films_to_correct and films_to_add_imdbid ):
+        movies.fixOriginErrors(films_to_correct, films_to_add_imdbid)
 
     with open(output_csvfile, 'w+', newline='') as output_csv:
         generate_file(movies, output_csv, csv_quotechar, csv_delimiter)

@@ -33,6 +33,7 @@ def clean_csv_data(r):
     title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
     storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
     director = r['director'] if 'director' in r and r['director'] else None
+    year = r['year'] if 'year' in r and r['year'] else None
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
 
@@ -68,6 +69,7 @@ def clean_csv_data(r):
         'title_alt':title_alt,
         'storage_name':storage_name,
         'director':director,
+        'year':year,
         'is_original':is_original,
         'imdb_id':imdb_id,
         'storage_type':storage_type,
