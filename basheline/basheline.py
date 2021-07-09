@@ -377,29 +377,24 @@ class csvCleaner(filesParser):
 
         # Adding IMDB_ID to CSV -> Detected using csv_to_imdb
         imdb_id = ''
-        matchAll = 0
-        matchTitle = 0
-        matchTitleAndYear = 0
 
         for affected_film in self.unmatchedtitles:
-            searchCSV = affected_film['search']
-            replace = affected_film['replace']
+            searchCSV = affected_film['csv_info']
+            db_info = affected_film['db_info']
 
-
-            search['director'] = searchCSV['director_csv']
-            search['title'] = searchCSV['title_csv']
-            if searchCSV['title_preferred_csv'] is not None:
-                search['title_preferred'] = searchCSV['title_preferred_csv']
-            search['year'] = searchCSV['year_csv']
+            # Copying the dict so we can choose fields we want to check
+            csv_info = {}
+            csv_info['title'] = searchCSV['title']
+            csv_info['year'] = searchCSV['year']
+            csv_info['director'] = searchCSV['director']
 
             match = True
-            for field in search:
-                search_content = search[field]
-                if not search_content.lower() == self.row[field].lower():
+            for field in csv_info:
+                search_content = csv_info[field]
+                if search_content.lower() != self.row[field].lower():
                     match = False
             if match and imdb_id == '':
-                print ('IMDB:', replace['imdb_id'])
-                self.row['imdb_id'] = replace['imdb_id']
+                self.row['imdb_id'] = db_info['imdb_id']
 
 
 def generate_file(movies, fout, csv_quotechar, csv_delimiter):
