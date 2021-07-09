@@ -83,25 +83,31 @@ class Command(BaseCommand):
             print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
-        json_obj = {
+        json_obj = {}
+        json_obj['search'] = {}
+        json_obj['replace'] = {}
+        json_obj['search'] = {
             'title_csv': cd['title'],
+            'title_preferred_csv': cd['title_alt'],
+            'year_csv': cd['year'],
+            'director_csv': cd['director'],
         }
         m = facade_result.movie
 
         if facade_result.is_local_data:
-            json_obj['title'] = m.title
-            json_obj['imdb_id'] = m.imdb_id
-            json_obj['db_id'] = m.id
+            json_obj['replace']['title'] = m.title
+            json_obj['replace']['imdb_id'] = m.imdb_id
+            json_obj['replace']['db_id'] = m.id
         else:
             print('\tWARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
 
-            json_obj['title'] = m['title']
-            json_obj['imdb_id'] = m.getID()
-            json_obj['db_id'] = None
+            json_obj['replace']['title'] = m['title']
+            json_obj['replace']['imdb_id'] = m.getID()
+            json_obj['replace']['db_id'] = None
 
 
 
-        if json_obj['title'] == cd['title']:
+        if json_obj['replace']['title'] == cd['title']:
             return None
 
         return json_obj
@@ -169,7 +175,7 @@ class Command(BaseCommand):
             now = datetime.now()
             dump_filename = 'csv2imdb-%s.json' % now.strftime('%Y%m%d-%H%M%S')
             dump_file = open(dump_filename, 'w', newline='')
-            dump_file.write(json.dumps(json_obj, indent=4, sort_keys=True))
+            dump_file.write(json.dumps(json_obj, indent=4, sort_keys=True, ensure_ascii=False))
 
             print(" * WARNING!!!")
 
