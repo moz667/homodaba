@@ -224,7 +224,7 @@ def search_movie_imdb(title, year, title_alt=None, director=None):
     search_results = search_imdb_movies('%s (%s)' % (title, year))
 
     if len(search_results) == 0:
-        print(clean_string(title))
+        # print(clean_string(title))
         search_results = search_imdb_movies('%s (%s)' % (clean_string(title), year))
     
     if len(search_results) == 0:

@@ -12,7 +12,7 @@ import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate
+from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate, clean_csv_data, csv_validate
 
 verbosity = 0
 
@@ -83,24 +83,12 @@ class Command(BaseCommand):
         exit()
 
     """
-    Valida los datos de una fila del csv, si hay algun error lanza Exception
-
-    Ahora mismo solo valida que tenga titulo (title) y año (year)
-    """
-    def validate(self, r):
-        if not 'title' in r or not r['title']:
-            raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
-        if not 'year' in r or not r['year']:
-            raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
-
-    """
     Argumentos del comando:
 
     """
     def add_arguments(self, parser):
         parser.add_argument('--csv-file', nargs='+', type=str, help="""Fichero csv con los datos a importar.""")
         parser.add_argument('--from-title', nargs='+', type=str, help="""Empieza a tratar desde la fila que se titule igual que el valor de este parametro.""")
-        parser.add_argument('--imdba-delay', nargs='+', type=int, help="""Retardo entre llamadas al imdb (util si te da muchos errores de conexion).""")
         parser.add_argument(
             '--csv-file-help',
             action='store_true',
@@ -130,76 +118,30 @@ class Command(BaseCommand):
             imdb_id=ia_person.getID(),
         )
 
-    def clean_path_no_extension_and_title(self, title):
-        clean_title = title
-        if '/' in clean_title:
-            clean_title = title.split('/')[-1]
-        if '.' in clean_title:
-            clean_title = title.split('.')[-1]
-
-        return clean_title.strip()
-
     def get_or_insert_movie(self, r):
         print('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
-        """
-        Tenemos que averiguar primero:
-        1) Si se trata de una peli original
-        2) El archivo donde se almacena si no lo es
-        """
-        title = r['title']
-        title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
-        storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
-        director = r['director'] if 'director' in r and r['director'] else None
-        is_original = True if not storage_name else False
-        imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
-
-        storage_type = MovieStorageType.ST_DVD
-        if 'storage_type' in r and r['storage_type']:
-            if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
-                print('\tWARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
-            else:
-                storage_type = r['storage_type']
-        
-        media_format = MovieStorageType.MF_DVD
-        if 'media_format' in r and r['media_format']:
-            if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
-                print('\tWARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
-            else:
-                media_format = r['media_format']
-
-        path = r['path'] if not is_original and 'path' in r and r['path'] else None
-
-        if not is_original and not path and 'path_no_extension' in r and r['path_no_extension']:
-            path = r['path_no_extension']
-            if media_format:
-                if media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_ISO_EXTENSION:
-                    path = path + ".iso"
-                elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION:
-                    path = path + ".%s" % media_format.lower()
+        cd = clean_csv_data(r)
 
         facade_result = facade_search(
-            title=title, year=r['year'], 
-            title_alt=title_alt,
-            director=director,
-            storage_type=storage_type,
-            storage_name=storage_name,
-            path=path,
-            imdb_id=imdb_id,
+            title=cd['title'], year=r['year'], 
+            title_alt=cd['title_alt'],
+            director=cd['director'],
+            storage_type=cd['storage_type'],
+            storage_name=cd['storage_name'],
+            path=cd['path'],
+            imdb_id=cd['imdb_id'],
         )
 
         if not facade_result:
-            print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (title, r['year']))
+            print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
-
-        version = r['version'] if 'version' in r and r['version'] else None
-        resolution = r['resolution'] if 'resolution' in r and r['resolution'] else None
 
         if facade_result.is_local_data:
             global verbosity
             
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (title, r['year']))
+            print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
             if verbosity > 2:
                 print(
@@ -214,18 +156,18 @@ class Command(BaseCommand):
             if not facade_result.storage_match:
                 self.get_or_insert_storage(
                     movie=facade_result.movie, 
-                    is_original=is_original, 
-                    storage_type=storage_type, 
-                    storage_name=storage_name, 
-                    path=path, 
-                    resolution=resolution, 
-                    media_format=media_format, 
-                    version=version, 
+                    is_original=cd['is_original'], 
+                    storage_type=cd['storage_type'], 
+                    storage_name=cd['storage_name'], 
+                    path=cd['path'], 
+                    resolution=cd['resolution'], 
+                    media_format=cd['media_format'], 
+                    version=cd['version'], 
                 )
 
             return facade_result.movie
        
-        trace_validate_imdb_movie(facade_result.movie, title, director=director)
+        trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
 
         local_movie = self.insert_movie(
             facade_result.movie, 
@@ -236,13 +178,13 @@ class Command(BaseCommand):
         
         self.get_or_insert_storage(
             movie=local_movie, 
-            is_original=is_original, 
-            storage_type=storage_type, 
-            storage_name=storage_name, 
-            path=path, 
-            resolution=resolution, 
-            media_format=media_format, 
-            version=version, 
+            is_original=cd['is_original'], 
+            storage_type=cd['storage_type'], 
+            storage_name=cd['storage_name'], 
+            path=cd['path'], 
+            resolution=cd['resolution'], 
+            media_format=cd['media_format'], 
+            version=cd['version'], 
         )
 
         # 2.6) Devolvemos la pelicula
@@ -448,7 +390,6 @@ class Command(BaseCommand):
 
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
-        print(from_title)
 
         global verbosity
         verbosity = options['verbosity']
@@ -458,7 +399,7 @@ class Command(BaseCommand):
             csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
             fieldnames = csv_reader.fieldnames
             for r in csv_reader:
-                self.validate(r)
+                csv_validate(r)
         
         now = datetime.now()
 

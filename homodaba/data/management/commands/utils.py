@@ -16,6 +16,67 @@ import re
 import sys
 from time import sleep
 
+def csv_validate(r):
+    if not 'title' in r or not r['title']:
+        raise Exception("ERROR!: El titulo es obligatorio y tiene que estar definido en el CSV como 'title'.")
+    if not 'year' in r or not r['year']:
+        raise Exception("ERROR!: El año de estreno es obligatorio y tiene que estar definido en el CSV como 'year'.")
+
+
+def clean_csv_data(r):
+    """
+    Tenemos que averiguar primero:
+    1) Si se trata de una peli original
+    2) El archivo donde se almacena si no lo es
+    """
+    title = r['title']
+    title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
+    storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
+    director = r['director'] if 'director' in r and r['director'] else None
+    is_original = True if not storage_name else False
+    imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
+
+    storage_type = MovieStorageType.ST_DVD
+    if 'storage_type' in r and r['storage_type']:
+        if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
+            print('\tWARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
+        else:
+            storage_type = r['storage_type']
+    
+    media_format = MovieStorageType.MF_DVD
+    if 'media_format' in r and r['media_format']:
+        if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
+            print('\tWARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
+        else:
+            media_format = r['media_format']
+
+    path = r['path'] if not is_original and 'path' in r and r['path'] else None
+
+    if not is_original and not path and 'path_no_extension' in r and r['path_no_extension']:
+        path = r['path_no_extension']
+        if media_format:
+            if media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_ISO_EXTENSION:
+                path = path + ".iso"
+            elif media_format in MovieStorageType.MEDIA_FORMATS_FILE_WITH_OTHER_EXTENSION:
+                path = path + ".%s" % media_format.lower()
+    
+    version = r['version'] if 'version' in r and r['version'] else None
+    resolution = r['resolution'] if 'resolution' in r and r['resolution'] else None
+
+    return {
+        'title':title,
+        'title_alt':title_alt,
+        'storage_name':storage_name,
+        'director':director,
+        'is_original':is_original,
+        'imdb_id':imdb_id,
+        'storage_type':storage_type,
+        'media_format':media_format,
+        'path':path,
+        'version':version,
+        'resolution':resolution,
+    }
+
 def normalize_age_certificate(raw_certificate):
     if '::' in raw_certificate:
         return re.compile('::.*').sub('', raw_certificate)
