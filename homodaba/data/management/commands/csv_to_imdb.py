@@ -68,7 +68,10 @@ class Command(BaseCommand):
         )
 
     def get_csv_imdb_json_data(self, r):
-        # print('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        global verbosity
+
+        if verbosity > 2:
+            print('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
 
@@ -80,10 +83,12 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
+            verbosity=verbosity
         )
 
         if not facade_result:
-            print('ERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+            if verbosity > 0:
+                print(' *** ERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
         json_obj = {}
@@ -113,7 +118,8 @@ class Command(BaseCommand):
                     'imdb_id': d.imdb_id,
                 })
         else:
-            print('WARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
+            if verbosity > 1:
+                print(' ** WARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
 
             json_obj['db_info']['title'] = m['title']
             json_obj['db_info']['imdb_id'] = m.getID()
@@ -145,15 +151,18 @@ class Command(BaseCommand):
         has_error = False
 
         if json_obj['db_info']['title'] != cd['title']:
-            print(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
+            if verbosity > 2:
+                print(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
             has_error = True
 
         if not cd['year']:
-            print(" - No esta definido el año en el csv para la pelicula '%s'." % cd['title'])
+            if verbosity > 2:
+                print(" - No esta definido el año en el csv para la pelicula '%s'." % cd['title'])
             has_error = True
 
         if json_obj['db_info']['year'] != int(cd['year']):
-            print(" - No coincide el año en la pelicula '%s'. csv:'%s' db:'%s'." % (cd['title'], cd['year'], json_obj['db_info']['year']))
+            if verbosity > 2:
+                print(" - No coincide el año en la pelicula '%s'. csv:'%s' db:'%s'." % (cd['title'], cd['year'], json_obj['db_info']['year']))
             has_error = True
 
         has_director_error = False
@@ -167,11 +176,12 @@ class Command(BaseCommand):
                     break
             
             if not director_match:
-                print(" - No hemos encontrado el director '%s' para la pelicula '%s'." % (csv_director, cd['title']))
+                if verbosity > 2:
+                    print(" - No hemos encontrado el director '%s' para la pelicula '%s'." % (csv_director, cd['title']))
                 has_error = True
                 has_director_error = True
 
-        if has_director_error:
+        if has_director_error and verbosity > 2:
             print(" - Los directores de la pelicula '%s' son:" % cd['title'])
             for cur_director in json_obj['db_info']['directors']:
                 print("\t * '%s'." % cur_director['name'])
@@ -233,23 +243,24 @@ class Command(BaseCommand):
         
         print("")
 
-        if len(json_obj) == 0:
-            print(" * CONGRATZ!!!")
+        if verbosity > 0:
+            if len(json_obj) == 0:
+                print(" * CONGRATZ!!!")
 
-            print("   - No hay ninguna pelicula en el csv con titulo distinto al imdb.")
-        else:
-            now = datetime.now()
-            dump_filename = 'csv2imdb-%s.json' % now.strftime('%Y%m%d-%H%M%S')
-            dump_file = open(dump_filename, 'w', newline='')
-            dump_file.write(json.dumps(json_obj, indent=4, sort_keys=True, ensure_ascii=False))
+                print("   - No hay ninguna pelicula en el csv con titulo distinto al imdb.")
+            else:
+                now = datetime.now()
+                dump_filename = 'csv2imdb-%s.json' % now.strftime('%Y%m%d-%H%M%S')
+                dump_file = open(dump_filename, 'w', newline='')
+                dump_file.write(json.dumps(json_obj, indent=4, sort_keys=True, ensure_ascii=False))
 
-            print(" * WARNING!!!")
+                print(" * WARNING!!!")
 
-            print("   - Se han encontrado %s en el csv con titulo distinto al imdb." % 
-                ('1 pelicula' if len(json_obj) == 1 else '%s peliculas' % len(json_obj))
-            )
+                print("   - Se han encontrado %s en el csv con titulo distinto al imdb." % 
+                    ('1 pelicula' if len(json_obj) == 1 else '%s peliculas' % len(json_obj))
+                )
 
-            print("   - Revisa el archivo '%s'." % 
-                dump_filename
-            )
+                print("   - Revisa el archivo '%s'." % 
+                    dump_filename
+                )
 

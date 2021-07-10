@@ -70,7 +70,7 @@ def clean_string(value):
     return re.sub(r'-', ' ', slugify(s))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None, imdb_id=None):
+    storage_name=None, path=None, imdb_id=None, verbosity=0):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
@@ -116,8 +116,6 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     # los campos tipicos de titulo y año
     movies_local_data = search_movie_local_data(title, year, title_alt)
 
-    # print(movies_local_data)
-
     if movies_local_data.count() == 1:
         facade_result = FacadeResult()
         facade_result.is_local_data = True
@@ -158,14 +156,11 @@ def match_movie_by_director(search_results, director, year):
         # Añadimos el director con "Nombre Apellidos" como "Apellidos Nombre" para direcores asiáticos
         slugify_directors.append(clean_string(reverse_name(director_name)))
 
-    # TODO: traza print(slugify_directors)
-
     for sr in search_results:
         movie = get_imdb_movie(sr.movieID)
         if 'director' in movie.keys():
             movie_directors = [clean_string(p['name']) for p in movie['director']]
 
-            # TODO: traza print(movie_directors)
             # Con que coincida un director damos la pelicula como buena
             for slugify_director in slugify_directors:
                 if slugify_director in movie_directors and 'year' in movie and int(movie['year']) == int(year):
@@ -176,7 +171,7 @@ def match_movie_by_director(search_results, director, year):
     return None
 
 
-def match_movie(search_results, title, year, director=None):
+def match_movie(search_results, title, year, director=None, verbosity=0):
     slugify_title = clean_string(title)
     matches = []
     matches_tier1 = []
@@ -208,8 +203,9 @@ def match_movie(search_results, title, year, director=None):
         if movie:
             return movie
         else:
-            print("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
-            trace_results(search_results)
+            if verbosity > 2:
+                print("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
+                trace_results(search_results)
             return None
     
     return get_imdb_movie(matches[0].movieID)
@@ -219,12 +215,11 @@ def trace_results(search_results):
         print("  - %s (%s) " % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None'))
 
 
-def search_movie_imdb(title, year, title_alt=None, director=None):
+def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
     # Buscamos por titulo y año en IMDB
     search_results = search_imdb_movies('%s (%s)' % (title, year))
 
     if len(search_results) == 0:
-        # print(clean_string(title))
         search_results = search_imdb_movies('%s (%s)' % (clean_string(title), year))
     
     if len(search_results) == 0:
@@ -239,7 +234,8 @@ def search_movie_imdb(title, year, title_alt=None, director=None):
         return search_movie_imdb(title_alt, year, director=director)
     
     if len(search_results) == 0:
-        print("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
+        if verbosity > 2:
+            print("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
         return None
     
     # Buscamos el mas prometedor
@@ -257,7 +253,5 @@ def search_movie_local_data(title, year, title_alt=None):
 
     query = Q(query_title)
     query_title.add(Q(year=year), Q.AND)
-    
-    # print(query)
     
     return Movie.objects.filter(query).all()
