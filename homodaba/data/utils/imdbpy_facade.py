@@ -69,6 +69,22 @@ def clean_string(value):
     s = re.sub(r'[\.:;,\-\[\]\(\)\{\}¿¡]+', ' ', value)
     return re.sub(r'-', ' ', slugify(s))
 
+def facade_get(imdb_id):
+    movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all()
+    
+    if movies_local_data.count() == 1:
+        return FacadeResult.local_data(movies_local_data[0])
+    else:
+        # Esto siempre deberia devolver un resultado... si no lo devuelve es 
+        # que el id esta mal :P
+        imdb_movie = get_imdb_movie(imdb_id)
+
+        facade_result = FacadeResult()
+        facade_result.is_imdb_data = True
+        facade_result.movie = imdb_movie
+
+        return facade_result
+
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
     storage_name=None, path=None, imdb_id=None, verbosity=0):
     """
@@ -80,20 +96,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     # Buscamos por imdb_id primero (easy)
     if not imdb_id is None:
-        movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all()
-        if movies_local_data.count() == 1:
-            return FacadeResult.local_data(movies_local_data[0])
-        else:
-            # Esto siempre deberia devolver un resultado... si no lo devuelve es 
-            # que el id esta mal :P
-            imdb_movie = get_imdb_movie(imdb_id)
-
-            facade_result = FacadeResult()
-            facade_result.is_imdb_data = True
-            facade_result.movie = imdb_movie
-
-            return facade_result
-
+        return facade_get(imdb_id)
     
     # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
     # si se trata de una peli almacenada en el disco

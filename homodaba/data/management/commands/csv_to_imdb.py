@@ -91,6 +91,11 @@ class Command(BaseCommand):
                 print(' *** ERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
+        # Si ya hemos puesto el imdb_id no tiene sentido comprobar, la damos 
+        # por bueba
+        if cd['imdb_id']:
+            return None
+        
         json_obj = {}
         json_obj['csv_info'] = {}
         json_obj['db_info'] = {}
@@ -151,17 +156,17 @@ class Command(BaseCommand):
         has_error = False
 
         if json_obj['db_info']['title'] != cd['title']:
-            if verbosity > 2:
+            if verbosity > 1:
                 print(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
             has_error = True
 
         if not cd['year']:
-            if verbosity > 2:
+            if verbosity > 1:
                 print(" - No esta definido el año en el csv para la pelicula '%s'." % cd['title'])
             has_error = True
 
         if json_obj['db_info']['year'] != int(cd['year']):
-            if verbosity > 2:
+            if verbosity > 1:
                 print(" - No coincide el año en la pelicula '%s'. csv:'%s' db:'%s'." % (cd['title'], cd['year'], json_obj['db_info']['year']))
             has_error = True
 
@@ -170,18 +175,17 @@ class Command(BaseCommand):
             director_match = False
 
             for cur_director in json_obj['db_info']['directors']:
-                # OJO: He metido el strip para que den menos errores
-                if cur_director['name'] == csv_director.strip() or cur_director['canonical_name'] == csv_director.strip():
+                if cur_director['name'] == csv_director or cur_director['canonical_name'] == csv_director:
                     director_match = True
                     break
             
             if not director_match:
-                if verbosity > 2:
+                if verbosity > 1:
                     print(" - No hemos encontrado el director '%s' para la pelicula '%s'." % (csv_director, cd['title']))
                 has_error = True
                 has_director_error = True
 
-        if has_director_error and verbosity > 2:
+        if has_director_error and verbosity > 1:
             print(" - Los directores de la pelicula '%s' son:" % cd['title'])
             for cur_director in json_obj['db_info']['directors']:
                 print("\t * '%s'." % cur_director['name'])
@@ -247,7 +251,7 @@ class Command(BaseCommand):
             if len(json_obj) == 0:
                 print(" * CONGRATZ!!!")
 
-                print("   - No hay ninguna pelicula en el csv con titulo distinto al imdb.")
+                print("   - No hay ninguna pelicula que no podamos localizar en imdb.")
             else:
                 now = datetime.now()
                 dump_filename = 'csv2imdb-%s.json' % now.strftime('%Y%m%d-%H%M%S')
@@ -256,7 +260,7 @@ class Command(BaseCommand):
 
                 print(" * WARNING!!!")
 
-                print("   - Se han encontrado %s en el csv con titulo distinto al imdb." % 
+                print("   - Se han encontrado %s en el csv con discrepancias en el imdb." % 
                     ('1 pelicula' if len(json_obj) == 1 else '%s peliculas' % len(json_obj))
                 )
 
