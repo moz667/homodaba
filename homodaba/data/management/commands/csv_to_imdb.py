@@ -83,7 +83,7 @@ class Command(BaseCommand):
         )
 
         if not facade_result:
-            print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+            print('ERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
         json_obj = {}
@@ -97,23 +97,86 @@ class Command(BaseCommand):
         }
         m = facade_result.movie
 
+        directors = []
+
         if facade_result.is_local_data:
             json_obj['db_info']['title'] = m.title
             json_obj['db_info']['imdb_id'] = m.imdb_id
             json_obj['db_info']['db_id'] = m.id
+            json_obj['db_info']['year'] = m.year
+
+            for d in m.get_directors():
+                directors.append({
+                    'db_id': d.id,
+                    'name': d.name,
+                    'canonical_name': d.canonical_name,
+                    'imdb_id': d.imdb_id,
+                })
         else:
-            print('\tWARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
+            print('WARNING: La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
 
             json_obj['db_info']['title'] = m['title']
             json_obj['db_info']['imdb_id'] = m.getID()
             json_obj['db_info']['db_id'] = None
+            json_obj['db_info']['year'] = int(m['year'])
 
+            if 'director' in m.keys():
+                for imdb_director in m['director']:
+                    local_db_directors = Person.objects.filter(imdb_id=imdb_director.getID()).all()
+                    local_db_director = local_db_directors[0] if local_db_directors.count() > 0 else None
 
+                    if local_db_director is None:
+                        directors.append({
+                            'db_id': None,
+                            'name': imdb_director['name'],
+                            'canonical_name': imdb_director['canonical_name'],
+                            'imdb_id': imdb_director.getID(),
+                        })
+                    else:
+                        directors.append({
+                            'db_id': local_db_director.id,
+                            'name': local_db_director.name,
+                            'canonical_name': local_db_director.canonical_name,
+                            'imdb_id': local_db_director.imdb_id,
+                        })
 
-        if json_obj['db_info']['title'] == cd['title']:
-            return None
+        json_obj['db_info']['directors'] = directors
 
-        return json_obj
+        has_error = False
+
+        if json_obj['db_info']['title'] != cd['title']:
+            print(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
+            has_error = True
+
+        if not cd['year']:
+            print(" - No esta definido el año en el csv para la pelicula '%s'." % cd['title'])
+            has_error = True
+
+        if json_obj['db_info']['year'] != int(cd['year']):
+            print(" - No coincide el año en la pelicula '%s'. csv:'%s' db:'%s'." % (cd['title'], cd['year'], json_obj['db_info']['year']))
+            has_error = True
+
+        has_director_error = False
+        for csv_director in cd['director'].split(','):
+            director_match = False
+
+            for cur_director in json_obj['db_info']['directors']:
+                # OJO: He metido el strip para que den menos errores
+                if cur_director['name'] == csv_director.strip() or cur_director['canonical_name'] == csv_director.strip():
+                    director_match = True
+                    break
+            
+            if not director_match:
+                print(" - No hemos encontrado el director '%s' para la pelicula '%s'." % (csv_director, cd['title']))
+                has_error = True
+                has_director_error = True
+
+        if has_director_error:
+            print(" - Los directores de la pelicula '%s' son:" % cd['title'])
+            for cur_director in json_obj['db_info']['directors']:
+                print("\t * '%s'." % cur_director['name'])
+
+        return json_obj if has_error else None
 
 
     def handle(self, *args, **options):
