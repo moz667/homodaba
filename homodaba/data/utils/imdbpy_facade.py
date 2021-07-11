@@ -180,7 +180,7 @@ def match_movie(search_results, title, year, director=None, verbosity=0):
     matches_tier1 = []
     
     for sr in search_results:
-        if 'year' in sr and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
+        if 'year' in sr and sr['year'] and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
             # sr.keys()[0] == 'title', es para evitar talk-shows y otros programas 
             # especiales... por lo visto en ellos no mete primero el title
             if sr.keys()[0] == 'title':
@@ -197,21 +197,22 @@ def match_movie(search_results, title, year, director=None, verbosity=0):
 
     total_matches = len(matches)
 
-    # Si hay mas de un match, buscamos por director en los matches
-    if total_matches > 1:
-        return match_movie_by_director(matches, director, year)
+    if not director is None:
+        # Si hay mas de un match, buscamos por director en los matches
+        if total_matches > 1:
+            return match_movie_by_director(matches, director, year)
+        
+        if total_matches == 0:
+            movie = match_movie_by_director(search_results, director, year)
+            if movie:
+                return movie
+            else:
+                if verbosity > 2:
+                    print("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
+                    trace_results(search_results)
+                return None
     
-    if total_matches == 0:
-        movie = match_movie_by_director(search_results, director, year)
-        if movie:
-            return movie
-        else:
-            if verbosity > 2:
-                print("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
-                trace_results(search_results)
-            return None
-    
-    return get_imdb_movie(matches[0].movieID)
+    return get_imdb_movie(matches[0].movieID) if len(matches) > 0 else None
 
 def trace_results(search_results):
     for sr in search_results:
@@ -233,7 +234,7 @@ def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
     
     # Si aun no lo encontramos por el titulo principal, 
     # buscamos por el alt (si lo tiene)
-    if len(search_results) == 0 and title_alt:
+    if len(search_results) == 0 and title_alt and not director is None:
         return search_movie_imdb(title_alt, year, director=director)
     
     if len(search_results) == 0:

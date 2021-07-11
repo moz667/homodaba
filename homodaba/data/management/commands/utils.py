@@ -12,9 +12,95 @@ from imdb import IMDb
 
 import csv
 from datetime import datetime
+import json
 import re
 import sys
 from time import sleep
+
+
+# TODO: Mover el tema de trazas a una lib a parte o investigar si exsiste  algo 
+# parecido, que seguro que existira
+verbosity = 0
+
+class Trace(object):
+    @staticmethod
+    def set_verbosity(new_verbosity):
+        global verbosity
+        verbosity = new_verbosity
+
+    @staticmethod
+    def trace(title, message=None):
+        print(title)
+        if message:
+            print(message)
+
+    @staticmethod
+    def info(title, message=None):
+        if verbosity > 0:
+            Trace.trace("INFO: %s" % title, message)
+
+    @staticmethod
+    def error(title, message=None):
+        if verbosity > 0:
+            Trace.trace("ERROR: %s" % title, message)
+
+    @staticmethod
+    def warning(title, message=None):
+        if verbosity > 1:
+            Trace.trace("WARNING: %s" % title, message)
+
+    @staticmethod
+    def debug(title, message=None):
+        if verbosity > 2:
+            Trace.trace("DEBUG: %s" % title, message)
+
+"""
+Divide un nombre de archivo (sin ruta) en partes diferenciadas
+{
+    'ext', extension
+    'name', nombre sin la extension ni el punto
+    'fullname', el nombre que le pasamos como parametro
+}
+"""
+def split_filename_parts(filename):
+    parts = filename.split('.')
+
+    # Si tiene extension:
+    if len(parts) > 1:
+        extension_index = (len(parts) - 1)
+
+        return {
+            'ext': parts[extension_index],
+            'name': '.'.join(parts[:extension_index]),
+            'fullname': filename
+        }
+    
+    # Si no tiene extension
+    return {
+        'fullname': filename
+    }
+
+"""
+Guarda un obj en un json formateandolo bonito
+"""
+def save_json(obj, filename):
+    dump_file = open(filename, 'w', newline='')
+    dump_file.write(json.dumps(obj, indent=4, sort_keys=True, ensure_ascii=False))
+
+"""
+Divide una lista en 2 listas 
+"""
+def divide_list_on_two(full_list):
+    # Si tiene solo un elemento, devolvemos la lista y una vacia
+    if len(full_list) == 1:
+        return full_list, []
+    
+    middle_index = int(len(full_list) / 2)
+    
+    first_half = full_list[:middle_index]
+    second_half = full_list[middle_index:]
+
+    return first_half, second_half
 
 def csv_validate(r):
     if not 'title' in r or not r['title']:
