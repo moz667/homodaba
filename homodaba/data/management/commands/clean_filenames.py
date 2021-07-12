@@ -1,14 +1,13 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
+from data.utils import Trace as trace
 from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie
 
 from datetime import datetime
 import os, sys, re, json
 
-from .utils import Trace as trace, save_json, split_filename_parts
-
-verbosity = 0
+from .utils import save_json, split_filename_parts
 
 HELP_TEXT = """
 Buscador:
@@ -33,8 +32,6 @@ Una vez terminado todos los archivos generamos un json con los datos de la lista
 Generador de script de renames (popper.sh):
 1) Por cada item en el json generamos un mv con el archivo original y el nuevo nombre
 """
-
-verbosity = 0
 
 VIDEO_EXT = [
     'mp4', 'avi', 'mkv', 'wmv', 'iso'
@@ -263,7 +260,8 @@ class Command(BaseCommand):
                 if file['year'] and file['title']:
                     search_results = search_movie_imdb(file['title'], file['year'])
 
-                    if len(search_results) == 0:
+                    if search_results == None or len(search_results) == 0:
+                        print("")
                         print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
                     else:
                         imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
@@ -276,6 +274,7 @@ class Command(BaseCommand):
                             processeds.append(file)
                             return
                         else:
+                            print("")
                             print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
                             print(" * Aunque hemos encontrado las siguientes: *")
                             for sr in search_results:
@@ -283,10 +282,13 @@ class Command(BaseCommand):
                                     print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
                             
                 elif not file['year']:
+                    print("")
                     print(" * No tenemos año para la peli '%s' *" % file['fullname'])
                 else:
+                    print("")
                     print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
 
+            print("")
             print("1. Introducir imdb_id")
             print("3. Introducir/Cambiar año")
             print("4. Introducir/Cambiar titulo")
@@ -312,20 +314,26 @@ class Command(BaseCommand):
                 print('Introduce el año:')
                 year = input()
                 file['year'] = int(year)
-                self.process_file(file, processeds, json_processeds_file)
+                return self.process_file(file, processeds, json_processeds_file)
             elif selected_option == "4":
                 print('Introduce el titulo:')
                 title = input()
                 file['title'] = title
-                self.process_file(file, processeds, json_processeds_file)
+                return self.process_file(file, processeds, json_processeds_file)
             elif selected_option == "5":
-                print(file)
-                self.process_file(file, processeds, json_processeds_file, query_file=False)
+                # print(file)
+                print(" - fullname: '%s'" % file['fullname'])
+                print(" - title: '%s'" % file['title'])
+                print(" - year: '%s'" % file['year'])
+
+                if 'imdb_id' in file:
+                    print(" - imdb_id: '%s'" % file['imdb_id'])
+                return self.process_file(file, processeds, json_processeds_file, query_file=False)
             elif str(selected_option).lower() == "x":
                 save_json(processeds, json_processeds_file)
                 exit(0)
             else:
-                self.process_file(file, processeds, json_processeds_file)
+                return self.process_file(file, processeds, json_processeds_file)
         except:
             print("Error no esperado:", sys.exc_info()[0])
             save_json(processeds, json_processeds_file)
@@ -342,9 +350,7 @@ class Command(BaseCommand):
         if 'output' in options and options['output']:
             output = ' '.join(options['output'])
         
-        global verbosity
-        if 'verbosity' in options and options['verbosity']:
-            verbosity = options['verbosity']
+        verbosity = options['verbosity']
         trace.set_verbosity(verbosity)
 
         files = self.generate_json_files(directory, output)

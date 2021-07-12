@@ -7,6 +7,7 @@ from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, Genre
 from data.models import get_first_or_create_tag
 
 from data.utils.imdbpy_facade import facade_search
+from data.utils import Trace as trace
 
 from imdb import IMDb
 
@@ -16,43 +17,6 @@ import json
 import re
 import sys
 from time import sleep
-
-
-# TODO: Mover el tema de trazas a una lib a parte o investigar si exsiste  algo 
-# parecido, que seguro que existira
-verbosity = 0
-
-class Trace(object):
-    @staticmethod
-    def set_verbosity(new_verbosity):
-        global verbosity
-        verbosity = new_verbosity
-
-    @staticmethod
-    def trace(title, message=None):
-        print(title)
-        if message:
-            print(message)
-
-    @staticmethod
-    def info(title, message=None):
-        if verbosity > 0:
-            Trace.trace("INFO: %s" % title, message)
-
-    @staticmethod
-    def error(title, message=None):
-        if verbosity > 0:
-            Trace.trace("ERROR: %s" % title, message)
-
-    @staticmethod
-    def warning(title, message=None):
-        if verbosity > 1:
-            Trace.trace("WARNING: %s" % title, message)
-
-    @staticmethod
-    def debug(title, message=None):
-        if verbosity > 2:
-            Trace.trace("DEBUG: %s" % title, message)
 
 """
 Divide un nombre de archivo (sin ruta) en partes diferenciadas
@@ -126,14 +90,14 @@ def clean_csv_data(r):
     storage_type = MovieStorageType.ST_DVD
     if 'storage_type' in r and r['storage_type']:
         if not r['storage_type'] in MovieStorageType.STORAGE_TYPES_AS_LIST:
-            print('\tWARNING! storage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
+            trace.warning('\tstorage_type "%s" no encontrado en la lista de soportados.' % r['storage_type'])
         else:
             storage_type = r['storage_type']
     
     media_format = MovieStorageType.MF_DVD
     if 'media_format' in r and r['media_format']:
         if not r['media_format'] in MovieStorageType.MEDIA_FORMATS_AS_LIST:
-            print('\tWARNING! media_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
+            trace.warning('\tmedia_format "%s" no encontrado en la lista de soportados.' % r['media_format'])
         else:
             media_format = r['media_format']
 
@@ -177,10 +141,26 @@ es dificil (al menos con esta api de imdb).
 hay un campo que es ia_movie['original title'], pero no suele venir con 
 el titulo original, viene mas con el titulo del entorno de la api (que 
 npi cual es, esto deberiamos investigarlo un poco... :P)
-
-TODO: Investigar en que entorno se ejecuta la API (idioma, pais?)
 """
-def get_imdb_original_title(ia_movie):
+def get_imdb_original_title(ia_movie, current_title=None):
+    trace.debug(' - %s (%s) [%s]' % (ia_movie['title'], ia_movie['year'], ia_movie.getID()))
+    if 'original title' in ia_movie.keys():
+        trace.debug('   * orinal_title: "%s"' % ia_movie['original title'])
+    if 'akas' in ia_movie.keys():
+        trace.debug('   * akas:')
+        for aka in ia_movie['akas']:
+            trace.debug("     - '%s'" % aka)
+
+    # Asumimos que si el pais de origen de la peli es españa
+    # el titulo que vamos a tener en el csv va a estar en español
+    # asi que el original no hace falta calcularlo (es el mismo)
+    # Esto se hace porque como se ha dicho con anterioridad, conseguir
+    # el titulo original en imdb es un dolor de webs... y para la peli
+    # Julieta (2016), devuelve "Silencio" lo cual no tiene puto sentido
+    # FIXME: Poner por setting estos 'spain'
+    if current_title and imdb_check_country_movie(ia_movie, 'spain'):
+        return current_title
+
     if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
         for country in ia_movie['countries']:
             for aka in ia_movie['akas']:
@@ -191,6 +171,14 @@ def get_imdb_original_title(ia_movie):
     # return ia_movie['original title']
     return None
 
+def imdb_check_country_movie(ia_movie, country):
+    if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
+        for c in ia_movie['countries']:
+            if c.lower() == country.lower():
+                return True
+    
+    return False
+
 """
 Compara los datos recuperados de imdb en ia_movie con el title y director que 
 le pasamos como parametro.
@@ -199,19 +187,19 @@ Si no coinciden, sacamos un mensaje notificando las diferencias.
 def trace_validate_imdb_movie(ia_movie, title, director=None):
     # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
     if ia_movie['title'] != title:
-        print('\tINFO: El titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
 
     # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
     if director:
         if not 'director' in ia_movie.keys():
-            print('\tINFO: trace_validate_ia_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+            trace.info('\ttrace_validate_ia_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         else:
             ia_directors = [p['name'] for p in ia_movie['director']]
 
             for director_name in director.split(','):
                 if not director_name in ia_directors:
                     # Esto es para que revises tu csv!!!
-                    print("\tINFO: No encontramos el director '%s' en IMDB para la pelicula '%s'" % (director_name, title))
+                    trace.info("\tNo encontramos el director '%s' en IMDB para la pelicula '%s'" % (director_name, title))
 
 
 """
@@ -219,7 +207,6 @@ Busqueda interactiva.
 
 TODO: No se esta usando pero lo dejamos por aqui por si queremos retomarlo
 TODO: Si lo volvemos a usar, utilizar la cache
-"""
 def interactive_imdb_search(title, year, title_alt=None):
     ia = IMDb(reraiseExceptions=True)
     search_results = ia.search_movie('%s (%s)' % (title, year))
@@ -244,22 +231,23 @@ def interactive_imdb_search(title, year, title_alt=None):
             input_return = input("")
 
             if input_return == 'q':
-                print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
+                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
                 exit()
             elif input_return == 'n':
-                print("\tERROR!: Parece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
+                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
                 return None
             else:
                 try:
                     input_return = int(input_return)
                     if not (input_return > 0 and input_return <= len(search_results)):
-                        print("\tERROR!: Ese valor no es posible.")
+                        trace.error("\tEse valor no es posible.")
                         input_return = ""
                 except ValueError:
-                    print("\tERROR!: Ese valor no es posible.")
+                    trace.error("\tEse valor no es posible.")
                     input_return = ""
         
         return search_results[int(input_return) - 1]
     
     # No encontramos ni una...
     return None
+"""

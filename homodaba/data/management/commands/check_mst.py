@@ -11,8 +11,6 @@ from data.utils.imdbpy_facade import facade_search
 import csv
 import sys
 
-from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate
-
 verbosity = 0
 
 HELP_TEXT = """

@@ -12,6 +12,12 @@ IMDB_API = IMDb(reraiseExceptions=True)
 
 import codecs
 
+from . import Trace as trace
+
+"""
+TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
+"""
+
 def serialize(obj):
     return codecs.encode(pickle.dumps(obj), "base64").decode()
 
@@ -86,7 +92,7 @@ def facade_get(imdb_id):
         return facade_result
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None, imdb_id=None, verbosity=0):
+    storage_name=None, path=None, imdb_id=None):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
@@ -181,11 +187,13 @@ def match_imdb_movie_by_director(search_results, director, year):
     return None
 
 
-def match_imdb_movie(search_results, title, year, director=None, verbosity=0):
+def match_imdb_movie(search_results, title, year, director=None):
     slugify_title = clean_string(title)
     matches = []
     matches_tier1 = []
     
+    trace_results(search_results)
+
     for sr in search_results:
         if 'year' in sr and sr['year'] and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
             # sr.keys()[0] == 'title', es para evitar talk-shows y otros programas 
@@ -195,10 +203,6 @@ def match_imdb_movie(search_results, title, year, director=None, verbosity=0):
             else:
                 matches.append(sr)
     
-    # Si solo hemos encontrado un tier1 asumimos que es el bueno
-    if len(matches_tier1) == 1:
-        return get_imdb_movie(matches_tier1[0].movieID)
-
     # Sumamos todos los matches dando prioridad por tier
     matches = matches_tier1 + matches
 
@@ -214,19 +218,34 @@ def match_imdb_movie(search_results, title, year, director=None, verbosity=0):
             if movie:
                 return movie
             else:
-                if verbosity > 2:
-                    print("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
+                trace.debug("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
+                
+                if trace.is_debug():
                     trace_results(search_results)
+
                 return None
     
+    # Si solo hemos encontrado un tier1 asumimos que es el bueno
+    if len(matches_tier1) == 1:
+        trace.debug(">>> Seleccionando: len(matches_tier1) == 1")
+        trace_results(matches_tier1)
+        return get_imdb_movie(matches_tier1[0].movieID)
+
+    trace.debug(">>> Seleccionando: matches[0]")
+    trace_results(matches)
     return get_imdb_movie(matches[0].movieID) if len(matches) > 0 else None
 
 def trace_results(search_results):
     for sr in search_results:
-        print("  - %s (%s) " % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None'))
+        trace.debug("  - %s (%s) [%s]" % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None', sr.movieID))
+        movie = get_imdb_movie(sr.movieID)
+        if 'director' in movie.keys():
+            trace.debug("        DIRECTORES:")
+            movie_directors = [clean_string(p['name']) for p in movie['director']]
+            for director in movie_directors:
+                trace.debug("        * '%s'" % director)
 
-
-def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
+def search_movie_imdb(title, year, title_alt=None, director=None):
     # Buscamos por titulo y año en IMDB
     search_results = search_imdb_movies('%s (%s)' % (title, year))
 
@@ -245,8 +264,7 @@ def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
         return search_movie_imdb(title_alt, year, director=director)
     
     if search_results is None or len(search_results) == 0:
-        if verbosity > 2:
-            print("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
+        trace.debug("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
         return None
     
     return search_results

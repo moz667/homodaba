@@ -6,15 +6,14 @@ from django.utils.text import slugify
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
+from data.utils import Trace as trace
 from data.utils.imdbpy_facade import facade_search
 
 import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate, clean_csv_data, csv_validate
-
-verbosity = 0
+from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate, clean_csv_data, csv_validate, imdb_check_country_movie
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -119,7 +118,7 @@ class Command(BaseCommand):
         )
 
     def get_or_insert_movie(self, r):
-        print('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        trace.info('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
 
@@ -134,23 +133,12 @@ class Command(BaseCommand):
         )
 
         if not facade_result:
-            print('\tERROR!: Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+            trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
         if facade_result.is_local_data:
-            global verbosity
-            
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            print("\tINFO: Ya tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
-
-            if verbosity > 2:
-                print(
-                    '\tDEBUG:',
-                    '\n\t\ttitle: ',               getattr(facade_result.movie, 'title'),
-                    '\n\t\ttitle_original: ',      getattr(facade_result.movie, 'title_original'),
-                    '\n\t\ttitle_preferred: ',     getattr(facade_result.movie, 'title_preferred'),
-                    '\n\t\timdb_id: ',             getattr(facade_result.movie, 'imdb_id')
-                )
+            trace.info("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
             # Solo insertamos storage si no fue una coincidencia de storage
             if not facade_result.storage_match:
@@ -170,6 +158,7 @@ class Command(BaseCommand):
         trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
 
         local_movie = self.insert_movie(
+            r['title'],
             facade_result.movie, 
             tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
             title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
@@ -205,7 +194,7 @@ class Command(BaseCommand):
 
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
-            print('\tINFO: Ya tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
+            trace.info('\tYa tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
             return storages[0]
         
         # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
@@ -220,7 +209,7 @@ class Command(BaseCommand):
             version=version,
         )
 
-    def insert_movie(self, ia_movie, tags=[], title_original=None, title_preferred=None):
+    def insert_movie(self, title, ia_movie, tags=[], title_original=None, title_preferred=None):
         # 2.2.4) Para cada uno de los directores
         directors = []
 
@@ -237,7 +226,7 @@ class Command(BaseCommand):
                 
                 directors.append(lp)
         else:
-            print('\tINFO: insert_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+            trace.info('\tinsert_movie: No encontramos directores para la pelicula "%s"' % title)
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
         writers = []
@@ -252,7 +241,7 @@ class Command(BaseCommand):
                 
                 writers.append(lp)
         else:
-            print('\tINFO: No encontramos escritores para la pelicula "%s"' % ia_movie['title'])
+            trace.info('\tNo encontramos escritores para la pelicula "%s"' % title)
         
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
         casting = []
@@ -267,21 +256,30 @@ class Command(BaseCommand):
                 
                 casting.append(lp)
         else:
-            print('\tINFO: No encontramos casting para la pelicula "%s"' % ia_movie['title'])
+            trace.info('\tNo encontramos casting para la pelicula "%s"' % title)
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
         # buscamos el titulo preferido:
         if title_preferred is None:
             # FIXME: Poner por setting estos ' (Spain)'
-            if 'akas' in ia_movie.keys():
+
+            # Asumimos que las pelis españolas tienen el titulo en español
+            # y que el prefered es el mismo que este... asi evitamos 
+            # problemas con los datos de imdb (ver get_imdb_original_title para 
+            # mas info )
+            if imdb_check_country_movie(ia_movie, 'spain'):
+                title_preferred = title
+            
+            elif 'akas' in ia_movie.keys():
                 for aka in ia_movie['akas']:
                     if ' (Spain)' in aka:
                         title_preferred = aka.replace(' (Spain)', '')
                         break
         
+        # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
         local_movie = Movie.objects.create(
             title=ia_movie['title'],
-            title_original=title_original if not title_original is None and title_original else get_imdb_original_title(ia_movie),
+            title_original=title_original if not title_original is None and title_original else get_imdb_original_title(ia_movie, current_title=title),
             title_preferred=title_preferred,
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
@@ -333,7 +331,7 @@ class Command(BaseCommand):
                     if not vc_tag in local_movie.content_rating_systems.all():
                         local_movie.content_rating_systems.add(vc_tag)
             else:
-                print('INFO: No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
+                trace.info('No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
         if len(tags):
             tagged = True
@@ -391,8 +389,9 @@ class Command(BaseCommand):
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
 
-        global verbosity
         verbosity = options['verbosity']
+        trace.set_verbosity(verbosity)
+
         fieldnames = []
 
         with open(options['csv_file'][0], newline='') as csvfile:
@@ -427,7 +426,7 @@ class Command(BaseCommand):
                         else:
                             csv_writer_done.writerow(csv_row)
                     except:
-                        print("Error no esperado:", sys.exc_info()[0])
+                        trace.error("Error no esperado", sys.exc_info()[0])
                         csv_writer_fails.writerow(csv_row)
                         raise
 
