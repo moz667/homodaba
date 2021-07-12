@@ -53,19 +53,6 @@ class filesParser:
                 if field in originMovie: movie[field] = originMovie[field]
             self.movies[row] = movie
 
-    def fixOriginErrors(self, file_json):
-        base, ext = os.path.splitext(file_json)
-        if ext.lower() != '.json':
-            raise argparse.ArgumentTypeError('File must have a json extension', file_json)
-        with open(file_json, 'r', newline='') as films_to_correct:
-            moviespatch = json.load(films_to_correct)
-
-        basheline_cleaner = csvCleaner(moviespatch, movieswithIMDB)
-        for row in self.movies:
-            movie = self.movies[row]
-            basheline_cleaner.process(movie)
-            self.movies[row] = movie
-
     def fixOriginErrors(self, *args):
         patchedTitles_json = args[0]
         if (len(args) == 2):
