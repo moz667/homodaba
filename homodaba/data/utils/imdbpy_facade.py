@@ -129,7 +129,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     search_results = search_movie_imdb(title, year, title_alt=title_alt, director=director)
 
-    if len(search_results) == 0:
+    if search_results is None or len(search_results) == 0:
         return None
     
     # Buscamos el mas prometedor
@@ -230,21 +230,21 @@ def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
     # Buscamos por titulo y año en IMDB
     search_results = search_imdb_movies('%s (%s)' % (title, year))
 
-    if len(search_results) == 0:
+    if search_results is None or len(search_results) == 0:
         search_results = search_imdb_movies('%s (%s)' % (clean_string(title), year))
     
-    if len(search_results) == 0:
+    if search_results is None or len(search_results) == 0:
         search_results = search_imdb_movies(title)
     
-    if len(search_results) == 0:
+    if search_results is None or len(search_results) == 0:
         search_results = search_imdb_movies(clean_string(title))
     
     # Si aun no lo encontramos por el titulo principal, 
     # buscamos por el alt (si lo tiene)
-    if len(search_results) == 0 and title_alt and not director is None:
+    if (search_results is None or len(search_results) == 0) and title_alt and not director is None:
         return search_movie_imdb(title_alt, year, director=director)
     
-    if len(search_results) == 0:
+    if search_results is None or len(search_results) == 0:
         if verbosity > 2:
             print("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
         return None
