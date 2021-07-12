@@ -44,6 +44,11 @@ class Command(BaseCommand):
             help='Ayuda ampliada acerca del archivo csv.',
         )
         parser.add_argument(
+            '--force-check-imdb-id',
+            action='store_true',
+            help='Fuerza la comprobacion de discrepancias incluso si tiene el campo imdb_id.',
+        )
+        parser.add_argument(
             '--delimiter', default=';',
             type=str,
             help='Delimitador de campos para el csv (por defecto ";")',
@@ -67,7 +72,7 @@ class Command(BaseCommand):
             imdb_id=ia_person.getID(),
         )
 
-    def get_csv_imdb_json_data(self, r):
+    def get_csv_imdb_json_data(self, r, force_check_imdb_id=True):
         global verbosity
 
         if verbosity > 2:
@@ -93,7 +98,7 @@ class Command(BaseCommand):
 
         # Si ya hemos puesto el imdb_id no tiene sentido comprobar, la damos 
         # por bueba
-        if cd['imdb_id']:
+        if not force_check_imdb_id and cd['imdb_id']:
             return None
         
         json_obj = {}
@@ -209,6 +214,8 @@ class Command(BaseCommand):
         if 'quotechar' in options and options['quotechar'] and options['quotechar'][0]:
             csv_quotechar = options['quotechar'][0]
 
+        force_check_imdb_id = options['force_check_imdb_id']
+
         from_title = options['from_title'] if 'from_title' in options and options['from_title'] and len(options['from_title']) > 0 else None
         from_title = ' '.join(from_title) if from_title else None
 
@@ -237,7 +244,7 @@ class Command(BaseCommand):
                 
                 if start:
                     try:
-                        cur_movie = self.get_csv_imdb_json_data(csv_row)
+                        cur_movie = self.get_csv_imdb_json_data(csv_row, force_check_imdb_id)
                         if not cur_movie is None:
                             json_obj.append(cur_movie)
                     except:
