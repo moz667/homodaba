@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from data.utils.imdbpy_facade import facade_search, get_imdb_movie
+from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie
 
 from datetime import datetime
 import os, sys, re, json
@@ -257,6 +257,80 @@ class Command(BaseCommand):
         
         return False
 
+    def process_file(self, file, processeds, json_processeds_file, query_file=True):
+        try:
+            if query_file:
+                if file['year'] and file['title']:
+                    search_results = search_movie_imdb(file['title'], file['year'])
+
+                    if len(search_results) == 0:
+                        print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
+                    else:
+                        imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
+
+                        if imdb_movie:
+                            file['title'] = imdb_movie['title']
+                            file['year'] = imdb_movie['year']
+                            file['imdb_id'] = imdb_movie.getID()
+
+                            processeds.append(file)
+                            return
+                        else:
+                            print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
+                            print(" * Aunque hemos encontrado las siguientes: *")
+                            for sr in search_results:
+                                if 'year' in sr and 'title' in sr:
+                                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+                            
+                elif not file['year']:
+                    print(" * No tenemos año para la peli '%s' *" % file['fullname'])
+                else:
+                    print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
+
+            print("1. Introducir imdb_id")
+            print("3. Introducir/Cambiar año")
+            print("4. Introducir/Cambiar titulo")
+            print("5. Mostrar informacion de la peli actual")
+            print(" . Volver a procesar")
+
+            print("X. Guardar y Salir")
+            print('Introduce una opcion:')
+
+            selected_option = input()
+            if selected_option == "1":
+                print('Introduce el imdb_id:')
+                imdb_id = input()
+
+                imdb_movie = get_imdb_movie(imdb_id)
+
+                file['title'] = imdb_movie['title']
+                file['year'] = imdb_movie['year']
+                file['imdb_id'] = imdb_id
+
+                processeds.append(file)
+            elif selected_option == "3":
+                print('Introduce el año:')
+                year = input()
+                file['year'] = int(year)
+                self.process_file(file, processeds, json_processeds_file)
+            elif selected_option == "4":
+                print('Introduce el titulo:')
+                title = input()
+                file['title'] = title
+                self.process_file(file, processeds, json_processeds_file)
+            elif selected_option == "5":
+                print(file)
+                self.process_file(file, processeds, json_processeds_file, query_file=False)
+            elif str(selected_option).lower() == "x":
+                save_json(processeds, json_processeds_file)
+                exit(0)
+            else:
+                self.process_file(file, processeds, json_processeds_file)
+        except:
+            print("Error no esperado:", sys.exc_info()[0])
+            save_json(processeds, json_processeds_file)
+            raise
+
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
             self.print_help('manage.py', __name__)
@@ -291,7 +365,7 @@ class Command(BaseCommand):
         json_processeds_file = self.get_output_filename('processeds.json', directory, output)
         
         if os.path.exists(json_processeds_file):
-            processeds = json.loads(open(json_processeds_file, 'r', newline=''))
+            processeds = json.load(open(json_processeds_file, 'r', newline=''))
 
         for f in files["clean"]:
             if self.match_in_processeds(f, processeds):
@@ -319,8 +393,6 @@ class Command(BaseCommand):
                 resolution = possible_resolutions[0]
                 cur_name = re.sub(resolution, "", cur_name)
 
-
-
             cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
 
             cur_name = re.sub(r"(?![a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
@@ -328,13 +400,11 @@ class Command(BaseCommand):
             
             # print(f['name'])
             print(title)
-            if year and title:
-                facade_results = facade_search(title, year)
-            elif not year:
-                print("No tenemos año para la peli '%s'" % f['fullname'])
-            else:
-                print("No tenemos titulo para la peli '%s'" % f['fullname'])
 
+            f['year'] = year
+            f['title'] = title
+
+            self.process_file(f, processeds, json_processeds_file)
             """
             print("cur_name: %s" % cur_name)
             print("title: %s" % title)
@@ -373,4 +443,49 @@ Una vez terminado todos los archivos generamos un json con los datos de la lista
 
 Generador de script de renames (popper.sh):
 1) Por cada item en el json generamos un mv con el archivo original y el nuevo nombre
+
+            if year and title:
+                facade_results = facade_search(title, year)
+                print(facade_results)
+            elif not year:
+                print("No tenemos año para la peli '%s'" % f['fullname'])
+            else:
+                print("No tenemos titulo para la peli '%s'" % f['fullname'])
+            
+            try:
+                print("1. Introducir imdb_id")
+                print("2. Introducir/Cambiar año")
+                print("3. Introducir/Cambiar titulo")
+                print("4. Mostrar informacion de la peli actual")
+
+                print("X. Guardar y Salir")
+                print('Introduce una opcion:')
+
+                selected_option = input()
+                if selected_option == "1":
+                    print('Introduce el imdb_id:')
+                    imdb_id = input()
+
+                    imdb_movie = get_imdb_movie(imdb_id)
+
+                    f['title'] = imdb_movie['title']
+                    f['year'] = imdb_movie['year']
+                    f['imdb_id'] = imdb_id
+
+                    processeds.append(f)
+                elif selected_option == "2":
+                    print('Introduce el año:')
+                    year = input()
+                    # TODO: Retry
+                elif selected_option == "3":
+                    print('Introduce el titulo:')
+                    title = input()
+                    # TODO: Retry
+                elif selected_option == "X":
+                    save_json(processeds, json_processeds_file)
+                    exit(0)
+            except:
+                print("Error no esperado:", sys.exc_info()[0])
+                save_json(processeds, json_processeds_file)
+                raise
 """

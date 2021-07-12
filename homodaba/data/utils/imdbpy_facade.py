@@ -127,7 +127,14 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
         return facade_result
 
-    imdb_movie = search_movie_imdb(title, year, title_alt=title_alt, director=director)
+    search_results = search_movie_imdb(title, year, title_alt=title_alt, director=director)
+
+    if len(search_results) == 0:
+        return None
+    
+    # Buscamos el mas prometedor
+    imdb_movie = match_imdb_movie(search_results, title, year, director)
+
     if imdb_movie:
         facade_result = FacadeResult()
         # Por ultima vez comprobamos que no la tenemos dada de alta en local
@@ -152,7 +159,7 @@ def reverse_name(name):
     reverse_name = " ".join([second, first])
     return reverse_name
 
-def match_movie_by_director(search_results, director, year):
+def match_imdb_movie_by_director(search_results, director, year):
     slugify_directors = []
     for director_name in director.split(','):
         slugify_directors.append(clean_string(director_name))
@@ -174,7 +181,7 @@ def match_movie_by_director(search_results, director, year):
     return None
 
 
-def match_movie(search_results, title, year, director=None, verbosity=0):
+def match_imdb_movie(search_results, title, year, director=None, verbosity=0):
     slugify_title = clean_string(title)
     matches = []
     matches_tier1 = []
@@ -200,10 +207,10 @@ def match_movie(search_results, title, year, director=None, verbosity=0):
     if not director is None:
         # Si hay mas de un match, buscamos por director en los matches
         if total_matches > 1:
-            return match_movie_by_director(matches, director, year)
+            return match_imdb_movie_by_director(matches, director, year)
         
         if total_matches == 0:
-            movie = match_movie_by_director(search_results, director, year)
+            movie = match_imdb_movie_by_director(search_results, director, year)
             if movie:
                 return movie
             else:
@@ -242,8 +249,7 @@ def search_movie_imdb(title, year, title_alt=None, director=None, verbosity=0):
             print("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
         return None
     
-    # Buscamos el mas prometedor
-    return match_movie(search_results, title, year, director)
+    return search_results
 
 def search_movie_local_data(title, year, title_alt=None):
     query_title = Q(title__iexact=title)
