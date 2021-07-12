@@ -101,7 +101,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     """
 
     # Buscamos por imdb_id primero (easy)
-    if not imdb_id is None:
+    if imdb_id:
         return facade_get(imdb_id)
     
     # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
@@ -165,12 +165,19 @@ def reverse_name(name):
     reverse_name = " ".join([second, first])
     return reverse_name
 
+def slugify_directors(director_field):
+    directors = []
+
+    if director_field:
+        for director_name in director_field.split(','):
+            directors.append(clean_string(director_name))
+            # Añadimos el director con "Nombre Apellidos" como "Apellidos Nombre" para direcores asiáticos
+            directors.append(clean_string(reverse_name(director_name)))
+    
+    return directors
+
 def match_imdb_movie_by_director(search_results, director, year):
-    slugify_directors = []
-    for director_name in director.split(','):
-        slugify_directors.append(clean_string(director_name))
-        # Añadimos el director con "Nombre Apellidos" como "Apellidos Nombre" para direcores asiáticos
-        slugify_directors.append(clean_string(reverse_name(director_name)))
+    directors = slugify_directors(director)
 
     for sr in search_results:
         movie = get_imdb_movie(sr.movieID)
@@ -178,7 +185,7 @@ def match_imdb_movie_by_director(search_results, director, year):
             movie_directors = [clean_string(p['name']) for p in movie['director']]
 
             # Con que coincida un director damos la pelicula como buena
-            for slugify_director in slugify_directors:
+            for slugify_director in directors:
                 if slugify_director in movie_directors and 'year' in movie and int(movie['year']) == int(year):
                     return movie
     
@@ -192,7 +199,20 @@ def match_imdb_movie(search_results, title, year, director=None):
     matches = []
     matches_tier1 = []
     
+    trace.debug("match_imdb_movie(search_results, '%s', '%s', '%s'" % (title, year, director))
     trace_results(search_results)
+
+    if not director is None:
+        year_matches = []
+
+        for sr in search_results:
+            if 'year' in sr and sr['year'] and int(sr['year']) == int(year):
+                year_matches.append(sr)
+
+        movie = match_imdb_movie_by_director(year_matches, director, year)
+
+        if movie:
+            return movie
 
     for sr in search_results:
         if 'year' in sr and sr['year'] and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
@@ -206,6 +226,12 @@ def match_imdb_movie(search_results, title, year, director=None):
     # Sumamos todos los matches dando prioridad por tier
     matches = matches_tier1 + matches
 
+    # Si solo hemos encontrado un tier1 asumimos que es el bueno
+    if len(matches_tier1) == 1:
+        trace.debug(">>> Seleccionando: len(matches_tier1) == 1")
+        trace_results(matches_tier1)
+        return get_imdb_movie(matches_tier1[0].movieID)
+
     total_matches = len(matches)
 
     if not director is None:
@@ -215,35 +241,28 @@ def match_imdb_movie(search_results, title, year, director=None):
         
         if total_matches == 0:
             movie = match_imdb_movie_by_director(search_results, director, year)
+
             if movie:
                 return movie
             else:
                 trace.debug("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
-                
-                if trace.is_debug():
-                    trace_results(search_results)
-
                 return None
-    
-    # Si solo hemos encontrado un tier1 asumimos que es el bueno
-    if len(matches_tier1) == 1:
-        trace.debug(">>> Seleccionando: len(matches_tier1) == 1")
-        trace_results(matches_tier1)
-        return get_imdb_movie(matches_tier1[0].movieID)
 
     trace.debug(">>> Seleccionando: matches[0]")
     trace_results(matches)
+
     return get_imdb_movie(matches[0].movieID) if len(matches) > 0 else None
 
 def trace_results(search_results):
-    for sr in search_results:
-        trace.debug("  - %s (%s) [%s]" % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None', sr.movieID))
-        movie = get_imdb_movie(sr.movieID)
-        if 'director' in movie.keys():
-            trace.debug("        DIRECTORES:")
-            movie_directors = [clean_string(p['name']) for p in movie['director']]
-            for director in movie_directors:
-                trace.debug("        * '%s'" % director)
+    if trace.is_debug():
+        for sr in search_results:
+            trace.debug("  - %s (%s) [%s]" % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None', sr.movieID))
+            movie = get_imdb_movie(sr.movieID)
+            if 'director' in movie.keys():
+                trace.debug("        DIRECTORES:")
+                movie_directors = [clean_string(p['name']) for p in movie['director']]
+                for director in movie_directors:
+                    trace.debug("        * '%s'" % director)
 
 def search_movie_imdb(title, year, title_alt=None, director=None):
     # Buscamos por titulo y año en IMDB
@@ -269,7 +288,7 @@ def search_movie_imdb(title, year, title_alt=None, director=None):
     
     return search_results
 
-def search_movie_local_data(title, year, title_alt=None):
+def search_movie_local_data(title, year, title_alt=None, director=None):
     query_title = Q(title__iexact=title)
     query_title.add(Q(title_original__iexact=title), Q.OR)
     query_title.add(Q(title_preferred__iexact=title), Q.OR)
@@ -282,4 +301,23 @@ def search_movie_local_data(title, year, title_alt=None):
     query = Q(query_title)
     query_title.add(Q(year=year), Q.AND)
     
-    return Movie.objects.filter(query).all()
+    matches_title_movies = Movie.objects.filter(query).all()
+
+    if len(matches_title_movies) > 0 and director:
+        ss_directors = slugify_directors(director)
+
+        for movie in matches_title_movies:
+            for director in movie.get_directors():
+                for ss_director in ss_directors:
+                    director_clean_names = []
+                    
+                    if director.person.name:
+                        director_clean_names.append(clean_string(director.person.name))
+                    
+                    if director.person.canonical_name:
+                        director_clean_names.append(clean_string(director.person.canonical_name))
+
+                    if ss_director in director_clean_names:
+                        return [movie]
+
+    return matches_title_movies

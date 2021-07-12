@@ -262,7 +262,6 @@ class Command(BaseCommand):
         # buscamos el titulo preferido:
         if title_preferred is None:
             # FIXME: Poner por setting estos ' (Spain)'
-
             # Asumimos que las pelis españolas tienen el titulo en español
             # y que el prefered es el mismo que este... asi evitamos 
             # problemas con los datos de imdb (ver get_imdb_original_title para 
