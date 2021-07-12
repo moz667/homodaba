@@ -27,16 +27,17 @@ class Trace(object):
     @staticmethod
     def error(title, message=None):
         if verbosity > 0:
-            Trace.trace("ERROR: %s" % title, message)
+            Trace.trace("ERRR: %s" % title, message)
 
     @staticmethod
     def warning(title, message=None):
         if verbosity > 1:
-            Trace.trace("WARNING: %s" % title, message)
+            Trace.trace("WARN: %s" % title, message)
 
     @staticmethod
     def debug(title, message=None):
         if Trace.is_debug():
-            Trace.trace("DEBUG: %s" % title, message)
+            Trace.trace("DEBG: %s" % title, message)
 
 trace = Trace
+

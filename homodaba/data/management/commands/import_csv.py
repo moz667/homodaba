@@ -430,4 +430,4 @@ class Command(BaseCommand):
                         csv_writer_fails.writerow(csv_row)
                         raise
 
-                    print("")
+                    trace.info("")
