@@ -86,10 +86,8 @@ class filesParser:
         severalyears = self.set_additionalyears_as_tag.regex.match(movie['year'])
         if severalyears:
             firstyear = severalyears.group(1)
-            secondyear = severalyears.group(2)
-            self.add_tag(movie,secondyear)
             movie['year'] =firstyear 
-    set_additionalyears_as_tag.regex = re.compile(r'(\d{4}).*(\d{4})')                      # year.*year
+    set_additionalyears_as_tag.regex = re.compile(r'(\d{4}).*\d{4}')                      # year.*year
 
     def process_altTitle(self,movie):
         title_fields=['title','title_preferred']
@@ -102,8 +100,6 @@ class filesParser:
                 alttitle_is_a_version = self.process_altTitle.version_regex.search(alttitle)
                 if alttitle_is_a_version:
                     movie['version'] = alttitle
-                else:
-                    self.add_tag(movie, alttitle)
     process_altTitle.alttitle_regex = re.compile(r'(.*) \((.*)\)')                  # Tile (Alt. Title)
     process_altTitle.version_regex = re.compile(r'(edition|version|censor|cut)', re.IGNORECASE)
 
@@ -380,7 +376,7 @@ class csvCleaner(filesParser):
                 search_content = csv_info[field]
                 if search_content.lower() != self.row[field].lower():
                     match = False
-            if match and imdb_id == '':
+            if match and not 'imdb_id' in self.row:
                 self.row['imdb_id'] = db_info['imdb_id']
 
 
