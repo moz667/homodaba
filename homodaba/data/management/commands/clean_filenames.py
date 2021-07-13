@@ -109,6 +109,9 @@ class Command(BaseCommand):
         save_json(self.ignoreds, self.ignoreds_filename)
 
     def match_file_as_imdb_movie(self, file):
+        imdb_movie = None
+        posible_movies = []
+
         if file['year'] and file['title']:
             search_results = search_movie_imdb(file['title'], file['year'])
 
@@ -121,14 +124,13 @@ class Command(BaseCommand):
                     file['title'] = imdb_movie['title']
                     file['year'] = imdb_movie['year']
                     file['imdb_id'] = imdb_movie.getID()
-
-                    return imdb_movie
                 else:
                     print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
                     print(" * Aunque hemos encontrado las siguientes: *")
                     for sr in search_results:
                         if 'year' in sr and 'title' in sr:
                             print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+                            posible_movies.append(sr)
         else:
             if not file['year']:
                 print(" * No tenemos año para la peli '%s' *" % file['fullname'])
@@ -144,18 +146,24 @@ class Command(BaseCommand):
                     for sr in search_results:
                         if 'year' in sr and 'title' in sr:
                             print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+                            posible_movies.append(sr)
 
-        return None
+        return imdb_movie, posible_movies
 
     def process_file(self, file, query_file=True):
+        imdb_movie = None
+        posible_movies = []
+
         if query_file:
-            imdb_movie = self.match_file_as_imdb_movie(file)
+            imdb_movie, posible_movies = self.match_file_as_imdb_movie(file)
 
             if not imdb_movie is None:
                 self.processeds.append(file)
                 return True
 
         print("")
+        if len(posible_movies) > 0:
+            print(" 0. Selecciona una de las pelis encontradas")
         print(" 1. Introducir imdb_id")
         print(" 2. Introducir/Cambiar titulo (año)")
         print(" 3. Introducir/Cambiar año")
@@ -173,7 +181,27 @@ class Command(BaseCommand):
         selected_option = getch.getch()
         print("")
 
-        if selected_option == "1":
+        if selected_option == "0":
+            i = 0
+            for sr in posible_movies:
+                print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'], sr.movieID, sr.movieID))
+                i = i + 1
+            movie_index = input('Introduce el indice:')
+
+            imdb_id = posible_movies[int(movie_index)].movieID
+            imdb_movie = get_imdb_movie(imdb_id)
+
+            if not imdb_movie is None:
+                file['title'] = imdb_movie['title']
+                file['year'] = imdb_movie['year']
+                file['imdb_id'] = imdb_id
+
+                self.processeds.append(file)
+                return True
+                
+            trace.error("No hemos encontrado la peli por el imdb_id='%s'" % imdb_id)
+            return False
+        elif selected_option == "1":
             imdb_id = input('Introduce el imdb_id: ')
 
             imdb_id = re.sub(r'^tt', '', imdb_id)
