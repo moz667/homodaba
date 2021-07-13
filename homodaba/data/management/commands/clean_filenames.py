@@ -210,7 +210,7 @@ class Command(BaseCommand):
             return False
         elif selected_option == "4":
             title = input('Introduce el titulo:')
-            
+
             file['title'] = title
             return False
         elif selected_option == "5":
@@ -310,8 +310,9 @@ class Command(BaseCommand):
                 cur_name = re.sub(resolution, "", cur_name)
 
             cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
-
-            cur_name = re.sub(r"(?![a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
+            cur_name = re.sub(r"-|_|\.", " ", cur_name)
+            cur_name = re.sub(r"(?![0-9a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
+            
             title = cur_name.strip()
             
             # print(f['name'])
