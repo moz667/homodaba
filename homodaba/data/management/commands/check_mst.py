@@ -6,7 +6,7 @@ from django.utils.text import slugify
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
-from data.utils.imdbpy_facade import facade_search
+from data.utils.imdbpy_facade import facade_search, clean_string
 
 import csv
 import sys
@@ -118,7 +118,7 @@ class Command(BaseCommand):
             csv_reader = csv.DictReader(csvfile, delimiter=csv_delimiter, quotechar=csv_quotechar)
 
             for r in csv_reader:
-                if r['path'] == mst.path and r['title'] == mst.movie.title:
+                if r['path'] == mst.path and clean_string(r['title']) == clean_string(mst.movie.title):
                     # print("\tOK: La pelicula '%s' tiene el mismo titulo (%s) que en la bbdd." % (r['title'],  mst.movie.title))
                     return
             

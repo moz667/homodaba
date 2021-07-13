@@ -7,7 +7,7 @@ from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, Genre
 from data.models import get_first_or_create_tag
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import facade_search, match_director
+from data.utils.imdbpy_facade import facade_search, match_director, clean_string
 
 import csv
 from datetime import datetime
@@ -153,7 +153,7 @@ class Command(BaseCommand):
 
         has_error = False
 
-        if json_obj['db_info']['title'] != cd['title']:
+        if clean_string(json_obj['db_info']['title']) != clean_string(cd['title']):
             trace.warning(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
             has_error = True
 

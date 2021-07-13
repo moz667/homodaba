@@ -6,7 +6,7 @@ from django.utils.text import slugify
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
-from data.utils.imdbpy_facade import facade_search
+from data.utils.imdbpy_facade import facade_search, clean_string, match_director
 from data.utils import Trace as trace
 
 from imdb import IMDb
@@ -186,7 +186,7 @@ Si no coinciden, sacamos un mensaje notificando las diferencias.
 """
 def trace_validate_imdb_movie(ia_movie, title, director=None):
     # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-    if ia_movie['title'] != title:
+    if clean_string(ia_movie['title']) != clean_string(title):
         trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
 
     # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
@@ -194,12 +194,9 @@ def trace_validate_imdb_movie(ia_movie, title, director=None):
         if not 'director' in ia_movie.keys():
             trace.info('\ttrace_validate_ia_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
         else:
-            ia_directors = [p['name'] for p in ia_movie['director']]
-
-            for director_name in director.split(','):
-                if not director_name in ia_directors:
-                    # Esto es para que revises tu csv!!!
-                    trace.info("\tNo encontramos el director '%s' en IMDB para la pelicula '%s'" % (director_name, title))
+            if not match_director(director, ia_movie['director']):
+                # Esto es para que revises tu csv!!!
+                trace.info("\tNo encontramos el/los director/es '%s' en IMDB para la pelicula '%s'" % (director, title))
 
 
 """
