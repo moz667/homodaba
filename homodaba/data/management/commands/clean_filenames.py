@@ -1,13 +1,16 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.utils.text import slugify
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie
+from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie, search_imdb_movies
+
+import getch
 
 from datetime import datetime
 import os, sys, re, json
 
 from .utils import save_json, split_filename_parts
+
+from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 
 HELP_TEXT = """
 Buscador:
@@ -33,22 +36,13 @@ Generador de script de renames (popper.sh):
 1) Por cada item en el json generamos un mv con el archivo original y el nuevo nombre
 """
 
-VIDEO_EXT = [
-    'mp4', 'avi', 'mkv', 'wmv', 'iso'
-]
-
-SUB_EXT = [
-    'srt', 'sub', 'sup', 'idx'
-]
-
-AUDIO_EXT = [
-    'ac3'
-]
-
-VALID_EXT = VIDEO_EXT + SUB_EXT + AUDIO_EXT
-
 class Command(BaseCommand):
     help = HELP_TEXT
+
+    processeds = []
+    processeds_filename = ""
+    ignoreds = []
+    ignoreds_filename = ""
 
     """
     Argumentos del comando:
@@ -57,155 +51,11 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--directory', nargs='+', type=str, help="""Directorio a chequear""")
         parser.add_argument('--output', nargs='+', type=str, help="""Directorio donde guardaremos los json generados""")
-    
-    def slugify_directory(self, directory):
-        return slugify(directory.replace("../", "_").replace("/", "-"))
-
-    def get_output_filename(self, filename, directory, output='.'):
-        slug_directory = self.slugify_directory(directory)
-        return os.path.join(output, '%s-%s' % (slug_directory, filename))
-
-    def is_valid_filegroup(self, filegroup):
-        video_count = 0
-
-        for f in filegroup:
-            if 'ext' in f and f['ext'].lower() in VIDEO_EXT:
-                video_count = video_count + 1
-        
-        # Para que sea valido tiene que existir SOLO un video
-        return video_count == 1
-
-    def populate_new_item(self, filegroup):
-        new_item = {
-            'fullname': None,
-            'name': None,
-            'ext': None,
-            'subs': [],
-            'audios': [],
-        }
-
-        for f in filegroup:
-            ext_low = f['ext'].lower()
-
-            if ext_low in SUB_EXT:
-                new_item['subs'].append(f)
-            elif ext_low in AUDIO_EXT:
-                new_item['audios'].append(f)
-            elif ext_low in VIDEO_EXT:
-                new_item['fullname'] = f['fullname']
-                new_item['name'] = f['name']
-                new_item['ext'] = f['ext']
-            else:
-                raise NotImplementedError 
-
-        return new_item
-
-    def generate_json_files(self, directory, output='.'):
-        files_clean = []
-
-        files_no_extension = []
-        files_invalid = []
-        files_orphans_subs = []
-        files_orphans_audios = []
-
-        i = 0
-        
-        full_list = os.listdir(directory)
-        full_list.sort()
-
-        while i < len(full_list):
-            cur_item = split_filename_parts(full_list[i])
-
-            # Si empieza por . lo ignoramos:
-            if cur_item['fullname'].startswith('.'):
-                trace.debug("El archivo '%s' va a ser ignorado." % cur_item['fullname'])
-                i = i + 1
-                continue
-            
-            # Comprobamos que tiene extension...
-            if not 'ext' in cur_item:
-                trace.warning("El archivo '%s' no tiene extension." % cur_item['fullname'])
-                files_no_extension.append(cur_item)
-                i = i + 1
-                continue
-            
-            # ...y que tenga una extension valida
-            if not cur_item['ext'].lower() in VALID_EXT:
-                trace.warning("El archivo '%s' no una extension valida." % cur_item['fullname'])
-                files_invalid.append(cur_item)
-                i = i + 1
-                continue
-            
-            
-            # Mientras que haya siguientes y los archivos se llamen igual que este 
-            # hacemos una lista temporal con archivos que se llamen igual
-            filegroup = [cur_item]
-            
-            i = i + 1
-            
-            while i < len(full_list):
-                next_item = split_filename_parts(full_list[i])
-
-                if not 'name' in next_item or next_item['name'] != cur_item['name']:
-                    break
-                
-                filegroup.append(next_item)
-                i = i + 1
-
-            # Si no es valido el grupo de archivos, para cada uno lo añadimos 
-            # a la lista que competa
-            if not self.is_valid_filegroup(filegroup):
-                for f in filegroup:
-                    if f['ext'].lower() in SUB_EXT:
-                        trace.warning("El archivo '%s' es un subtitulo huerfano." % f['fullname'])
-                        files_orphans_subs.append(f)
-                    elif f['ext'].lower() in AUDIO_EXT:
-                        trace.warning("El archivo '%s' es un audio huerfano." % f['fullname'])
-                        files_orphans_audios.append(f)
-                    else:
-                        trace.warning("El archivo '%s' no tiene una extension valida o es un video con varias fuentes de video." % f['fullname'])
-                        files_invalid.append(f)
-            # Si es valido el grupo, construimos la estructura con el grupo de archivos
-            else:
-                files_clean.append(self.populate_new_item(filegroup))
-        
-        json_files = [
-            {
-                'obj': files_clean, 
-                'filename': self.get_output_filename('files_clean.json', directory, output)
-            },
-            {
-                'obj': files_no_extension, 
-                'filename': self.get_output_filename('files_no_extension.json', directory, output)
-            },
-            {
-                'obj': files_invalid, 
-                'filename': self.get_output_filename('files_invalid.json', directory, output)
-            },
-            {
-                'obj': files_orphans_subs, 
-                'filename': self.get_output_filename('files_orphans_subs.json', directory, output)
-            },
-            {
-                'obj': files_orphans_audios, 
-                'filename': self.get_output_filename('files_orphans_audios.json', directory, output)
-            },
-        ]
-
-        for jf in json_files:
-            if os.path.exists(jf['filename']):
-                os.remove(jf['filename'])
-
-            if len(jf['obj']) > 0:
-                save_json(jf['obj'], jf['filename'])
-        
-        return {
-            'clean': files_clean,
-            'no_extension': files_no_extension,
-            'invalid': files_invalid,
-            'orphans_subs': files_orphans_subs,
-            'orphans_audios': files_orphans_audios,
-        }
+        parser.add_argument(
+            '--not-scan-directory',
+            action='store_true',
+            help='No scanea directorios y carga los json que tengamos en el --output.',
+        )
 
     def process_files_no_extension(self, files, directory, output='.'):
         # Con los que no tienen extension por ahora no hacemos nada mas que 
@@ -226,9 +76,7 @@ class Command(BaseCommand):
         trace.debug("Estos archivos son:", debug_message)
     
     def process_files_orphans_subs(self, files, directory, output='.'):
-        slug_directory = self.slugify_directory(directory)
-        
-        sh_filename = self.get_output_filename('files_orphans_subs.sh', directory, output)
+        sh_filename = get_output_filename('files_orphans_subs.sh', directory, output)
         sh_file = open(sh_filename, 'w', newline='')
         sh_file.write("#!/bin/sh\n")
 
@@ -237,9 +85,7 @@ class Command(BaseCommand):
             sh_file.write('mv "%s" "orphans/"\n' % f['fullname'])
 
     def process_files_orphans_audios(self, files, directory, output='.'):
-        slug_directory = self.slugify_directory(directory)
-        
-        sh_filename = self.get_output_filename('files_orphans_audios.sh', directory, output)
+        sh_filename = get_output_filename('files_orphans_audios.sh', directory, output)
         sh_file = open(sh_filename, 'w', newline='')
         sh_file.write("#!/bin/sh\n")
 
@@ -247,97 +93,144 @@ class Command(BaseCommand):
             # TODO: OJO!!! si el nombre tuviera " deberiamos escaparla de alguna forma!!!
             sh_file.write('mv "%s" "orphans/"\n' % f['fullname'])
 
-    def match_in_processeds(self, file, processeds):
-        for p in processeds:
+    def match_in_processeds(self, file):
+        for p in self.processeds:
+            if file['fullname'] == p['fullname']:
+                return True
+
+        for p in self.ignoreds:
             if file['fullname'] == p['fullname']:
                 return True
         
         return False
+    
+    def save_processeds(self):
+        save_json(self.processeds, self.processeds_filename)
+        save_json(self.ignoreds, self.ignoreds_filename)
 
-    def process_file(self, file, processeds, json_processeds_file, query_file=True):
-        try:
-            if query_file:
-                if file['year'] and file['title']:
-                    search_results = search_movie_imdb(file['title'], file['year'])
+    def match_file_as_imdb_movie(self, file):
+        if file['year'] and file['title']:
+            search_results = search_movie_imdb(file['title'], file['year'])
 
-                    if search_results == None or len(search_results) == 0:
-                        print("")
-                        print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
-                    else:
-                        imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
+            if search_results == None or len(search_results) == 0:
+                print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
+            else:
+                imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
 
-                        if imdb_movie:
-                            file['title'] = imdb_movie['title']
-                            file['year'] = imdb_movie['year']
-                            file['imdb_id'] = imdb_movie.getID()
+                if imdb_movie:
+                    file['title'] = imdb_movie['title']
+                    file['year'] = imdb_movie['year']
+                    file['imdb_id'] = imdb_movie.getID()
 
-                            processeds.append(file)
-                            return
-                        else:
-                            print("")
-                            print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
-                            print(" * Aunque hemos encontrado las siguientes: *")
-                            for sr in search_results:
-                                if 'year' in sr and 'title' in sr:
-                                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-                            
-                elif not file['year']:
-                    print("")
-                    print(" * No tenemos año para la peli '%s' *" % file['fullname'])
+                    return imdb_movie
                 else:
-                    print("")
-                    print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
+                    print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
+                    print(" * Aunque hemos encontrado las siguientes: *")
+                    for sr in search_results:
+                        if 'year' in sr and 'title' in sr:
+                            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+        else:
+            if not file['year']:
+                print(" * No tenemos año para la peli '%s' *" % file['fullname'])
+            
+            if not file['title']:
+                print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
+            else:
+                search_results = search_imdb_movies(file['title'])
 
-            print("")
-            print("1. Introducir imdb_id")
-            print("3. Introducir/Cambiar año")
-            print("4. Introducir/Cambiar titulo")
-            print("5. Mostrar informacion de la peli actual")
-            print(" . Volver a procesar")
+                if not search_results is None and len(search_results) > 0:
+                    print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
+                    print(" * Aunque hemos encontrado las siguientes: *")
+                    for sr in search_results:
+                        if 'year' in sr and 'title' in sr:
+                            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
 
-            print("X. Guardar y Salir")
-            print('Introduce una opcion:')
+        return None
 
-            selected_option = input()
-            if selected_option == "1":
-                print('Introduce el imdb_id:')
-                imdb_id = input()
+    def process_file(self, file, query_file=True):
+        if query_file:
+            imdb_movie = self.match_file_as_imdb_movie(file)
 
+            if not imdb_movie is None:
+                self.processeds.append(file)
+                return True
+
+        print("")
+        print(" 1. Introducir imdb_id")
+        print(" 2. Introducir/Cambiar titulo (año)")
+        print(" 3. Introducir/Cambiar año")
+        print(" 4. Introducir/Cambiar titulo")
+        print(" 5. Mostrar informacion de la peli actual")
+        print(" 6. Ignorar")
+        print(" ?. Volver a procesar")
+        print("")
+        print(" X. Guardar y Salir")
+        print("")
+        print("")
+        print('Introduce una opcion:')
+
+        # getch coge solo un caracter, esta guay para evitarnos un intro
+        selected_option = getch.getch()
+        print("")
+
+        if selected_option == "1":
+            imdb_id = input('Introduce el imdb_id: ')
+
+            imdb_id = re.sub(r'^tt', '', imdb_id)
+            
+            if imdb_id.isdigit():
                 imdb_movie = get_imdb_movie(imdb_id)
 
-                file['title'] = imdb_movie['title']
-                file['year'] = imdb_movie['year']
-                file['imdb_id'] = imdb_id
+                if not imdb_movie is None:
+                    file['title'] = imdb_movie['title']
+                    file['year'] = imdb_movie['year']
+                    file['imdb_id'] = imdb_id
 
-                processeds.append(file)
-            elif selected_option == "3":
-                print('Introduce el año:')
-                year = input()
-                file['year'] = int(year)
-                return self.process_file(file, processeds, json_processeds_file)
-            elif selected_option == "4":
-                print('Introduce el titulo:')
-                title = input()
-                file['title'] = title
-                return self.process_file(file, processeds, json_processeds_file)
-            elif selected_option == "5":
-                # print(file)
-                print(" - fullname: '%s'" % file['fullname'])
-                print(" - title: '%s'" % file['title'])
-                print(" - year: '%s'" % file['year'])
+                    self.processeds.append(file)
+                    return True
+            
+            trace.error("No hemos encontrado la peli por el imdb_id='%s'" % imdb_id)
+            return False
+        elif selected_option == "2":
+            text = input('Introduce el titulo (año): ')
 
-                if 'imdb_id' in file:
-                    print(" - imdb_id: '%s'" % file['imdb_id'])
-                return self.process_file(file, processeds, json_processeds_file, query_file=False)
-            elif str(selected_option).lower() == "x":
-                save_json(processeds, json_processeds_file)
-                exit(0)
-            else:
-                return self.process_file(file, processeds, json_processeds_file)
-        except:
-            print("Error no esperado:", sys.exc_info()[0])
-            save_json(processeds, json_processeds_file)
-            raise
+            year = text[text.find("(")+1:text.find(")")].strip()
+            if year.isdigit():
+                year = int(year)
+            title = text[:text.find("(")].strip()
+
+            file['title'] = title
+            file['year'] = year
+
+            return False
+        elif selected_option == "3":
+            year = input('Introduce el año:')
+
+            file['year'] = int(year)
+            return False
+        elif selected_option == "4":
+            title = input('Introduce el titulo:')
+            
+            file['title'] = title
+            return False
+        elif selected_option == "5":
+            # print(file)
+            print(" - fullname: '%s'" % file['fullname'])
+            print(" - title: '%s'" % file['title'])
+            print(" - year: '%s'" % file['year'])
+
+            if 'imdb_id' in file:
+                print(" - imdb_id: '%s'" % file['imdb_id'])
+            return False
+        elif selected_option == "6":
+            print(" - Añadiendo '%s' a ignorados." % file['fullname'])
+            self.ignoreds.append(file)
+            return True
+        elif str(selected_option).lower() == "x":
+            self.save_processeds()
+            exit(0)
+        else:
+            return False
 
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
@@ -350,10 +243,17 @@ class Command(BaseCommand):
         if 'output' in options and options['output']:
             output = ' '.join(options['output'])
         
+        not_scan_directory = options['not_scan_directory']
+
         verbosity = options['verbosity']
         trace.set_verbosity(verbosity)
 
-        files = self.generate_json_files(directory, output)
+        files = {}
+
+        if not_scan_directory:
+            files = JSONDirectoryScan.load_json_files(directory, output)
+        else:
+            files = JSONDirectoryScan.generate_json_files(directory, output)
 
         if len(files["no_extension"]) > 0:
             self.process_files_no_extension(files["no_extension"], directory, output)
@@ -367,14 +267,24 @@ class Command(BaseCommand):
         # TODO: mover a un metodo... por ahora lo hacemos aqui a pelo
         # self.process_files_clean(files["clean"], directory, output)
 
-        processeds = []
-        json_processeds_file = self.get_output_filename('processeds.json', directory, output)
-        
-        if os.path.exists(json_processeds_file):
-            processeds = json.load(open(json_processeds_file, 'r', newline=''))
+        self.processeds = []
+        self.processeds_filename = get_output_filename('processeds.json', directory, output)
+
+        if os.path.exists(self.processeds_filename):
+            self.processeds = json.load(open(self.processeds_filename, 'r', newline=''))
+
+        self.ignoreds = []
+        self.ignoreds_filename = get_output_filename('ignoreds.json', directory, output)
+
+        if os.path.exists(self.ignoreds_filename):
+            self.ignoreds = json.load(open(self.ignoreds_filename, 'r', newline=''))
+
+        total_files = len(files["clean"])
+        cur_file_index = 0
 
         for f in files["clean"]:
-            if self.match_in_processeds(f, processeds):
+            cur_file_index = cur_file_index + 1
+            if self.match_in_processeds(f):
                 continue
             
             cur_name = f['name']
@@ -405,93 +315,21 @@ class Command(BaseCommand):
             title = cur_name.strip()
             
             # print(f['name'])
-            print(title)
+            print("")
+            print("## %s/%s : %s (%s) '%s' ##" % (
+                cur_file_index, total_files, 
+                title, year if not year is None else '', 
+                f['fullname']))
 
             f['year'] = year
             f['title'] = title
 
-            self.process_file(f, processeds, json_processeds_file)
-            """
-            print("cur_name: %s" % cur_name)
-            print("title: %s" % title)
-            print("year: %s" % year)
-            print("resolution: %s" % resolution)
-            
-            print("")
-            """
-
-        """
-        for cur_filename in full_list:
-            print(cur_filename)
-        """
-
-        
-
-"""
-Buscador:
-
-Para cada archivo...
-
-1) Miramos si ya esta en el json, si es asi pasamos al siguiente
-2) Si tiene 4 digitos numericos seguidos > 1950 y menor 2022 (current year + 1)
-    - Tenemos un posible año
-    - Quitamos todo el texto desde el año en adelante y hacemos strip de " " y "-" (Esto sera el titulo)
-3) Si no tiene año, el titulo sera todo el texto del nombre quitando desde "[.*" y haciendo strip de " " y "-" (Esto sera el titulo)
-4) Buscamos con el imdb el titulo
-    4.a) Si tenemos un solo match de año y titulo lo damos por bueno creando una estrcutura tipo MiniMovie {imdb_id, title, year}
-    4.b) Si tenemos varios matches:
-        * Sacamos la info para que se pueda seleccionar cual es el bueno
-        * Sacamos una opcion de no me convence ninguno, introducir imdb_id (manualmente buscamos en el imdb y pegamos el id)
-            - Cogemos la peli por imdb_id y generamos un MiniMovie
-5) Añadimos a una lista el nombre del archivo original y el nuevo generado del imdb
-
-Una vez terminado todos los archivos generamos un json con los datos de la lista
-
-Generador de script de renames (popper.sh):
-1) Por cada item en el json generamos un mv con el archivo original y el nuevo nombre
-
-            if year and title:
-                facade_results = facade_search(title, year)
-                print(facade_results)
-            elif not year:
-                print("No tenemos año para la peli '%s'" % f['fullname'])
-            else:
-                print("No tenemos titulo para la peli '%s'" % f['fullname'])
-            
             try:
-                print("1. Introducir imdb_id")
-                print("2. Introducir/Cambiar año")
-                print("3. Introducir/Cambiar titulo")
-                print("4. Mostrar informacion de la peli actual")
+                while not self.process_file(f):
+                    pass
 
-                print("X. Guardar y Salir")
-                print('Introduce una opcion:')
-
-                selected_option = input()
-                if selected_option == "1":
-                    print('Introduce el imdb_id:')
-                    imdb_id = input()
-
-                    imdb_movie = get_imdb_movie(imdb_id)
-
-                    f['title'] = imdb_movie['title']
-                    f['year'] = imdb_movie['year']
-                    f['imdb_id'] = imdb_id
-
-                    processeds.append(f)
-                elif selected_option == "2":
-                    print('Introduce el año:')
-                    year = input()
-                    # TODO: Retry
-                elif selected_option == "3":
-                    print('Introduce el titulo:')
-                    title = input()
-                    # TODO: Retry
-                elif selected_option == "X":
-                    save_json(processeds, json_processeds_file)
-                    exit(0)
+                print("")
             except:
                 print("Error no esperado:", sys.exc_info()[0])
-                save_json(processeds, json_processeds_file)
+                self.save_processeds()
                 raise
-"""
