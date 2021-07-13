@@ -177,22 +177,38 @@ def slugify_directors(director_field):
     return directors
 
 def match_imdb_movie_by_director(search_results, director, year):
-    directors = slugify_directors(director)
-
     for sr in search_results:
         movie = get_imdb_movie(sr.movieID)
         if 'director' in movie.keys():
-            movie_directors = [clean_string(p['name']) for p in movie['director']]
-
             # Con que coincida un director damos la pelicula como buena
-            for slugify_director in directors:
-                if slugify_director in movie_directors and 'year' in movie and int(movie['year']) == int(year):
-                    return movie
+            if match_director(director, movie['director']) and 'year' in movie and int(movie['year']) == int(year):
+                return movie
     
     # Llegados a este punto no hemos encontrado ninguna coincidencia decente
     # asi que lo damos por perdido
     return None
 
+def match_director(director, imdb_directors):
+    movie_directors = [clean_string(p['name']) for p in imdb_directors]
+
+    for p in imdb_directors:
+        if 'canonical name' in p and p['canonical name']:
+            movie_directors.append(clean_string(p['canonical name']))
+        elif 'canonica_name' in p and p['canonica_name']:
+            movie_directors.append(clean_string(p['canonica_name']))
+    
+    directors = slugify_directors(director)
+
+    for slugify_director in directors:
+        if slugify_director in movie_directors:
+            return True
+    
+    trace.debug("SLUGIFY CSV DIRECTORS:")
+    trace.debug(directors)
+    trace.debug("SLUGIFY IMDB DIRECTORS:")
+    trace.debug(movie_directors)
+
+    return False
 
 def match_imdb_movie(search_results, title, year, director=None):
     slugify_title = clean_string(title)

@@ -7,7 +7,7 @@ from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, Genre
 from data.models import get_first_or_create_tag
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import facade_search
+from data.utils.imdbpy_facade import facade_search, match_director
 
 import csv
 from datetime import datetime
@@ -166,16 +166,9 @@ class Command(BaseCommand):
             has_error = True
 
         has_director_error = False
-        for csv_director in cd['director'].split(','):
-            director_match = False
-
-            for cur_director in json_obj['db_info']['directors']:
-                if cur_director['name'] == csv_director or cur_director['canonical_name'] == csv_director:
-                    director_match = True
-                    break
-            
-            if not director_match:
-                trace.warning(" - No hemos encontrado el director '%s' para la pelicula '%s'." % (csv_director, cd['title']))
+        if 'director' in cd and cd['director']:
+            if not match_director(cd['director'], json_obj['db_info']['directors']):
+                trace.warning(" - No hemos encontrado el/los director/es '%s' para la pelicula '%s'." % (cd['director'], cd['title']))
                 has_error = True
                 has_director_error = True
 
