@@ -182,11 +182,15 @@ class Command(BaseCommand):
         print("")
 
         if selected_option == "0":
-            i = 0
-            for sr in posible_movies:
-                print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'], sr.movieID, sr.movieID))
-                i = i + 1
-            movie_index = input('Introduce el indice:')
+            movie_index = 0
+            
+            if len(posible_movies) > 1:
+                i = 0
+                for sr in posible_movies:
+                    print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'], sr.movieID, sr.movieID))
+                    i = i + 1
+                movie_index = input('Introduce el indice:')
+                
 
             imdb_id = posible_movies[int(movie_index)].movieID
             imdb_movie = get_imdb_movie(imdb_id)
@@ -198,7 +202,7 @@ class Command(BaseCommand):
 
                 self.processeds.append(file)
                 return True
-                
+
             trace.error("No hemos encontrado la peli por el imdb_id='%s'" % imdb_id)
             return False
         elif selected_option == "1":
