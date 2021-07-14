@@ -10,6 +10,7 @@ import os, sys, re, json
 
 from .utils import save_json, split_filename_parts
 
+from .filesystem import clean_filename_for_samba_share
 from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 
 HELP_TEXT = """
@@ -108,6 +109,22 @@ class Command(BaseCommand):
         save_json(self.processeds, self.processeds_filename)
         save_json(self.ignoreds, self.ignoreds_filename)
 
+    # TODO: Esto lo tendriamos que mover a utils de imdb
+    def match_posible_movies(self, search_results, trace_message=True):
+        posible_movies = []
+        
+        for sr in search_results:
+            if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
+                posible_movies.append(sr)
+        
+        if trace_message:
+            if len(posible_movies) > 0:
+                print(" * Aunque hemos encontrado las siguientes: *")
+                for sr in posible_movies:
+                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+        
+        return posible_movies
+
     def match_file_as_imdb_movie(self, file):
         imdb_movie = None
         posible_movies = []
@@ -126,11 +143,8 @@ class Command(BaseCommand):
                     file['imdb_id'] = imdb_movie.getID()
                 else:
                     print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
-                    print(" * Aunque hemos encontrado las siguientes: *")
-                    for sr in search_results:
-                        if 'year' in sr and 'title' in sr:
-                            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-                            posible_movies.append(sr)
+                    posible_movies = self.match_posible_movies(search_results)
+
         else:
             if not file['year']:
                 print(" * No tenemos año para la peli '%s' *" % file['fullname'])
@@ -142,11 +156,7 @@ class Command(BaseCommand):
 
                 if not search_results is None and len(search_results) > 0:
                     print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
-                    print(" * Aunque hemos encontrado las siguientes: *")
-                    for sr in search_results:
-                        if 'year' in sr and 'title' in sr:
-                            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-                            posible_movies.append(sr)
+                    posible_movies = self.match_posible_movies(search_results)
 
         return imdb_movie, posible_movies
 
@@ -183,7 +193,7 @@ class Command(BaseCommand):
 
         if selected_option == "0":
             movie_index = 0
-            
+
             if len(posible_movies) > 1:
                 i = 0
                 for sr in posible_movies:
@@ -263,6 +273,131 @@ class Command(BaseCommand):
             exit(0)
         else:
             return False
+    
+    def populate_title_and_year(self, file):
+        cur_name = file['name']
+
+        title = None
+        year = None
+        resolution = None
+        
+        # Buscamos el año
+        possible_years = re.findall('\d+\d+\d+\d+', cur_name)
+        for pos_year in reversed(possible_years):
+            if int(pos_year) > 1930 and int(pos_year) <= datetime.now().year:
+                year = pos_year
+        
+        if year:
+            cur_name = re.sub(year, "", cur_name)
+            year = int(year)
+        
+        # Buscamos resoluciones
+        possible_resolutions = re.findall('720p|1080p', cur_name)
+        if len(possible_resolutions) == 1:
+            resolution = possible_resolutions[0]
+            cur_name = re.sub(resolution, "", cur_name)
+
+        cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
+        cur_name = re.sub(r"-|_|\.", " ", cur_name)
+        cur_name = re.sub(r"(?![0-9a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
+        
+        title = cur_name.strip()
+
+        f['year'] = year
+        f['title'] = title
+
+        return title, year
+
+    def process_files_clean(self, files, directory, output='.'):
+        self.processeds = []
+        self.processeds_filename = get_output_filename('processeds.json', directory, output)
+
+        if os.path.exists(self.processeds_filename):
+            self.processeds = json.load(open(self.processeds_filename, 'r', newline=''))
+
+        self.ignoreds = []
+        self.ignoreds_filename = get_output_filename('ignoreds.json', directory, output)
+
+        if os.path.exists(self.ignoreds_filename):
+            self.ignoreds = json.load(open(self.ignoreds_filename, 'r', newline=''))
+
+        total_files = len(files)
+        cur_file_index = 0
+
+        for f in files:
+            cur_file_index = cur_file_index + 1
+            if self.match_in_processeds(f):
+                continue
+            
+            self.populate_title_and_year(f)
+            
+            # print(f['name'])
+            print("")
+            print("## %s/%s : %s (%s) '%s' ##" % (
+                cur_file_index, total_files, 
+                f['title'], f['year'] if not f['year'] is None else '', 
+                f['fullname']))
+
+            try:
+                while not self.process_file(f):
+                    pass
+            except:
+                print("Error no esperado:", sys.exc_info()[0])
+                self.save_processeds()
+                raise
+        
+        # TODO: Buscar imdb_id repetidos
+        # TODO: Buscar titles (year) repetidos
+        # TODO: Ir uno por uno de las procesadas mostrando fullname y nuevo fullname y con 
+        # la url del imdb para revalidar (y/N)
+        for f in self.processeds:
+            if not 'imdb_title' in f:
+                imdb_movie = get_imdb_movie(f['imdb_id'])
+
+                if imdb_movie:
+                    f['imdb_title'] = imdb_movie['title']
+                    f['imdb_year'] = imdb_movie['year']
+                else:
+                    trace.error("No encontramos peli en el imdb_id='%s' fullname='%s'", (f['imdb_id'], f['fullname']))
+                
+            if 'imdb_title' in f:
+                # El caso de ':' se usa un monton, por lo que lo reemplazamos por ';'
+                # que parece que no se usa demasiado :P
+                clean_imdb_title = re.sub(r'[:]', ';', f['imdb_title'])
+                clean_imdb_title = clean_filename_for_samba_share(clean_imdb_title)
+
+                new_name = "%s (%s) [%s].%s" % (
+                    clean_imdb_title, 
+                    f['imdb_year'],
+                    f['imdb_id'],
+                    f['ext']
+                )
+
+                f['new_fullname'] = new_name
+
+                for extra_files in ['audios', 'subs']:
+                    if extra_files in f:
+                        for extra_file in f[extra_files]:
+                            new_name = "%s (%s) [%s].%s" % (
+                                clean_imdb_title, 
+                                f['imdb_year'],
+                                f['imdb_id'],
+                                extra_file['ext']
+                            )
+
+                            extra_file['new_fullname'] = new_name
+        
+        search_results = search_imdb_movies('The Hobbit: An Unexpected Journey (2012)')
+
+        if not search_results is None and len(search_results) > 0:
+            for sr in search_results:
+                if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
+                    imdb_movie = get_imdb_movie(sr.movieID)
+                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+                    # for k in imdb_movie.keys():
+                    #    print("    + '%s': '%s'" % (k, imdb_movie[k]))
+
+        self.save_processeds()
 
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
@@ -295,74 +430,7 @@ class Command(BaseCommand):
             self.process_files_orphans_subs(files["orphans_subs"], directory, output)
         if len(files["orphans_audios"]) > 0:
             self.process_files_orphans_audios(files["orphans_audios"], directory, output)
+        if len(files["clean"]) > 0:
+            self.process_files_clean(files["clean"], directory, output)
 
-        # TODO: mover a un metodo... por ahora lo hacemos aqui a pelo
-        # self.process_files_clean(files["clean"], directory, output)
 
-        self.processeds = []
-        self.processeds_filename = get_output_filename('processeds.json', directory, output)
-
-        if os.path.exists(self.processeds_filename):
-            self.processeds = json.load(open(self.processeds_filename, 'r', newline=''))
-
-        self.ignoreds = []
-        self.ignoreds_filename = get_output_filename('ignoreds.json', directory, output)
-
-        if os.path.exists(self.ignoreds_filename):
-            self.ignoreds = json.load(open(self.ignoreds_filename, 'r', newline=''))
-
-        total_files = len(files["clean"])
-        cur_file_index = 0
-
-        for f in files["clean"]:
-            cur_file_index = cur_file_index + 1
-            if self.match_in_processeds(f):
-                continue
-            
-            cur_name = f['name']
-
-            title = None
-            year = None
-            resolution = None
-            
-            # Buscamos el año
-            possible_years = re.findall('\d+\d+\d+\d+', cur_name)
-            for pos_year in reversed(possible_years):
-                if int(pos_year) > 1930 and int(pos_year) <= datetime.now().year:
-                    year = pos_year
-            
-            if year:
-                cur_name = re.sub(year, "", cur_name)
-                year = int(year)
-            
-            # Buscamos resoluciones
-            possible_resolutions = re.findall('720p|1080p', cur_name)
-            if len(possible_resolutions) == 1:
-                resolution = possible_resolutions[0]
-                cur_name = re.sub(resolution, "", cur_name)
-
-            cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
-            cur_name = re.sub(r"-|_|\.", " ", cur_name)
-            cur_name = re.sub(r"(?![0-9a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
-            
-            title = cur_name.strip()
-            
-            # print(f['name'])
-            print("")
-            print("## %s/%s : %s (%s) '%s' ##" % (
-                cur_file_index, total_files, 
-                title, year if not year is None else '', 
-                f['fullname']))
-
-            f['year'] = year
-            f['title'] = title
-
-            try:
-                while not self.process_file(f):
-                    pass
-
-                print("")
-            except:
-                print("Error no esperado:", sys.exc_info()[0])
-                self.save_processeds()
-                raise
