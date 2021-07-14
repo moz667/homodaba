@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie, search_imdb_movies
+from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie, search_imdb_movies, is_valid_imdb_movie
 
 import getch
 
@@ -10,7 +10,7 @@ import os, sys, re, json
 
 from .utils import save_json, split_filename_parts
 
-from .filesystem import clean_filename_for_samba_share
+from .filesystem import clean_filename_for_samba_share, escape_single_quoute
 from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 
 HELP_TEXT = """
@@ -58,14 +58,24 @@ class Command(BaseCommand):
             help='No scanea directorios y carga los json que tengamos en el --output.',
         )
 
+    def generate_move_safe(self, filename, target_dir='orphans', target_filename=None):
+        esc_filename = escape_single_quoute(filename)
+        esc_target_filename = escape_single_quoute(target_filename) if not target_filename is None else esc_filename
+
+        return ("if [ -e '%s/%s' ]; then\n" % (target_dir, esc_target_filename)) + \
+            ("\techo 'ERROR: Ya existe %s en %s'\n" % (esc_target_filename, target_dir)) + \
+            "else\n" + \
+            ("\tmv -i -- '%s' '%s/%s'\n" % (esc_filename, target_dir, esc_target_filename)) + \
+            "fi\n\n"
+
     def process_files_no_extension(self, files, directory, output='.'):
         # Con los que no tienen extension por ahora no hacemos nada mas que 
         # sacarlos por pantalla
-        trace.info("Se han encontrado %s archivos sin extension en el directorio '%s'." % (len(files), directory))
+        trace.info("Se han encontrado %s archivos/directorios sin extension en el directorio '%s'." % (len(files), directory))
         debug_message = ""
         for f in files:
             debug_message = debug_message + ("\t'%s'\n" % f["fullname"])
-        trace.debug("Estos archivos son:", debug_message)
+        trace.info("Estos archivos son:", debug_message)
 
     def process_files_invalid(self, files, directory, output='.'):
         # Con los que no son invalidos por ahora no hacemos nada mas que 
@@ -74,7 +84,7 @@ class Command(BaseCommand):
         debug_message = ""
         for f in files:
             debug_message = debug_message + ("\t'%s'\n" % f["fullname"])
-        trace.debug("Estos archivos son:", debug_message)
+        trace.info("Estos archivos son:", debug_message)
     
     def process_files_orphans_subs(self, files, directory, output='.'):
         sh_filename = get_output_filename('files_orphans_subs.sh', directory, output)
@@ -82,8 +92,7 @@ class Command(BaseCommand):
         sh_file.write("#!/bin/sh\n")
 
         for f in files:
-            # TODO: OJO!!! si el nombre tuviera " deberiamos escaparla de alguna forma!!!
-            sh_file.write('mv "%s" "orphans/"\n' % f['fullname'])
+            sh_file.write(self.generate_move_safe(f['fullname']))
 
     def process_files_orphans_audios(self, files, directory, output='.'):
         sh_filename = get_output_filename('files_orphans_audios.sh', directory, output)
@@ -91,8 +100,7 @@ class Command(BaseCommand):
         sh_file.write("#!/bin/sh\n")
 
         for f in files:
-            # TODO: OJO!!! si el nombre tuviera " deberiamos escaparla de alguna forma!!!
-            sh_file.write('mv "%s" "orphans/"\n' % f['fullname'])
+            sh_file.write(self.generate_move_safe(f['fullname']))
 
     def match_in_processeds(self, file):
         for p in self.processeds:
@@ -135,17 +143,18 @@ class Command(BaseCommand):
             if search_results == None or len(search_results) == 0:
                 print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
             else:
+                # TODO: Revisar... esta haciendo mal el match
                 imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
 
-                if imdb_movie:
+                if imdb_movie and is_valid_imdb_movie(imdb_movie):
                     file['title'] = imdb_movie['title']
                     file['year'] = imdb_movie['year']
                     file['imdb_id'] = imdb_movie.getID()
                 else:
-                    print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
+                    imdb_movie = None
                     posible_movies = self.match_posible_movies(search_results)
 
-        else:
+        if imdb_movie is None:
             if not file['year']:
                 print(" * No tenemos año para la peli '%s' *" % file['fullname'])
             
@@ -303,8 +312,8 @@ class Command(BaseCommand):
         
         title = cur_name.strip()
 
-        f['year'] = year
-        f['title'] = title
+        file['year'] = year
+        file['title'] = title
 
         return title, year
 
@@ -346,19 +355,45 @@ class Command(BaseCommand):
                 self.save_processeds()
                 raise
         
-        # TODO: Buscar imdb_id repetidos
-        # TODO: Buscar titles (year) repetidos
-        # TODO: Ir uno por uno de las procesadas mostrando fullname y nuevo fullname y con 
-        # la url del imdb para revalidar (y/N)
-        for f in self.processeds:
-            if not 'imdb_title' in f:
-                imdb_movie = get_imdb_movie(f['imdb_id'])
+        self.save_processeds()
 
+        delete_processeds = []
+
+        for f in self.processeds:
+            imdb_movie = get_imdb_movie(f['imdb_id'])
+
+            if (not 'manual_valid' in f or not f['manual_valid']) and not is_valid_imdb_movie(imdb_movie):
+                print("")
+                print(">> Encontramos errores en '%s'" % f['fullname'])
+                if not 'kind' in imdb_movie.keys():
+                    print(" - No sabemos el tipo de peli para imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
+                elif imdb_movie['kind'] != 'movie':
+                    print(" - El tipo de peli es '%s' para imdb_id='%s' fullname='%s'" % (imdb_movie['kind'], f['imdb_id'], f['fullname']))
+                
+                if not 'full-size cover url' in imdb_movie.keys() or not imdb_movie['full-size cover url']:
+                    print(" - La peli no tiene portada. imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
+            
+                print(" - Revise la url https://www.imdb.com/title/tt%s y si no coincide puede borrarla a continuacion." % f['imdb_id'])
+                print("")
+                print(">> Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
+                selected_option = getch.getch()
+
+                if selected_option.lower() != 'n':
+                    delete_processeds.append(f)
+                    continue
+                else:
+                    print(">> Desea VALIDAR la peli '%s' en la lista de procesados? (de esta forma no le volvera a preguntar) [Y/n]: " % f['fullname'])
+                    selected_option = getch.getch()
+
+                    if selected_option.lower() != 'n':
+                        f['manual_valid'] = True
+
+            if not 'imdb_title' in f:
                 if imdb_movie:
                     f['imdb_title'] = imdb_movie['title']
                     f['imdb_year'] = imdb_movie['year']
                 else:
-                    trace.error("No encontramos peli en el imdb_id='%s' fullname='%s'", (f['imdb_id'], f['fullname']))
+                    trace.error("No encontramos peli en el imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
                 
             if 'imdb_title' in f:
                 # El caso de ':' se usa un monton, por lo que lo reemplazamos por ';'
@@ -387,17 +422,112 @@ class Command(BaseCommand):
 
                             extra_file['new_fullname'] = new_name
         
-        search_results = search_imdb_movies('The Hobbit: An Unexpected Journey (2012)')
+        if len(delete_processeds) > 0:
+            print("")
+            print(" * Esta seguro que desea borrar %s items de la lista de procesados? [y/N]: " % len(delete_processeds))
+            selected_option = getch.getch()
 
-        if not search_results is None and len(search_results) > 0:
-            for sr in search_results:
-                if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
-                    imdb_movie = get_imdb_movie(sr.movieID)
-                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-                    # for k in imdb_movie.keys():
-                    #    print("    + '%s': '%s'" % (k, imdb_movie[k]))
-
+            if selected_option.lower() == 'y':
+                for item in delete_processeds:
+                    self.processeds.remove(item)
+        
         self.save_processeds()
+
+        # Comprobamos que ya todos estan validados manualmente o son una peli valida de imdb
+        for f in self.processeds:
+            if (not 'manual_valid' in f or not f['manual_valid']) and not is_valid_imdb_movie(imdb_movie):
+                print(" * No podemos continuar mientras que te queden pelis sin validar ")
+                exit()
+
+        # Buscamos imdb_ids repetidos
+        imdb_ids = []
+        imdb_repeated_ids = {}
+        new_fullnames = []
+        for f in self.processeds:
+            if f['imdb_id'] in imdb_ids:
+                # print(" * El imdb_id '%s' esta repetido en otra peli" % f['imdb_id'])
+                if not f['imdb_id'] in imdb_repeated_ids:
+                    imdb_repeated_ids[f['imdb_id']] = 1    
+                imdb_repeated_ids[f['imdb_id']] = imdb_repeated_ids[f['imdb_id']] + 1
+            else:
+                imdb_ids.append(str(f['imdb_id']))
+
+                # Buscamos nombres repetidos (como tiene imdb_id deberian ser los 
+                # mismos que los anteriores, al estar dentro del else: no deberia
+                # salir ni uno)
+                if f['new_fullname'] in new_fullnames:
+                    print(" * El nuevo nombre '%s' esta repetido en otra peli" % f['new_fullname'])
+                else:
+                    new_fullnames.append(f['new_fullname'])
+                
+                for key in ['audios', 'subs']:
+                    for item in f[key]:
+                        if item['new_fullname'] in new_fullnames:
+                            print(" * El nuevo nombre '%s' esta repetido en '%s' otra peli" % (item['new_fullname'], key))
+                        else:
+                            new_fullnames.append(f['new_fullname'])
+        
+        for imdb_id in imdb_repeated_ids.keys():
+            repeated_files = []
+            
+            for f in self.processeds:
+                if f['imdb_id'] == imdb_id:
+                    repeated_files.append(f)
+            
+            print(" * Los siguientes archivos tienen el mismo imdb_id='%s':" % imdb_id)
+            for rf in repeated_files:
+                print("    - %s" % rf['fullname'])
+            
+            imdb_movie = get_imdb_movie(imdb_id)
+            print(" * Los datos en imdb de la peli son %s (%s) [https://www.imdb.com/title/tt%s]:" % (imdb_movie['title'], imdb_movie['year'], imdb_id))
+            print(" * Quieres borrar todos estos archivos de procesados? [y/N]")
+            selected_option = getch.getch()
+
+            if selected_option.lower() == 'y':
+                for item in repeated_files:
+                    self.processeds.remove(item)
+                
+                self.save_processeds()
+
+        if len(imdb_repeated_ids) > 0:
+            print(" * No podemos continuar mientras que queden pelis con ids duplicados")
+            exit()
+
+        # No hace falta comprobar que ni fullname ni new_fullname estan repetidos, 
+        # ya que al meterle el imdb_id al final no va a ocurrir.
+
+        # Ultima comprobacion, uno a uno mostrar el viejo y el nuevo nombre asi 
+        # como algo de info de imdb
+        for f in self.processeds:
+            if not 'last_validation' in f or not f['last_validation']:
+                print("")
+                print(" > '%s'" % f['fullname'])
+                print(" > '%s'" % f['new_fullname'])
+                print("   https://www.imdb.com/title/tt%s" % f['imdb_id'])
+                print(" * Es correcto? [Y/n]")
+                
+                selected_option = getch.getch()
+
+                if selected_option.lower() == 'n':
+                    print(" * No podemos continuar, corrija el error manualmente.")
+                    exit()
+                
+                f['last_validation'] = True
+                self.save_processeds()
+
+        # TODO: Ir uno por uno de las procesadas mostrando fullname y nuevo fullname y con 
+        # la url del imdb para revalidar (Y/n)
+        # TODO: Por ultimo generar el script algo asi:
+        # if [ -e 'fichero_destino' ]; then echo "EXISTE el fichero fichero_destino"; else mv -i -- 'fichero_origen' 'fichero_destino'; fi
+        # OJO: entre comilla simple implica que tenemos que escapar la comilla simple del valor!!!!
+        
+        sh_filename = get_output_filename('move_processeds.sh', directory, output)
+        sh_file = open(sh_filename, 'w', newline='')
+        sh_file.write("#!/bin/sh\n")
+
+        for f in self.processeds:
+            sh_file.write(self.generate_move_safe(f['fullname'], 'clean-name', f['new_fullname']))
+
 
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
@@ -434,3 +564,16 @@ class Command(BaseCommand):
             self.process_files_clean(files["clean"], directory, output)
 
 
+
+
+"""
+search_results = search_imdb_movies('The Hobbit: An Unexpected Journey (2012)')
+
+if not search_results is None and len(search_results) > 0:
+    for sr in search_results:
+        if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
+            imdb_movie = get_imdb_movie(sr.movieID)
+            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+            # for k in imdb_movie.keys():
+            #    print("    + '%s': '%s'" % (k, imdb_movie[k]))
+"""

@@ -11,6 +11,12 @@ class ImdbCache(models.Model):
     def __str__(self):
         return self.imdb_id if self.imdb_id else self.search_query
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['search_query'], name='imdbcache_search_query_idx'),
+            models.Index(fields=['imdb_id'], name='imdbcache_imdb_id_idx'),
+        ]
+
 class Person(models.Model):
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)

@@ -8,3 +8,6 @@ https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing
 """
 def clean_filename_for_samba_share(filename):
     return re.sub(r'["\\\/:|<>\*\?]', '', filename)
+
+def escape_single_quoute(filename):
+    return filename.replace("'", "'\"'\"'")

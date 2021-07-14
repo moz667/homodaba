@@ -210,6 +210,17 @@ def match_director(director, imdb_directors):
 
     return False
 
+def is_valid_imdb_movie(imdb_movie, valid_kinds=['movie']):
+    if not 'kind' in imdb_movie.keys():
+        return False
+    elif not imdb_movie['kind'] in valid_kinds:
+        return False
+    
+    if not 'full-size cover url' in imdb_movie.keys() or not imdb_movie['full-size cover url']:
+        return False
+    
+    return True
+
 def match_imdb_movie(search_results, title, year, director=None):
     slugify_title = clean_string(title)
     matches = []
