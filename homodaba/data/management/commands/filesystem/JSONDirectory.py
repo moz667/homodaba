@@ -29,7 +29,7 @@ def get_output_filename(filename, directory, output='.'):
 
 class JSONDirectoryScan(object):
     @staticmethod
-    def is_valid_filegroup(self, filegroup):
+    def is_valid_filegroup(filegroup):
         video_count = 0
 
         for f in filegroup:
@@ -40,7 +40,7 @@ class JSONDirectoryScan(object):
         return video_count == 1
 
     @staticmethod
-    def populate_new_item(self, filegroup):
+    def populate_new_item(filegroup):
         new_item = {
             'fullname': None,
             'name': None,
@@ -120,7 +120,7 @@ class JSONDirectoryScan(object):
 
             # Si no es valido el grupo de archivos, para cada uno lo añadimos 
             # a la lista que competa
-            if not is_valid_filegroup.is_valid_filegroup(filegroup):
+            if not JSONDirectoryScan.is_valid_filegroup(filegroup):
                 for f in filegroup:
                     if f['ext'].lower() in SUB_EXT:
                         trace.warning("El archivo '%s' es un subtitulo huerfano." % f['fullname'])
@@ -133,7 +133,7 @@ class JSONDirectoryScan(object):
                         files_invalid.append(f)
             # Si es valido el grupo, construimos la estructura con el grupo de archivos
             else:
-                files_clean.append(is_valid_filegroup.populate_new_item(filegroup))
+                files_clean.append(JSONDirectoryScan.populate_new_item(filegroup))
 
         json_files = JSONDirectoryScan.get_json_filenames(
             directory, output, 

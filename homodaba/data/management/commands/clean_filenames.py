@@ -40,6 +40,7 @@ Generador de script de renames (popper.sh):
 class Command(BaseCommand):
     help = HELP_TEXT
 
+    not_interactive = False
     processeds = []
     processeds_filename = ""
     ignoreds = []
@@ -56,6 +57,11 @@ class Command(BaseCommand):
             '--not-scan-directory',
             action='store_true',
             help='No scanea directorios y carga los json que tengamos en el --output.',
+        )
+        parser.add_argument(
+            '--not-interactive',
+            action='store_true',
+            help='No hace ninguna pregunta (input) si encuentra errores, solo va pasando e intenta localizarlas solo.',
         )
 
     def generate_move_safe(self, filename, target_dir='orphans', target_filename=None):
@@ -180,6 +186,9 @@ class Command(BaseCommand):
                 self.processeds.append(file)
                 return True
 
+        if self.not_interactive:
+            return False
+
         print("")
         if len(posible_movies) > 0:
             print(" 0. Selecciona una de las pelis encontradas")
@@ -248,6 +257,7 @@ class Command(BaseCommand):
             year = text[text.find("(")+1:text.find(")")].strip()
             if year.isdigit():
                 year = int(year)
+
             title = text[:text.find("(")].strip()
 
             file['title'] = title
@@ -295,9 +305,10 @@ class Command(BaseCommand):
         for pos_year in reversed(possible_years):
             if int(pos_year) > 1930 and int(pos_year) <= datetime.now().year:
                 year = pos_year
+                break
         
         if year:
-            cur_name = re.sub(year, "", cur_name)
+            cur_name = re.sub("%s.*" % year, "", cur_name)
             year = int(year)
         
         # Buscamos resoluciones
@@ -306,16 +317,53 @@ class Command(BaseCommand):
             resolution = possible_resolutions[0]
             cur_name = re.sub(resolution, "", cur_name)
 
+        cur_name = cur_name.strip()
+
+        cur_name = cur_name.lower()
+
+        for s in "BluRay 720p Hi10 x264 Dual Subs triaudio HDTeam".lower().split():
+            cur_name = cur_name.replace(" %s" % s, " ")
+
         cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
         cur_name = re.sub(r"-|_|\.", " ", cur_name)
-        cur_name = re.sub(r"(?![0-9a-zA-ZÁÉÍÓÚáéíóú\s\.\,]).", "", cur_name)
+        cur_name = re.sub(r"(?![0-9a-zA-ZÁÉÍÓÚáéíóúñ\s\.\,]).", "", cur_name)
         
-        title = cur_name.strip()
+        title = cur_name.split()
+        title = ' '.join(title)
+
+        # " BluRay 720p Hi10  x264 Dual Subs [HDTeam]"
 
         file['year'] = year
         file['title'] = title
 
         return title, year
+
+    def populate_new_filenames(self, file):
+        # El caso de ':' se usa un monton, por lo que lo reemplazamos por ';'
+        # que parece que no se usa demasiado :P
+        clean_imdb_title = re.sub(r'[:]', ';', file['imdb_title'])
+        clean_imdb_title = clean_filename_for_samba_share(clean_imdb_title)
+
+        new_name = "%s (%s) [tt%s].%s" % (
+            clean_imdb_title, 
+            file['imdb_year'],
+            file['imdb_id'],
+            file['ext']
+        )
+
+        file['new_fullname'] = new_name
+
+        for extra_files in ['audios', 'subs']:
+            if extra_files in file:
+                for extra_file in file[extra_files]:
+                    new_name = "%s (%s) [tt%s].%s" % (
+                        clean_imdb_title, 
+                        file['imdb_year'],
+                        file['imdb_id'],
+                        extra_file['ext']
+                    )
+
+                    extra_file['new_fullname'] = new_name
 
     def process_files_clean(self, files, directory, output='.'):
         self.processeds = []
@@ -349,7 +397,8 @@ class Command(BaseCommand):
 
             try:
                 while not self.process_file(f):
-                    pass
+                    if self.not_interactive:
+                        break
             except:
                 print("Error no esperado:", sys.exc_info()[0])
                 self.save_processeds()
@@ -359,7 +408,9 @@ class Command(BaseCommand):
 
         delete_processeds = []
 
+        trace.debug(" * Validando procesados (Datos basicos)")
         for f in self.processeds:
+            trace.debug(" - %s" % f['fullname'])
             imdb_movie = get_imdb_movie(f['imdb_id'])
 
             if (not 'manual_valid' in f or not f['manual_valid']) and not is_valid_imdb_movie(imdb_movie):
@@ -375,18 +426,20 @@ class Command(BaseCommand):
             
                 print(" - Revise la url https://www.imdb.com/title/tt%s y si no coincide puede borrarla a continuacion." % f['imdb_id'])
                 print("")
-                print(">> Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
-                selected_option = getch.getch()
 
-                if selected_option.lower() != 'n':
-                    delete_processeds.append(f)
-                    continue
-                else:
-                    print(">> Desea VALIDAR la peli '%s' en la lista de procesados? (de esta forma no le volvera a preguntar) [Y/n]: " % f['fullname'])
+                if not self.not_interactive:
+                    print(">> Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
                     selected_option = getch.getch()
 
                     if selected_option.lower() != 'n':
-                        f['manual_valid'] = True
+                        delete_processeds.append(f)
+                        continue
+                    else:
+                        print(">> Desea VALIDAR la peli '%s' en la lista de procesados? (de esta forma no le volvera a preguntar) [Y/n]: " % f['fullname'])
+                        selected_option = getch.getch()
+
+                        if selected_option.lower() != 'n':
+                            f['manual_valid'] = True
 
             if not 'imdb_title' in f:
                 if imdb_movie:
@@ -396,33 +449,9 @@ class Command(BaseCommand):
                     trace.error("No encontramos peli en el imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
                 
             if 'imdb_title' in f:
-                # El caso de ':' se usa un monton, por lo que lo reemplazamos por ';'
-                # que parece que no se usa demasiado :P
-                clean_imdb_title = re.sub(r'[:]', ';', f['imdb_title'])
-                clean_imdb_title = clean_filename_for_samba_share(clean_imdb_title)
-
-                new_name = "%s (%s) [%s].%s" % (
-                    clean_imdb_title, 
-                    f['imdb_year'],
-                    f['imdb_id'],
-                    f['ext']
-                )
-
-                f['new_fullname'] = new_name
-
-                for extra_files in ['audios', 'subs']:
-                    if extra_files in f:
-                        for extra_file in f[extra_files]:
-                            new_name = "%s (%s) [%s].%s" % (
-                                clean_imdb_title, 
-                                f['imdb_year'],
-                                f['imdb_id'],
-                                extra_file['ext']
-                            )
-
-                            extra_file['new_fullname'] = new_name
+                self.populate_new_filenames(f)
         
-        if len(delete_processeds) > 0:
+        if not self.not_interactive and len(delete_processeds) > 0:
             print("")
             print(" * Esta seguro que desea borrar %s items de la lista de procesados? [y/N]: " % len(delete_processeds))
             selected_option = getch.getch()
@@ -480,14 +509,16 @@ class Command(BaseCommand):
             
             imdb_movie = get_imdb_movie(imdb_id)
             print(" * Los datos en imdb de la peli son %s (%s) [https://www.imdb.com/title/tt%s]:" % (imdb_movie['title'], imdb_movie['year'], imdb_id))
-            print(" * Quieres borrar todos estos archivos de procesados? [y/N]")
-            selected_option = getch.getch()
 
-            if selected_option.lower() == 'y':
-                for item in repeated_files:
-                    self.processeds.remove(item)
-                
-                self.save_processeds()
+            if not self.not_interactive:
+                print(" * Quieres borrar todos estos archivos de procesados? [y/N]")
+                selected_option = getch.getch()
+
+                if selected_option.lower() == 'y':
+                    for item in repeated_files:
+                        self.processeds.remove(item)
+                    
+                    self.save_processeds()
 
         if len(imdb_repeated_ids) > 0:
             print(" * No podemos continuar mientras que queden pelis con ids duplicados")
@@ -504,23 +535,20 @@ class Command(BaseCommand):
                 print(" > '%s'" % f['fullname'])
                 print(" > '%s'" % f['new_fullname'])
                 print("   https://www.imdb.com/title/tt%s" % f['imdb_id'])
-                print(" * Es correcto? [Y/n]")
-                
-                selected_option = getch.getch()
 
-                if selected_option.lower() == 'n':
-                    print(" * No podemos continuar, corrija el error manualmente.")
-                    exit()
-                
-                f['last_validation'] = True
-                self.save_processeds()
+                if not self.not_interactive:
+                    print(" * Es correcto? [Y/n]")
+                    
+                    selected_option = getch.getch()
 
-        # TODO: Ir uno por uno de las procesadas mostrando fullname y nuevo fullname y con 
-        # la url del imdb para revalidar (Y/n)
-        # TODO: Por ultimo generar el script algo asi:
-        # if [ -e 'fichero_destino' ]; then echo "EXISTE el fichero fichero_destino"; else mv -i -- 'fichero_origen' 'fichero_destino'; fi
-        # OJO: entre comilla simple implica que tenemos que escapar la comilla simple del valor!!!!
-        
+                    if selected_option.lower() == 'n':
+                        print(" * No podemos continuar, corrija el error manualmente.")
+                        exit()
+                    
+                    # TODO: Usar esta ultima validacion para generar el sh final
+                    f['last_validation'] = True
+                    self.save_processeds()
+
         sh_filename = get_output_filename('move_processeds.sh', directory, output)
         sh_file = open(sh_filename, 'w', newline='')
         sh_file.write("#!/bin/sh\n")
@@ -528,6 +556,10 @@ class Command(BaseCommand):
         for f in self.processeds:
             sh_file.write(self.generate_move_safe(f['fullname'], 'clean-name', f['new_fullname']))
 
+            for extra_files in ['audios', 'subs']:
+                if extra_files in f:
+                    for extra_file in f[extra_files]:
+                        sh_file.write(self.generate_move_safe(extra_file['fullname'], 'clean-name', extra_file['new_fullname']))
 
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
@@ -541,6 +573,7 @@ class Command(BaseCommand):
             output = ' '.join(options['output'])
         
         not_scan_directory = options['not_scan_directory']
+        self.not_interactive = options['not_interactive']
 
         verbosity = options['verbosity']
         trace.set_verbosity(verbosity)
@@ -562,6 +595,8 @@ class Command(BaseCommand):
             self.process_files_orphans_audios(files["orphans_audios"], directory, output)
         if len(files["clean"]) > 0:
             self.process_files_clean(files["clean"], directory, output)
+
+        # TODO: Pintar estadisticas al final?
 
 
 
