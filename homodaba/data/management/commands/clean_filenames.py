@@ -124,11 +124,17 @@ class Command(BaseCommand):
         save_json(self.ignoreds, self.ignoreds_filename)
 
     # TODO: Esto lo tendriamos que mover a utils de imdb
-    def match_posible_movies(self, search_results, trace_message=True):
+    def match_posible_movies(self, search_results, year=None, trace_message=True):
         posible_movies = []
-        
+
+        if year:
+            for sr in search_results:
+                if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie' and int(year) == int(sr['year']):
+                    posible_movies.append(sr)
+
+
         for sr in search_results:
-            if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
+            if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie' and not sr in posible_movies:
                 posible_movies.append(sr)
         
         if trace_message:
@@ -158,7 +164,7 @@ class Command(BaseCommand):
                     file['imdb_id'] = imdb_movie.getID()
                 else:
                     imdb_movie = None
-                    posible_movies = self.match_posible_movies(search_results)
+                    posible_movies = self.match_posible_movies(search_results, year=file['year'], trace_message=False)
 
         if imdb_movie is None:
             if not file['year']:
@@ -170,8 +176,9 @@ class Command(BaseCommand):
                 search_results = search_imdb_movies(file['title'])
 
                 if not search_results is None and len(search_results) > 0:
+                    print("")
                     print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
-                    posible_movies = self.match_posible_movies(search_results)
+                    posible_movies = self.match_posible_movies(search_results, year=file['year'])
 
         return imdb_movie, posible_movies
 
@@ -190,7 +197,10 @@ class Command(BaseCommand):
             return False
 
         print("")
-        if len(posible_movies) > 0:
+        if len(posible_movies) == 1:
+            sr = posible_movies[0]
+            print(" 0. Selecciona '%s (%s) [%s]'" % (sr['title'], sr['year'], sr.movieID))
+        elif len(posible_movies) > 0:
             print(" 0. Selecciona una de las pelis encontradas")
         print(" 1. Introducir imdb_id")
         print(" 2. Introducir/Cambiar titulo (año)")
@@ -415,7 +425,8 @@ class Command(BaseCommand):
 
             if (not 'manual_valid' in f or not f['manual_valid']) and not is_valid_imdb_movie(imdb_movie):
                 print("")
-                print(">> Encontramos errores en '%s'" % f['fullname'])
+                print("## Encontramos errores en '%s'" % f['fullname'])
+                print("")
                 if not 'kind' in imdb_movie.keys():
                     print(" - No sabemos el tipo de peli para imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
                 elif imdb_movie['kind'] != 'movie':
@@ -428,14 +439,15 @@ class Command(BaseCommand):
                 print("")
 
                 if not self.not_interactive:
-                    print(">> Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
+                    print(" * Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
                     selected_option = getch.getch()
 
                     if selected_option.lower() != 'n':
                         delete_processeds.append(f)
                         continue
                     else:
-                        print(">> Desea VALIDAR la peli '%s' en la lista de procesados? (de esta forma no le volvera a preguntar) [Y/n]: " % f['fullname'])
+                        print("")
+                        print(" * Desea VALIDAR la peli '%s' en la lista de procesados? (de esta forma no le volvera a preguntar) [Y/n]: " % f['fullname'])
                         selected_option = getch.getch()
 
                         if selected_option.lower() != 'n':
