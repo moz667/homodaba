@@ -224,7 +224,7 @@ class txtFilesParser(filesParser):
             movie['storage_type'] = 'hard-drive'
         else:
             movie['ignored'] = True
-    processPath.regex = re.compile(r'/media/bpk/(HDD-Pelis-[0-9]{3})/([HS]D)(?:/(.*))?')
+    processPath.regex = re.compile(r'/media/bpk/(HDD-(?:Pelis|Anime)-[0-9]{3})/([HS]D)(?:/(.*))?')
 
     def checkExtension(self,movie):
         extension = movie['extension']
@@ -308,6 +308,7 @@ class csvCleaner(filesParser):
         self.process_AlienFilms()
         self.process_HarryPotterFilms()
         self.process_StarWarsFilms()
+        self.process_GhibliFilms()
         self.fix_movies()
         return self.row
 
@@ -338,6 +339,19 @@ class csvCleaner(filesParser):
             trimmed_title = filmstarwars.group(1)
             self.row['title'] = trimmed_title
     process_StarWarsFilms.regex = re.compile(r'Episode [A-Z]{1,4}\. (.*)')                # Episode XXXX. Title
+
+    def process_GhibliFilms(self):
+        # Remove XX. if film is tagged as 'Studio Ghibli'
+        if 'tags' in self.row:
+            tags = self.row['tags']
+        else:
+            tags = ""
+        if tags == 'Studio Ghibli':
+            filmsghibli = self.process_GhibliFilms.regex.match(self.row['title'])
+            if filmsghibli:
+                trimmed_title = filmsghibli.group(1)
+                self.row['title'] = trimmed_title
+    process_GhibliFilms.regex = re.compile(r'[0-9]{2}\. (.*)')
 
     def fix_movies(self):
         # Movies patched manually
