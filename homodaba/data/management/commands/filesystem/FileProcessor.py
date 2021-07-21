@@ -322,8 +322,6 @@ class FileProcessor(object):
         title = cur_name.split()
         title = ' '.join(title)
 
-        # " BluRay 720p Hi10  x264 Dual Subs [HDTeam]"
-
         file['year'] = year
         file['title'] = title
 
@@ -342,7 +340,6 @@ class FileProcessor(object):
             if search_results == None or len(search_results) == 0:
                 print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
             else:
-                # TODO: Revisar... esta haciendo mal el match
                 imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
 
                 if imdb_movie and is_valid_imdb_movie(imdb_movie):

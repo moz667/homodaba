@@ -11,12 +11,129 @@ import re
 IMDB_API = IMDb(reraiseExceptions=True)
 
 import codecs
+from enum import Enum
 
 from . import Trace as trace
+
 
 """
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
 """
+
+# Niveles de precision para el matcheo de resultados de busqueda con el imdb
+class MatchPrecision(Enum): 
+    NONE = 0
+    MID = 1
+    HIGH = 2
+
+match_precision_level = MatchPrecision.NONE
+
+def match_imdb_movie(search_results, title, year, director=None, precission_level=None):
+    precission_level = match_precision_level if precission_level is None else precission_level
+    
+    trace.debug("match_imdb_movie(search_results, '%s', '%s', '%s', '%s')" % (title, year, director, precission_level))
+    trace_results(search_results)
+
+    def match_high_precision():
+        # TODO:
+        # todos los campos que se le pasen tiene que coincidir
+        # ademas requerir year?
+        # 
+        # - no se tocan los titulos (solo se convierten a minusculas y se 
+        # quitan los caracteres prohibidos para samba)
+        # - no busca en akas
+        return None
+    
+    def match_mid_precision():
+        # TODO:
+        # todos los campos que se le pasen tiene que coincidir
+        # ya no es obligatorio year?
+        # 
+        # - los titulos se limpian de morralla (tags y otras mierdas)
+        # - no busca en akas
+        return None
+
+    def match_none_precision():
+        # TODO:
+        # con que coincidan 2 campos vale, pero hay que tener en cuenta que title
+        # es obligatorio asi que las combinaciones posibles son:
+        # (year, title) (title, director) (title, year, director)
+        #
+        # - los titulos se limpian de morralla (tags y otras ms)
+        # - busca en akas
+
+        slugify_title = clean_string(title)
+        matches = []
+        matches_tier1 = []
+
+        if not director is None:
+            year_matches = []
+
+            for sr in search_results:
+                if 'year' in sr and sr['year'] and int(sr['year']) == int(year):
+                    year_matches.append(sr)
+
+            movie = match_imdb_movie_by_director(year_matches, director, year)
+
+            if movie:
+                return movie
+
+        for sr in search_results:
+            if 'year' in sr and sr['year'] and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
+                # sr.keys()[0] == 'title', es para evitar talk-shows y otros programas 
+                # especiales... por lo visto en ellos no mete primero el title
+                if sr.keys()[0] == 'title':
+                    matches_tier1.append(sr)
+                else:
+                    matches.append(sr)
+        
+        # Sumamos todos los matches dando prioridad por tier
+        matches = matches_tier1 + matches
+
+        # Si solo hemos encontrado un tier1 asumimos que es el bueno
+        if len(matches_tier1) == 1:
+            trace.debug(">>> Seleccionando: len(matches_tier1) == 1")
+            trace_results(matches_tier1)
+            return get_imdb_movie(matches_tier1[0].movieID)
+
+        total_matches = len(matches)
+
+        if not director is None:
+            # Si hay mas de un match, buscamos por director en los matches
+            if total_matches > 1:
+                return match_imdb_movie_by_director(matches, director, year)
+            
+            if total_matches == 0:
+                movie = match_imdb_movie_by_director(search_results, director, year)
+
+                if movie:
+                    return movie
+                else:
+                    trace.debug("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
+                    return None
+
+        trace.debug(">>> Seleccionando: matches[0]")
+        trace_results(matches)
+
+        return get_imdb_movie(matches[0].movieID) if len(matches) > 0 else None
+
+    # Para cada precision de matcheo, buscamos peli y comprobamos si es la 
+    # precision que queremos, sino encotramos o tenemos una precision menor
+    # pasamos a la siguiente
+    imdb_movie = match_high_precision()
+
+    if precission_level == MatchPrecision.HIGH or not imdb_movie is None:
+        return imdb_movie
+
+    imdb_movie = match_mid_precision()
+
+    if precission_level == MatchPrecision.MID or not imdb_movie is None:
+        return imdb_movie
+
+    return match_none_precision()
+
+
+
 
 def serialize(obj):
     return codecs.encode(pickle.dumps(obj), "base64").decode()
@@ -220,65 +337,6 @@ def is_valid_imdb_movie(imdb_movie, valid_kinds=['movie']):
         return False
     
     return True
-
-def match_imdb_movie(search_results, title, year, director=None):
-    slugify_title = clean_string(title)
-    matches = []
-    matches_tier1 = []
-    
-    trace.debug("match_imdb_movie(search_results, '%s', '%s', '%s'" % (title, year, director))
-    trace_results(search_results)
-
-    if not director is None:
-        year_matches = []
-
-        for sr in search_results:
-            if 'year' in sr and sr['year'] and int(sr['year']) == int(year):
-                year_matches.append(sr)
-
-        movie = match_imdb_movie_by_director(year_matches, director, year)
-
-        if movie:
-            return movie
-
-    for sr in search_results:
-        if 'year' in sr and sr['year'] and int(sr['year']) == int(year) and clean_string(sr['title']) == slugify_title:
-            # sr.keys()[0] == 'title', es para evitar talk-shows y otros programas 
-            # especiales... por lo visto en ellos no mete primero el title
-            if sr.keys()[0] == 'title':
-                matches_tier1.append(sr)
-            else:
-                matches.append(sr)
-    
-    # Sumamos todos los matches dando prioridad por tier
-    matches = matches_tier1 + matches
-
-    # Si solo hemos encontrado un tier1 asumimos que es el bueno
-    if len(matches_tier1) == 1:
-        trace.debug(">>> Seleccionando: len(matches_tier1) == 1")
-        trace_results(matches_tier1)
-        return get_imdb_movie(matches_tier1[0].movieID)
-
-    total_matches = len(matches)
-
-    if not director is None:
-        # Si hay mas de un match, buscamos por director en los matches
-        if total_matches > 1:
-            return match_imdb_movie_by_director(matches, director, year)
-        
-        if total_matches == 0:
-            movie = match_imdb_movie_by_director(search_results, director, year)
-
-            if movie:
-                return movie
-            else:
-                trace.debug("NO se han encontrado resultados en el IMDB para titulo identico %s (%s) - %s" % (title, year, director))
-                return None
-
-    trace.debug(">>> Seleccionando: matches[0]")
-    trace_results(matches)
-
-    return get_imdb_movie(matches[0].movieID) if len(matches) > 0 else None
 
 def trace_results(search_results):
     if trace.is_debug():
