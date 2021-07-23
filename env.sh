@@ -12,6 +12,10 @@ export ES_CONTAINER_VERSION="docker.elastic.co/elasticsearch/elasticsearch:7.9.1
 # Ip donde escucha django
 export LOCALNETIP='127.0.0.1'
 
+# Variable que define los tipos validos de peliculas, por defecto solo movie,
+# pero se podrian poner los que se quieran separandolos por comas:
+# export IMDB_VALID_MOVIE_KINDS='movie,tv movie'
+
 # Ips que permitimos acceder a la escucha de django separadas por espacio
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 export ALLOWED_HOSTS='127.0.0.1'

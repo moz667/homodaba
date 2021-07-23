@@ -15,6 +15,7 @@ from enum import Enum
 
 from . import Trace as trace
 
+from homodaba.settings import IMDB_VALID_MOVIE_KINDS
 
 """
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
@@ -42,7 +43,7 @@ Busca resultados exactos o prometedores en imdb
     imdb_movie, un resultado de tipo IMDb.Movie o None si no consigue encontrar uno exacto
     promisings, lista con search results prometedores (ver search_imdb_movies)
 """
-def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kinds=['movie'], precission_level=None):
+def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kinds=IMDB_VALID_MOVIE_KINDS, precission_level=None):
     precission_level = match_precision_level if precission_level is None else precission_level
     search_results = search_movie_imdb(title, year=year, title_alt=title_alt, director=director)
 
@@ -50,8 +51,8 @@ def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kind
     if not search_results or len(search_results) == 0:
         return None, []
 
-    trace.debug("match_imdb_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s', 'precission_level=%s')" % (
-        title, year, title_alt, director, precission_level)
+    trace.debug("match_imdb_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s', valid_kinds=[%s], 'precission_level=%s')" % (
+        title, year, title_alt, director, ','.join(valid_kinds), precission_level)
     )
     trace_results(search_results)
     # OJO: sigue despues de los 'def match_*'
@@ -358,7 +359,10 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     if movies_local_data.count() == 1:
         return FacadeResult.local_data(movies_local_data[0])
 
-    imdb_movie, search_results = match_imdb_movie(title, year, title_alt=title_alt, director=director)
+    imdb_movie, search_results = match_imdb_movie(
+        title, year, title_alt=title_alt, 
+        director=director
+    )
 
     if not imdb_movie is None:
         # Por ultima vez comprobamos que no la tenemos dada de alta en local
@@ -434,7 +438,7 @@ def match_director(director, imdb_directors):
 
     return False
 
-def is_valid_imdb_movie(imdb_movie, valid_kinds=['movie']):
+def is_valid_imdb_movie(imdb_movie, valid_kinds=IMDB_VALID_MOVIE_KINDS):
     if not 'kind' in imdb_movie.keys():
         return False
     elif not imdb_movie['kind'] in valid_kinds:
