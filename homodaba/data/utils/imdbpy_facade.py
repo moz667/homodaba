@@ -56,7 +56,7 @@ def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kind
     trace_results(search_results)
     # OJO: sigue despues de los 'def match_*'
 
-    def get_year_matches(_search_results):
+    def get_year_matches():
         year_matches = []
 
         for sr in search_results:
@@ -94,7 +94,7 @@ def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kind
         # - busca en akas
 
         # Matches por year:
-        year_matches = get_year_matches(search_results, year) if year else []
+        year_matches = get_year_matches() if year else []
         is_match_by_year = len(year_matches) > 0
 
         # Lista temporal donde vamos poniendo los mas prometedores
