@@ -1,7 +1,7 @@
 
 from data.management.commands.utils import save_json
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie, search_imdb_movies, is_valid_imdb_movie, clean_string
+from data.utils.imdbpy_facade import get_imdb_movie, match_imdb_movie, is_valid_imdb_movie, clean_string
 
 import getch
 
