@@ -1,0 +1,38 @@
+version: '2.0'
+
+services:
+    homodaba-es:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.9.1
+        hostname: homodaba-es-host
+        container_name: homodaba-es-container
+        restart: always
+        environment:
+            - discovery.type=single-node
+#        networks:
+#            homodaba_net:
+#                ipv4_address: 172.66.7.101
+    homodaba-app:
+        build: ./
+        image: homodaba:trunk
+        hostname: homodaba-app-host
+        container_name: homodaba-app-container
+        ports:
+            - "8000:8000"
+        restart: always
+        environment:
+            - SECRET_KEY=${SECRET_KEY}
+            - ES_DSL_HOSTS=homodaba-es-host
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+        volumes:
+            - ./volumes/sqlite3:/opt/app/sqlite3
+#        networks:
+#            homodaba_net:
+#                ipv4_address: 172.66.7.100
+
+#networks:
+#    homodaba_net:
+#        driver: bridge
+#        ipam:
+#            driver: default
+#            config:
+#                - subnet: 172.66.7.0/24
