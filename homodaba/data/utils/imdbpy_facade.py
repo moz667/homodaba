@@ -381,7 +381,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     # sacamos un mensaje y devolvemos None
     trace.debug(" * No encontramos coincidencia clara para la peli '%s (%s)' *" % (title, year))
     trace.debug(" * Aunque hemos encontrado las siguientes: *")
-    trace_results(search_results)
+    trace_results(search_results, mini_info=True)
 
     return None
 
@@ -449,16 +449,19 @@ def is_valid_imdb_movie(imdb_movie, valid_kinds=IMDB_VALID_MOVIE_KINDS):
     
     return True
 
-def trace_results(search_results):
+def trace_results(search_results, mini_info=False):
     if trace.is_debug():
         for sr in search_results:
             trace.debug("  - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None', sr.movieID, sr.movieID))
-            movie = get_imdb_movie(sr.movieID)
-            if 'director' in movie.keys():
-                trace.debug("        DIRECTORES:")
-                movie_directors = [clean_string(p['name']) for p in movie['director']]
-                for director in movie_directors:
-                    trace.debug("        * '%s'" % director)
+            if not mini_info:
+                movie = get_imdb_movie(sr.movieID)
+                if 'director' in movie.keys():
+                    trace.debug("      DIRECTORES:")
+                    movie_directors = [clean_string(p['name']) for p in movie['director']]
+                    for director in movie_directors:
+                        trace.debug("        * '%s'" % director)
+                trace.debug("      TIPO DE PELICULA: '%s'" % sr['kind'] if 'kind' in sr and sr['kind'] else '')
+                trace.debug("      PORTADA: '%s'" % movie['full-size cover url'] if 'full-size cover url' in movie.keys() and movie['full-size cover url'] else '')
 
 def search_movie_imdb(title, year=None, title_alt=None, director=None):
     search_results = None
