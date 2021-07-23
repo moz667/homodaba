@@ -98,7 +98,7 @@ WSGI_APPLICATION = 'homodaba.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.getenv("SQLITE3_PATH", BASE_DIR) / 'db.sqlite3',
+        'NAME': Path(os.getenv("SQLITE3_PATH", "")) if os.getenv("SQLITE3_PATH", "") else BASE_DIR / 'db.sqlite3',
     }
 }
 
