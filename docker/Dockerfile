@@ -11,6 +11,7 @@ ENV PYTHONUNBUFFERED 1
 ENV SECRET_KEY ${SECRET_KEY}
 ENV ES_DSL_HOSTS ${ES_DSL_HOSTS}
 ENV ALLOWED_HOSTS ${ALLOWED_HOSTS}
+ENV SQLITE3_PATH "/opt/app/sqlite3"
 
 RUN mkdir /opt/app
 
@@ -24,6 +25,9 @@ RUN pip3 install -r homodaba/python-requirements.txt
 VOLUME /opt/app/sqlite3
 
 EXPOSE 8000
+
+COPY manage.sh /manage.sh
+RUN chmod 755 /manage.sh
 
 COPY init-homodaba.sh /init-homodaba.sh
 RUN chmod 755 /init-homodaba.sh
