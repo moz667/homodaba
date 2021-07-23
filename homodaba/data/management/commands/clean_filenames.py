@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import search_movie_imdb, get_imdb_movie, match_imdb_movie, search_imdb_movies, is_valid_imdb_movie
 
 import getch
 
@@ -136,12 +135,12 @@ class Command(BaseCommand):
         sh_file.write("#!/bin/sh\n")
 
         for f in file_processor.processeds:
-            sh_file.write(self.generate_move_safe(f['fullname'], 'clean-name', f['new_fullname']))
+            sh_file.write(self.generate_move_safe(f['fullname'], '.', f['new_fullname']))
 
             for extra_files in ['audios', 'subs']:
                 if extra_files in f:
                     for extra_file in f[extra_files]:
-                        sh_file.write(self.generate_move_safe(extra_file['fullname'], 'clean-name', extra_file['new_fullname']))
+                        sh_file.write(self.generate_move_safe(extra_file['fullname'], '.', extra_file['new_fullname']))
 
     def handle(self, *args, **options):
         if not 'directory' in options or not options['directory'] or len(options['directory']) == 0:
@@ -179,18 +178,3 @@ class Command(BaseCommand):
             self.process_files_clean(files["clean"], directory, output)
 
         # TODO: Pintar estadisticas al final?
-
-
-
-
-"""
-search_results = search_imdb_movies('The Hobbit: An Unexpected Journey (2012)')
-
-if not search_results is None and len(search_results) > 0:
-    for sr in search_results:
-        if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie':
-            imdb_movie = get_imdb_movie(sr.movieID)
-            print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-            # for k in imdb_movie.keys():
-            #    print("    + '%s': '%s'" % (k, imdb_movie[k]))
-"""

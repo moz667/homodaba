@@ -7,7 +7,7 @@ from data.utils import Trace as trace
 from ..utils import save_json, split_filename_parts
 
 VIDEO_EXT = [
-    'mp4', 'avi', 'mkv', 'wmv', 'iso'
+    'mp4', 'avi', 'mkv', 'wmv', 'iso', 'mpg', 'mpeg'
 ]
 
 SUB_EXT = [

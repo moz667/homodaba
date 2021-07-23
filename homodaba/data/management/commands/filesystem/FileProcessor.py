@@ -277,7 +277,7 @@ class FileProcessor(object):
 
     def populate_title_and_year(self, file):
         cur_name = file['name']
-
+        
         title = None
         year = None
         resolution = None
@@ -290,11 +290,11 @@ class FileProcessor(object):
                 break
         
         if year:
-            cur_name = re.sub("%s.*" % year, "", cur_name)
+            cur_name = re.sub("%s" % year, "", cur_name)
             year = int(year)
         
         # Buscamos resoluciones
-        possible_resolutions = re.findall('720p|1080p', cur_name)
+        possible_resolutions = re.findall('720p|1080p|480p|1080i', cur_name)
         if len(possible_resolutions) == 1:
             resolution = possible_resolutions[0]
             cur_name = re.sub(resolution, "", cur_name)
@@ -304,7 +304,7 @@ class FileProcessor(object):
         cur_name = cur_name.lower()
 
         # Quitamos terminos cacosos que contienen un punto
-        for s in "elitetorrent.net EspaTaquilla.com".lower().split():
+        for s in "elitetorrent.net EspaTaquilla.com www.zonatorrent.com www.lokotorrents.com".lower().split():
             cur_name = cur_name.replace(s, " ")
 
         # Limpiamos todo lo que no sean letras, numeros o . y ,
@@ -312,7 +312,7 @@ class FileProcessor(object):
 
         # Quitamos terminos cacosos de descripciones que meten a los archivos
         # [DVDRip][Xvid][Castellano][EspaTaquilla.com]
-        for s in "BluRay 720p Hi10 x264 Dual Subs triaudio HDTeam hdrip xvid ac3 hdrip gnio DVDRip castellano spanish divx".lower().split():
+        for s in "BluRay 720p Hi10 x264 Dual Subs triaudio hdtv español HDTeam hdrip xvid ac3 hdrip gnio DVDRip castellano spanish divx".lower().split():
             cur_name = cur_name.replace(s, " ")
 
         cur_name = re.sub(r"\[[a-zA-Z0-9\-\s\+\._]+\]", "", cur_name)
@@ -334,77 +334,32 @@ class FileProcessor(object):
         imdb_movie = None
         posible_movies = []
 
-        if file['year'] and file['title']:
-            search_results = search_movie_imdb(file['title'], file['year'])
-
-            if search_results == None or len(search_results) == 0:
-                print(" * No encontramos coincidencias para la peli '%s' *" % file['fullname'])
-            else:
-                imdb_movie = match_imdb_movie(search_results, file['title'], file['year'])
-
-                if imdb_movie and is_valid_imdb_movie(imdb_movie):
-                    file['title'] = imdb_movie['title']
-                    file['year'] = imdb_movie['year']
-                    file['imdb_id'] = imdb_movie.getID()
-                else:
-                    imdb_movie = None
-                    posible_movies = self.match_posible_movies(search_results, year=file['year'], trace_message=False)
-
-        if imdb_movie is None:
+        if file['title']:
+            imdb_movie, posible_movies = match_imdb_movie(
+                file['title'], year=file['year'] if file['year'] else None
+            )
+        
+        if imdb_movie:
+            file['title'] = imdb_movie['title']
+            file['year'] = imdb_movie['year']
+            file['imdb_id'] = imdb_movie.getID()
+        else:
             if not file['year']:
                 print(" * No tenemos año para la peli '%s' *" % file['fullname'])
             
             if not file['title']:
                 print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
             else:
-                # TODO: Con toda esta logica podiamos ampliar el match_imdb_movie e incluirlo en
-                # search_movie_imdb
-                search_results = search_imdb_movies(file['title'])
+                print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
 
-                if not search_results is None and len(search_results) > 0:
-                    posible_movies = self.match_posible_movies(search_results, year=file['year'], trace_message=False)
-
-                    if len(posible_movies) == 1:
-                        clean_title = clean_string(file['title'])
-                        imdb_movie_test = get_imdb_movie(posible_movies[0].movieID)
-                        if imdb_movie_test and 'akas' in imdb_movie_test.keys():
-                            for aka in imdb_movie_test['akas']:
-                                clean_aka_title = clean_string(re.sub(r'\(.*\)', '', aka))
-                                if clean_aka_title == clean_title:
-                                    file['title'] = imdb_movie_test['title']
-                                    file['year'] = imdb_movie_test['year']
-                                    file['imdb_id'] = imdb_movie_test.getID()
-
-                                    return imdb_movie_test, posible_movies
-                    elif len(posible_movies) > 0:
-                        print("")
-                        print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
-                        posible_movies = self.match_posible_movies(search_results, year=file['year'])
-                    
+                if len(posible_movies) > 0:
+                    print(" * Aunque hemos encontrado las siguientes: *")
+                    for sr in posible_movies:
+                        print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (
+                            sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID
+                        ))
 
         return imdb_movie, posible_movies
-
-    # TODO: Esta logica la tendriamos que mover a utils de imdb
-    def match_posible_movies(self, search_results, year=None, trace_message=True):
-        posible_movies = []
-
-        if year:
-            for sr in search_results:
-                if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie' and int(year) == int(sr['year']):
-                    posible_movies.append(sr)
-
-
-        for sr in search_results:
-            if 'year' in sr and 'title' in sr and 'kind' in sr and sr['kind'] == 'movie' and not sr in posible_movies:
-                posible_movies.append(sr)
-        
-        if trace_message:
-            if len(posible_movies) > 0:
-                print(" * Aunque hemos encontrado las siguientes: *")
-                for sr in posible_movies:
-                    print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
-        
-        return posible_movies
 
     def process_file(self, file, query_file=True):
         imdb_movie = None
@@ -423,7 +378,7 @@ class FileProcessor(object):
         print("")
         if len(posible_movies) == 1:
             sr = posible_movies[0]
-            print(" 0. Selecciona '%s (%s) [%s]'  https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'], sr.movieID, sr.movieID))
+            print(" 0. Selecciona '%s (%s) [%s]'  https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID))
         elif len(posible_movies) > 0:
             print(" 0. Selecciona una de las pelis encontradas")
         print(" 1. Introducir imdb_id")
@@ -443,13 +398,13 @@ class FileProcessor(object):
         selected_option = getch.getch()
         print("")
 
-        if selected_option == "0":
+        if selected_option == "0" and len(posible_movies) > 0:
             movie_index = 0
 
             if len(posible_movies) > 1:
                 i = 0
                 for sr in posible_movies:
-                    print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'], sr.movieID, sr.movieID))
+                    print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID))
                     i = i + 1
                 movie_index = input('Introduce el indice:')
                 
