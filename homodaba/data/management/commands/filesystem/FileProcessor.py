@@ -11,6 +11,10 @@ import os, sys, re, json
 from . import clean_filename_for_samba_share, escape_single_quoute
 from .JSONDirectory import JSONDirectoryScan, get_output_filename
 
+# kitty console:
+# from data.utils.imdbpy_facade import show_imdb_movie_image
+# from homodaba.settings import IMDB_VALID_MOVIE_KINDS
+
 class FileProcessor(object):
     files = []
 
@@ -147,6 +151,8 @@ class FileProcessor(object):
                 print("   https://www.imdb.com/title/tt%s" % f['imdb_id'])
 
                 if not self.not_interactive:
+                    # kitty console:
+                    # show_imdb_movie_image(get_imdb_movie(f['imdb_id']))
                     print(" * Es correcto? [Y/n]")
                     
                     selected_option = getch.getch()
@@ -282,6 +288,10 @@ class FileProcessor(object):
         year = None
         resolution = None
         
+        # TODO: Deberiamos mejorar la busqueda de año pensando en la forma
+        # que tiene bpk de definir los nombres de archivos:
+        # Titulo (Director/es, año)
+
         # Buscamos el año
         possible_years = re.findall('\d+\d+\d+\d+', cur_name)
         for pos_year in reversed(possible_years):
@@ -290,7 +300,26 @@ class FileProcessor(object):
                 break
         
         if year:
-            cur_name = re.sub("%s" % year, "", cur_name)
+            # Muchas veces los nombres de las pelis vienen de la forma:
+            #   Titulo (año) Varias tags y cosas que no nos interesan
+            #   Titulo año Varias tags y cosas que no nos interesan
+            # Es tan comun esta definicion, que resulta interesante
+            # hacer estos replaces:
+            #   s/(año).*//
+            #   s/año.*//
+            pattern = re.compile("\(%s\)" % year)
+
+            if pattern.search(cur_name):
+                new_cur_name = re.sub("\(%s\).*" % year, "", cur_name).strip()
+                if len(new_cur_name) > 0:
+                    cur_name = new_cur_name
+            else:
+                new_cur_name = re.sub("%s.*" % year, "", cur_name).strip()
+                if len(new_cur_name) > 0:
+                    cur_name = new_cur_name
+                else:
+                    cur_name = re.sub("%s" % year, "", cur_name)
+
             year = int(year)
         
         # Buscamos resoluciones
@@ -343,6 +372,9 @@ class FileProcessor(object):
             file['title'] = imdb_movie['title']
             file['year'] = imdb_movie['year']
             file['imdb_id'] = imdb_movie.getID()
+
+            # kitty console:
+            # show_imdb_movie_image(imdb_movie)
         else:
             if not file['year']:
                 print(" * No tenemos año para la peli '%s' *" % file['fullname'])
@@ -358,6 +390,10 @@ class FileProcessor(object):
                         print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (
                             sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID
                         ))
+
+                        # kitty console:
+                        # if 'kind' in sr and sr['kind'] in IMDB_VALID_MOVIE_KINDS:
+                        #    show_imdb_movie_image(get_imdb_movie(sr.movieID))
 
         return imdb_movie, posible_movies
 

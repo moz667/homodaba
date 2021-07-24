@@ -17,6 +17,11 @@ from . import Trace as trace
 
 from homodaba.settings import IMDB_VALID_MOVIE_KINDS
 
+# kitty console:
+# * OJO: para usar pixcat hay que instalarlo:
+#   ~ pip install pixcat
+# from pixcat import Image
+
 """
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
 """
@@ -35,6 +40,14 @@ def match_imdb_id(imdb_id, search_results):
             return True
     
     return False
+
+# kitty console:
+# def show_imdb_movie_image(imdb_movie):
+#    if 'full-size cover url' in imdb_movie.keys() and imdb_movie['full-size cover url']:
+#        Image(imdb_movie['full-size cover url']).thumbnail(128).show(align="left")
+# Ademas de con pixcat, mucho mas sencillo seria hacerlo con un comando directo:
+# import os
+# os.system("kitty +kitten icat %s" % movie['full-size cover url'])
 
 """
 Busca resultados exactos o prometedores en imdb
@@ -462,6 +475,9 @@ def trace_results(search_results, mini_info=False):
                         trace.debug("        * '%s'" % director)
                 trace.debug("      TIPO DE PELICULA: '%s'" % sr['kind'] if 'kind' in sr and sr['kind'] else '')
                 trace.debug("      PORTADA: '%s'" % movie['full-size cover url'] if 'full-size cover url' in movie.keys() and movie['full-size cover url'] else '')
+
+            # kitty console:
+            # show_imdb_movie_image(movie)
 
 def search_movie_imdb(title, year=None, title_alt=None, director=None):
     search_results = None
