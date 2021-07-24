@@ -111,10 +111,21 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
 
         if not contains_quote:
             query_title = Q(title__icontains=search_term)
+            query_title.add(Q(title_original__icontains=search_term), Q.OR)
+            query_title.add(Q(title_preferred__icontains=search_term), Q.OR)
         else:
             query_title = Q(title__iexact=search_term)
             query_title.add(Q(title__icontains=' ' + search_term), Q.OR)
             query_title.add(Q(title__icontains=search_term + ' '), Q.OR)
+            query_title.add(Q(title_original__iexact=search_term), Q.OR)
+            query_title.add(Q(title_original__icontains=' ' + search_term), Q.OR)
+            query_title.add(Q(title_original__icontains=search_term+ ' '), Q.OR)
+            query_title.add(Q(title_preferred__iexact=search_term), Q.OR)
+            query_title.add(Q(title_preferred__icontains=' ' + search_term), Q.OR)
+            query_title.add(Q(title_preferred__icontains=search_term+ ' '), Q.OR)
+
+        """
+        He quitado esto porque engorrina...
 
         if TitleAka.objects.filter(query_title).all().count() > 0:
             query_title = Q(title_akas__in=TitleAka.objects.filter(query_title))
@@ -124,6 +135,7 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
                 query_title.add(Q(title__iexact=search_term), Q.OR)
             # query_title.add(Q(title_akas__in=TitleAka.objects.filter(query_title)), Q.OR)
             use_distinct = True
+        """
 
     if year:
         query_title_new = Q(year=year)
@@ -138,6 +150,8 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
         movie_ids = []
         for mp in MoviePerson.objects.filter(person__pk=director, role=MoviePerson.RT_DIRECTOR).all():
             movie_ids.append(mp.movie.id)
+        
+        use_distinct = True
         
         queryset = queryset.filter(id__in=movie_ids)
 
