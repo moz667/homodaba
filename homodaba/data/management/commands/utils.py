@@ -169,7 +169,7 @@ def get_imdb_original_title(ia_movie, current_title=None):
     
     # TODO: Comentar con perico... el problema es que casi nunca viene bien...
     # return ia_movie['original title']
-    return None
+    return current_title
 
 def imdb_check_country_movie(ia_movie, country):
     if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():

@@ -251,7 +251,7 @@ class MoviePersonDirectorProxy(MoviePerson):
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'
-    ST_NEW_SHARE = 'net-share'
+    ST_NET_SHARE = 'net-share'
     ST_DVD = 'dvd'
     ST_BRAY = 'bluray'
     ST_ULTRA_BRAY = 'ultra-bluray'
@@ -259,7 +259,7 @@ class MovieStorageType(models.Model):
 
     STORAGE_TYPES = [
         (ST_DRIVE, 'Disco duro'),
-        (ST_NEW_SHARE, 'Compartido de red'),
+        (ST_NET_SHARE, 'Compartido de red'),
         (ST_DVD, 'DVD'),
         (ST_BRAY, 'BLURAY'),
         (ST_ULTRA_BRAY, 'ULTRA BLURAY'),
@@ -269,6 +269,8 @@ class MovieStorageType(models.Model):
     STORAGE_TYPES_AS_LIST = [k for (k, v) in STORAGE_TYPES]
     STORAGE_TYPES_AS_DICT = {k:v for (k, v) in STORAGE_TYPES}
 
+    MF_OTHER = ''
+    MF_UNKNOWN = 'UNKNOWN'
     MF_AVI = 'AVI'
     MF_BLURAY = 'BLURAY'
     MF_BLURAY_ISO = 'BLURAY-ISO'
@@ -282,6 +284,8 @@ class MovieStorageType(models.Model):
     MF_ULTRA_BRAY = 'ULTRA-BLURAY'
 
     MEDIA_FORMATS = [
+        (MF_OTHER, 'Otro'),
+        (MF_UNKNOWN, 'Desconocido'),
         (MF_AVI, MF_AVI),
         (MF_BLURAY, MF_BLURAY),
         (MF_BLURAY_ISO, MF_BLURAY_ISO),

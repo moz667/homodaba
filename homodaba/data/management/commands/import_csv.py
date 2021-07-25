@@ -269,7 +269,7 @@ class Command(BaseCommand):
             if imdb_check_country_movie(ia_movie, 'spain'):
                 title_preferred = title
             
-            elif 'akas' in ia_movie.keys():
+            if 'akas' in ia_movie.keys():
                 for aka in ia_movie['akas']:
                     if ' (Spain)' in aka:
                         title_preferred = aka.replace(' (Spain)', '')

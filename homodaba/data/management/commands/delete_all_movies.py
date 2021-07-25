@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import gettext as _
 
-from data.models import Movie
+from data.models import Movie, TitleAka, ContentRatingTag, Person, Tag, GenreTag
+from data.utils import Trace as trace
 
 import csv
 
@@ -39,11 +40,19 @@ class Command(BaseCommand):
             type=str,
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
+        parser.add_argument(
+            '--delete-all-data',
+            action='store_true',
+            help='Borra todo menos la cache...',
+        )
+
 
     def handle(self, *args, **options):
         csv_file = None
         csv_delimiter = ';'
         csv_quotechar = '|'
+
+        delete_all_data = options['delete_all_data']
 
         if 'csv_file' in options and options['csv_file'] and len(options['csv_file']) > 0:
             csv_file = ' '.join(options['csv_file'])
@@ -60,5 +69,16 @@ class Command(BaseCommand):
                 for csv_row in csv_reader:
                     if 'title' in csv_row:
                         Movie.objects.filter(title=csv_row['title']).delete()
+
         else:
-             Movie.objects.all().delete()
+            Movie.objects.all().delete()
+
+        if delete_all_data:
+            if len(Movie.objects.all()) > 0:
+                trace.error("No podemos borrar todos los datos ya que aun existe peliculas.")
+            else:
+                TitleAka.objects.all().delete()
+                ContentRatingTag.objects.all().delete()
+                Person.objects.all().delete()
+                Tag.objects.all().delete()
+                GenreTag.objects.all().delete()
