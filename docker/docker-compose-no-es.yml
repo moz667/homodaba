@@ -27,6 +27,7 @@ services:
         container_name: homodaba-tbot-container
         restart: always
         environment:
+            - SECRET_KEY=${SECRET_KEY}
             - TBOT_TOKEN=${TBOT_TOKEN}
         env_file:
             - ./.env
