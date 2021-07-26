@@ -16,6 +16,15 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
+TBOT_TOKEN = os.getenv("TBOT_TOKEN", "")
+
+TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))
+
+# Tipos de pelicula que consideramos buenos. [por defecto: movie]
+# imdb tiene muchos tipos: movie, tv movie, video... en principio
+# esta guay usar solo movie para las peliculas porque es una forma
+# sencilla de filtrar los resultados de las busquedas para encontrar
+# buenos matches en el casos de peliculas (usando solo movie)
 IMDB_VALID_MOVIE_KINDS = os.getenv("IMDB_VALID_MOVIE_KINDS", 'movie').split(',')
 
 # Quick-start development settings - unsuitable for production

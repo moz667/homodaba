@@ -1,5 +1,8 @@
 version: '2.0'
 
+# homodaba docker:
+# Version con Elastic search pero sin telegram bot (ver mas abajo si quieres ponerlo)
+
 services:
     homodaba-es:
         image: docker.elastic.co/elasticsearch/elasticsearch:7.9.1
@@ -8,9 +11,6 @@ services:
         restart: always
         environment:
             - discovery.type=single-node
-#        networks:
-#            homodaba_net:
-#                ipv4_address: 172.66.7.101
     homodaba-app:
         build: ./
         image: homodaba:trunk
@@ -25,14 +25,18 @@ services:
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
         volumes:
             - ./volumes/sqlite3:/opt/app/sqlite3
-#        networks:
-#            homodaba_net:
-#                ipv4_address: 172.66.7.100
-
-#networks:
-#    homodaba_net:
-#        driver: bridge
-#        ipam:
-#            driver: default
-#            config:
-#                - subnet: 172.66.7.0/24
+# Si quieres el bot de telegram solo tienes que:
+#    1) Conseguir un token siguiendo a traves del botfather
+#       https://core.telegram.org/bots#6-botfather
+#    2) Con el token descomentar estas lineas y poner el token en la variable de
+#       entorno TBOT_TOKEN
+#    homodaba-tbot:
+#        build: ./
+#        image: homodaba:trunk
+#        hostname: homodaba-tbot-host
+#        container_name: homodaba-tbot-container
+#        restart: always
+#        environment:
+#            - TBOT_TOKEN=${TBOT_TOKEN}
+#        volumes:
+#            - ./volumes/sqlite3:/opt/app/sqlite3

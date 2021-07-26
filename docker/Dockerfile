@@ -31,4 +31,7 @@ RUN chmod 755 /manage.sh
 
 COPY init-homodaba.sh /init-homodaba.sh
 RUN chmod 755 /init-homodaba.sh
-CMD ["/init-homodaba.sh"]
+
+COPY init-homodaba-tbot.sh /init-homodaba-tbot.sh
+RUN chmod 755 /init-homodaba-tbot.sh
+# CMD ["/init-homodaba.sh"]

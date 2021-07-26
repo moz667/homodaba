@@ -28,3 +28,8 @@ tag por cada peli dentro de una saga :P)
 1. Documentar (uff... que pereza  ^ _ ^)
 1. Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".
 1. Ver qué hacemos con las películas que no están en IMDB.
+
+TODO: Para calcular el titulo original si tiene varios paises coger el primero de los akas que coincida con el primer pais, sino el segundo... etc... (por orden)
+
+* Suicide Squad, Bravo 14, Escuadrón suicida
+* Blue Is the Warmest Colour, Blue Is the Warmest Colour, La vida de Adèle

@@ -13,6 +13,8 @@ import csv
 import os
 import logging
 
+from homodaba.settings import TBOT_TOKEN
+
 """
 Dave: Open the pod bay doors, please, HAL. Open the pod bay doors, please, HAL. Hello, HAL, do you read me? Hello, HAL, do you read me? Do you read me, HAL? Do you read me, HAL? Hello, HAL, do you read me? Hello, HAL, do you read me? Do you read me, HAL?
 HAL: Affirmative, Dave. I read you.
@@ -39,8 +41,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
-TBOT_TOKEN = 'TBOT_TOKEN'
-LIMIT_MOVIES = 50
+LIMIT_MOVIES = 10
 
 class Command(BaseCommand):
     help = _('Arranca el bot the telegram')
@@ -51,7 +52,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--token', type=str, help="""Token de la API de 
 telegram, https://core.telegram.org/bots#6-botfather. (Tambien se puede 
-conseguir de la variable de entorno "%s" """ % TBOT_TOKEN)
+conseguir de la variable de entorno "TBOT_TOKEN" """)
         parser.add_argument('--home-name', type=str, help="""Nombre de la base
 de datos (actualmente "%s") """ % self.home_name)
     
@@ -61,12 +62,13 @@ de datos (actualmente "%s") """ % self.home_name)
         self.help_command(update, context)
 
     def help_command(self, update, context):
+        print("A HELP COMMAND!!!!")
         if not update:
             return
         update.message.reply_html("""
 <b>/help: </b> Muestra este mensaje.
 <b>[/search] texto [(año)]: </b> Busca peliculas que coincidan con texto (opcionalmente del año entre parentesis). Si se especifica el texto entre comillas dobles, busca términos exactos.
-<b>/list: </b> Lista las primeras 50 péliculas.
+<b>/list: </b> Lista las primeras 10 péliculas.
 <b>/movie id: </b> Muestra el detalle de la película con ese id.
 """)
 
@@ -192,13 +194,13 @@ de datos (actualmente "%s") """ % self.home_name)
             update.message.reply_text("Tienes que introducir algún término de búsqueda")
 
     def handle(self, *args, **options):
-        token = os.getenv(TBOT_TOKEN, False)
+        token = TBOT_TOKEN
         if not token and (not 'token' in options or not options['token']):
             self.print_help('manage.py', __name__)
             return
 
-        token = options['token'] if 'token' in options else token
-      
+        token = options['token'] if 'token' in options and options['token'] else token
+
         self.home_name = options['home_name'] if 'home_name' in options and options['home_name'] else self.home_name
 
         verbosity = int(options["verbosity"])
@@ -211,7 +213,7 @@ de datos (actualmente "%s") """ % self.home_name)
         if verbosity > 2:
             logging.getLogger().setLevel(logging.DEBUG)
         
-        """Start the bot."""
+        print("""Start the bot.""")
         # Create the Updater and pass it your bot's token.
         # Make sure to set use_context=True to use the new context based callbacks
         # Post version 12 this will no longer be necessary
