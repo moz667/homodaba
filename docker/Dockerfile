@@ -46,8 +46,5 @@ RUN chmod 755 /init-homodaba.sh
 
 COPY init-homodaba-tbot.sh /init-homodaba-tbot.sh
 RUN chmod 755 /init-homodaba-tbot.sh
-# CMD ["/init-homodaba.sh"]
 
-# Recopilamos los estaticos
-RUN /bin/bash -c "export SECRET_KEY=RANDPOM_SHIT; \
-python3 /opt/app/homodaba/homodaba/manage.py collectstatic --no-input"
+CMD ["/init-homodaba.sh"]

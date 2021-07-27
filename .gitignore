@@ -4,6 +4,9 @@ backups
 homodaba/*.sqlite3
 static/*
 docker/.env*
+docker/volumes/import/*
+docker/volumes/sqlite/*
+docker/volumes/static/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

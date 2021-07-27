@@ -16,7 +16,7 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
         env_file:
-            - ./.env
+            - ./.env-no-es
         volumes:
             - ./volumes/sqlite:/opt/app/sqlite
             - ./volumes/import:/opt/app/import
@@ -32,7 +32,7 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - TBOT_TOKEN=${TBOT_TOKEN}
         env_file:
-            - ./.env
+            - ./.env-no-es
         volumes:
             - ./volumes/sqlite:/opt/app/sqlite
         command: /init-homodaba-tbot.sh
