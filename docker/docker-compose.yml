@@ -23,8 +23,11 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - ES_DSL_HOSTS=homodaba-es-host
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+        env_file:
+            - ./.env
         volumes:
-            - ./volumes/sqlite3:/opt/app/sqlite3
+            - ./volumes/sqlite:/opt/app/sqlite
+        command: /init-homodaba.sh
 # Si quieres el bot de telegram solo tienes que:
 #    1) Conseguir un token siguiendo a traves del botfather
 #       https://core.telegram.org/bots#6-botfather
@@ -39,4 +42,4 @@ services:
 #        environment:
 #            - TBOT_TOKEN=${TBOT_TOKEN}
 #        volumes:
-#            - ./volumes/sqlite3:/opt/app/sqlite3
+#            - ./volumes/sqlite:/opt/app/sqlite

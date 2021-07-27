@@ -55,4 +55,10 @@ if [ ! -e "homodaba/db.sqlite3" ]; then
     $DJANGO_MANAGE createsuperuser
 fi
 
-$DJANGO_MANAGE runserver $LOCALNETIP:8000
+if [ "$DJANGO_DEBUG" == "0" ]; then
+	# Si quieres seguir sirviendo estaticos sin DEBUG hay que 
+	# forzar el modo "insecure"
+	$DJANGO_MANAGE runserver --insecure $LOCALNETIP:8000
+else
+	$DJANGO_MANAGE runserver $LOCALNETIP:8000
+fi

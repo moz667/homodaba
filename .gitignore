@@ -2,6 +2,8 @@
 output
 backups
 homodaba/*.sqlite3
+static/*
+docker/.env*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

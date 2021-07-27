@@ -18,7 +18,9 @@ services:
         env_file:
             - ./.env
         volumes:
-            - ./volumes/sqlite3:/opt/app/sqlite3
+            - ./volumes/sqlite:/opt/app/sqlite
+            - ./volumes/import:/opt/app/import
+            - ./volumes/static:/opt/app/static
         command: /init-homodaba.sh
     homodaba-tbot:
         build: ./
@@ -32,5 +34,5 @@ services:
         env_file:
             - ./.env
         volumes:
-            - ./volumes/sqlite3:/opt/app/sqlite3
+            - ./volumes/sqlite:/opt/app/sqlite
         command: /init-homodaba-tbot.sh

@@ -34,7 +34,7 @@ IMDB_VALID_MOVIE_KINDS = os.getenv("IMDB_VALID_MOVIE_KINDS", 'movie').split(',')
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False if os.getenv("DJANGO_DEBUG", '1') == '0' else True
 
 LOCALNETIP = os.getenv("LOCALNETIP", '127.0.0.1')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', LOCALNETIP).split()
@@ -101,7 +101,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'homodaba.wsgi.application'
 
-SQLITE3_PATH = Path(os.getenv("SQLITE3_PATH", "")) if os.getenv("SQLITE3_PATH", "") else BASE_DIR
+SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "")) if os.getenv("SQLITE_ROOT", "") else BASE_DIR
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
@@ -109,7 +109,7 @@ SQLITE3_PATH = Path(os.getenv("SQLITE3_PATH", "")) if os.getenv("SQLITE3_PATH", 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': SQLITE3_PATH / 'db.sqlite3',
+        'NAME': SQLITE_ROOT / 'db.sqlite3',
     }
 }
 
@@ -150,4 +150,18 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = '/static/'
+# STATIC_URL = '/static/'
+
+STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../static')
+
+# Variable para mapear la app dentro de un directorio (para el reverse proxy)
+# Por ejemplo, para publicar detras de un proxy en https://example.com/homodaba
+# HOME_URL_PATH = 'homodaba/'
+HOME_URL_PATH = os.getenv('HOME_URL_PATH', '')
+
+# Variable para definir donde se sirven los estaticos, esto es util para 
+# servir estaticos en un reverse proxy que apunte a un contenedor docker
+STATIC_URL = os.getenv('STATIC_URL', '/%sstatic/' % HOME_URL_PATH)
+
+# Por ahora no usamos uploads, pero en un futuro... who knows!
+# MEDIA_URL = '/%supload/' % HOME_URL_PATH
