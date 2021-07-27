@@ -17,7 +17,10 @@ from django.contrib import admin
 from django.urls import include, path
 from .settings import HOME_URL_PATH
 
+from . import views
+
 urlpatterns = [
+    path('%s' % HOME_URL_PATH, views.index, name='home'),
     path('%sadmin/' % HOME_URL_PATH, admin.site.urls),
     path('%sauth/' % HOME_URL_PATH, include('django.contrib.auth.urls')),
     path('%si18n/' % HOME_URL_PATH, include('django.conf.urls.i18n')),
