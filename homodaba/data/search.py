@@ -5,7 +5,7 @@ from datetime import datetime
 
 from .models import Movie, TitleAka, MoviePerson
 
-from homodaba.settings import ELASTICSEARCH_DSL
+from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE
 
 if ELASTICSEARCH_DSL:
     from .documents import MovieDocument
@@ -80,8 +80,8 @@ if ELASTICSEARCH_DSL:
         print(query)
         # print(MovieDocument.search().query(query).to_dict())
 
-        # Por ahora hasta 100 registros (paginacion de la admin)
-        s = MovieDocument.search().query(query)[:100]
+        # Por ahora hasta ADMIN_MOVIE_LIST_PER_PAGE registros (paginacion de la admin)
+        s = MovieDocument.search().query(query)[:ADMIN_MOVIE_LIST_PER_PAGE]
         queryset = s.to_queryset()
         # Si el order_by es solo el campo -pk... entonces se trata del orde por defecto
         # asi que pasamos de el...
