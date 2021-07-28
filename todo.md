@@ -44,4 +44,4 @@ tag por cada peli dentro de una saga :P)
 1. [ ] Sacar caratula en busquedas
 1. [ ] Logear accesos
 1. [ ] Autenticar de alguna forma
-1. [ ] Hacer algo para cuando son muchos resultados (atachear fichero? paginar?
+1. [ ] Hacer algo para cuando son muchos resultados (atachear fichero? paginar?)
