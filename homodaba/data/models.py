@@ -3,6 +3,8 @@ from django.db.models import Q
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from imdb.utils import KIND_MAP
+
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
     search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
@@ -82,6 +84,18 @@ class TitleAka(models.Model):
         verbose_name_plural = "títulos conocidos (akas)"
 
 class Movie(models.Model):
+    """
+    KIND_MAP = {
+        'tv': 'tv movie',
+        'tv episode': 'episode',
+        'v': 'video movie',
+        'video': 'video movie',
+        'vg': 'video game',
+        'mini': 'tv mini series',
+        'tv mini-series': 'tv mini series',
+        'tv miniseries': 'tv mini series'
+    }
+    """
     MK_MOVIE = 'movie'
     MK_SERIE = 'tv series'
 

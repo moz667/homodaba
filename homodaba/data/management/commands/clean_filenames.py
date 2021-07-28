@@ -2,8 +2,6 @@ from django.core.management.base import BaseCommand, CommandError
 
 from data.utils import Trace as trace
 
-import getch
-
 from datetime import datetime
 import os, sys, re, json
 

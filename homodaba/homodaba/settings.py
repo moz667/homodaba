@@ -102,10 +102,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'homodaba.wsgi.application'
 
-SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "")) if os.getenv("SQLITE_ROOT", "") else BASE_DIR
-
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
+
+# Por defecto sqlite3
+SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "")) if os.getenv("SQLITE_ROOT", "") else BASE_DIR
 
 DATABASES = {
     'default': {
@@ -113,6 +114,21 @@ DATABASES = {
         'NAME': SQLITE_ROOT / 'db.sqlite3',
     }
 }
+
+# Opcion de mysql
+if os.getenv('DATABASE_ENGINE', '') == 'mysql':
+    DATABASES = {
+        'default':{
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DATABASE_NAME', 'dbtest'),
+            'USER': os.getenv('DATABASE_USER', 'dbroot'),
+            'PASSWORD':  os.getenv('DATABASE_PASSWORD', 'dbpass.123'),
+            'HOST': os.getenv('DATABASE_HOST', ''),
+            'PORT': '',
+        }
+    }
+
+
 
 
 # Password validation

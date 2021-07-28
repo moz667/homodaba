@@ -22,3 +22,34 @@
 * Compruebas con csv_2_imdb
    - Verificas resultados
    - Si hay nuevos imdb_id, volver a importar
+
+## Pasar de sqlite3 a mysql
+[source shubhamdipt.com](https://www.shubhamdipt.com/blog/django-transfer-data-from-sqlite-to-another-database/)
+1. En sqlite ejecutar:
+```bash
+bash manage.sh dumpdata > db.json
+```
+1. Cambiar la configuracion para mysql añadiendo las variables de entorno pertinentes:
+```
+DATABASE_ENGINE='mysql'
+DATABASE_NAME='[DATABASE_NAME]'
+DATABASE_USER='[DATABASE_USER]'
+DATABASE_PASSWORD='[DATABASE_PASSWORD]'
+DATABASE_HOST='[HOST_NAME]'
+```
+1. Crear las tablas ejecutando:
+```bash
+bash manage.sh migrate
+```
+1. Borrar ContentType (NPI de para que es esto... pero es lo que dice shubhamdipt) ejecutando:
+```bash
+bash manage.sh shell
+```
+```python
+from django.contrib.contenttypes.models import ContentType
+ContentType.objects.all().delete()
+```
+1. Importar los datos ejecutando:
+```bash
+bash manage.sh loaddata db.json
+```
