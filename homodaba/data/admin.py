@@ -9,6 +9,8 @@ from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag,
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
+from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE
+
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
 
@@ -90,6 +92,8 @@ class MovieAdmin(admin.ModelAdmin):
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results
     search_fields = ('title',)
+
+    list_per_page = ADMIN_MOVIE_LIST_PER_PAGE
 
     def get_urls(self):
         urls = super().get_urls()
