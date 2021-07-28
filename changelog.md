@@ -2,7 +2,8 @@
   * Añadiendo comando para borrar cache
   * Separando todo en archivo independiente todo.md
   * Variable ADMIN_MOVIE_LIST_PER_PAGE para definir el tamaño de paginado con las busquedas de pelis (por defecto 100)
-  
+  * Añadiendo soporte para mysql
+
 2021-03-08:
   * Añadido soporte a fichero JSON con los campos que se quieren cambiar. El formato debe ser similar a:
     ```
