@@ -9,7 +9,7 @@ from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag,
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
-from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE
+from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
 
 # from easy_select2 import select2_modelform
 # MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
@@ -83,7 +83,10 @@ class ContentRatingListFilter(CustomAbstractTagListFilter):
 
 
 class MovieAdmin(admin.ModelAdmin):
-    list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_other_titles', 'get_storage_types_html', 'rating',)
+    if HOMODABA_MINI_DETAILS:
+        list_display = ('get_main_titles_html', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_storage_types_html', 'rating',)
+    else:
+        list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_other_titles', 'get_storage_types_html', 'rating',)
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)

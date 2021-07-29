@@ -1,5 +1,5 @@
 ### Bugs
-1. [ ] Fallo al importar datos de sqlite3... title en TitleAka duplicado!!!
+1. [X] ~~Fallo al importar datos de sqlite3... title en TitleAka duplicado!!!~~
 
 ### General
 1. [ ] Documentar el pyenv homodaba : homodaba (created from 3.8.3)

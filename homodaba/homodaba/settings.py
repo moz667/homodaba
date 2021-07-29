@@ -19,7 +19,10 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 TBOT_TOKEN = os.getenv("TBOT_TOKEN", "")
 TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))
 
+# Numero de elementos en la pagina de busqueda de peliculas
 ADMIN_MOVIE_LIST_PER_PAGE = int(os.getenv("ADMIN_MOVIE_LIST_PER_PAGE", "100"))
+# Para mostrar de una forma alternativa con menos info
+HOMODABA_MINI_DETAILS = int(os.getenv("HOMODABA_MINI_DETAILS", "0")) == 1
 
 # Tipos de pelicula que consideramos buenos. [por defecto: movie]
 # imdb tiene muchos tipos: movie, tv movie, video... en principio

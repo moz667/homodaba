@@ -1,3 +1,8 @@
+2021-03-29:
+  * Añadiendo comando para chequear inconsistencias en la bbdd
+  * Corrigiendo fallo de importacion en mysql
+  * Variable para reducir la cantidad de informacion sacada en la admin
+
 2021-03-28:
   * Añadiendo comando para borrar cache
   * Separando todo en archivo independiente todo.md

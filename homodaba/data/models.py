@@ -5,6 +5,8 @@ from django.utils.safestring import mark_safe
 
 from imdb.utils import KIND_MAP
 
+from homodaba.settings import HOMODABA_MINI_DETAILS
+
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
     search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
@@ -198,7 +200,7 @@ class Movie(models.Model):
 
         html = '<ul class="storage-types">'
         for st in storage_types:
-            html = html + format_html('<li>{}</li>', st)
+            html = html + format_html('<li>{}</li>', st if not HOMODABA_MINI_DETAILS else st.str_mini())
         html = html + '</ul>'
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
@@ -210,17 +212,34 @@ class Movie(models.Model):
 
         html = '<pre>'
         for st in storage_types:
-            html = html + format_html('    * {}\n', st)
+            html = html + format_html('    * {}\n', st if not HOMODABA_MINI_DETAILS else st.str_mini() )
         html = html + '</pre>\n'
         return mark_safe(html)
     get_storage_types_html_tg.short_description = 'Medios (para telegram)'
     
+    def get_main_titles(self):
+        main_titles = [self.title]
+        if self.title_original and not self.title_original in main_titles:
+            main_titles.append(self.title_original)
+        if self.title_preferred and not self.title_preferred in main_titles:
+            main_titles.append(self.title_preferred)
+        return main_titles
+
+    def get_main_titles_html(self):
+        main_titles = self.get_main_titles()
+        html = '<ul class="main-titles">'
+        for t in main_titles:
+            html = html + format_html('<li>{}</li>', t)
+        html = html + '</ul>'
+        return mark_safe(html)
+    get_main_titles_html.short_description = 'Titulos'
+
     def get_storage_types_text(self):
         storage_types = MovieStorageType.objects.filter(movie=self).all()
         if storage_types.count() == 0:
             return ''
 
-        return ' * '.join([st.__str__() + '\n' for st in storage_types])
+        return ' * '.join([(st.__str__() if not HOMODABA_MINI_DETAILS else st.str_mini()) + '\n' for st in storage_types])
 
     class Meta:
         verbose_name = "película"
@@ -339,6 +358,12 @@ class MovieStorageType(models.Model):
         s = s + (' [%s]' % self.name if self.name else '')
         s = s + (' "%s"' % self.path if self.path else '')
         s = s + (' {%s}' % self.media_format if self.media_format != self.STORAGE_TYPES_AS_DICT[self.storage_type] else '')
+        return s
+
+    def str_mini(self):
+        s = '(Original) ' if self.is_original else ''
+        s = s + (' [%s]' % self.name if self.name and self.storage_type != MovieStorageType.ST_NET_SHARE else '')
+        s = s + (' "%s"' % self.path if self.path else '')
         return s
 
     class Meta:
