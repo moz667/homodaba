@@ -24,6 +24,7 @@ tag por cada peli dentro de una saga :P)
 1. [ ] Pillar los kind de iMDBPy : https://github.com/alberanid/imdbpy/blob/master/imdb/utils.py
 1. [ ] Añadir en MovieStorageType un campo que defina el tamaño del archivo
 1. [ ] Poner fecha de caducidad a la cache (ImdbCache)
+1. [ ] quitar los raw de la base de datos (con la cache yo creo que nos basta) (esto nos obliga a quitar los sample_XXX.py de data/management/commands)
 
 ### Limpiando titulos
 1. [ ] Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".

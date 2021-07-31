@@ -16,6 +16,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
+NO_CACHE = int(os.getenv("NO_CACHE", "0")) == 1
+UPDATE_CACHE = int(os.getenv("UPDATE_CACHE", "0")) == 1
+
 TBOT_TOKEN = os.getenv("TBOT_TOKEN", "")
 TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))
 

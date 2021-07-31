@@ -31,8 +31,9 @@
    ```
 1. Crear la base de datos de la siguiente forma:
    ```sql
-   CREATE DATABASE [DATABASE_NAME] CHARACTER SET utf8 COLLATE utf8_bin;
+   CREATE DATABASE [DATABASE_NAME] CHARACTER SET utf8;
    ```
+   Opcionalmente puedes usar  ```COLLATE utf8_bin``` que haria que la base de datos sea case sensitive (para claves, por ejemplo), si bien esto te puede ayudar para importar datos que te den error en la carga con ```manage.sh loaddata db.json```, hace que todos los filtros case-insensitive (Como __icontains, __iexact ...) sean totalmente ineficaces.
 1. Cambiar la configuracion para mysql añadiendo las variables de entorno pertinentes:
    ```
    DATABASE_ENGINE='mysql'

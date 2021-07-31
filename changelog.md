@@ -1,7 +1,18 @@
+2021-03-31:
+  * Añadiendo comando para optimizar y limpiar la bbdd (optimize_db)
+    - Limpiando titulos y akas
+  * Ampliando documentacion para migrar pelis
+  * Ampliando info para que get_imdb_movie recoja bien los title aka
+  * Añadiendo funcionalidad para ignorar y actualizar cache con variables de entorno NO_CACHE y UPDATE_CACHE
+  * Añadiendo a la busqueda sin Elastic Search los campos de los distintos titulos
+  * Añadiendo modelo de paises (Country)
+  * Modificando el modelo para añadir paises a las peliculas (Movie.countries)
+  * Modificando el modelo para añadir pais a los title akas (TitleAka.country) (OJO: aqui es solo texto y seguramente lo acabemos quitando)
+
 2021-03-29:
   * Añadiendo comando para chequear inconsistencias en la bbdd
   * Corrigiendo fallo de importacion en mysql
-  * Variable para reducir la cantidad de informacion sacada en la admin
+  * Variable para reducir la cantidad de informacion sacada en la admin (HOMODABA_MINI_DETAILS)
 
 2021-03-28:
   * Añadiendo comando para borrar cache

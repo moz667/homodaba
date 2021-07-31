@@ -15,7 +15,7 @@ from enum import Enum
 
 from . import Trace as trace
 
-from homodaba.settings import IMDB_VALID_MOVIE_KINDS
+from homodaba.settings import IMDB_VALID_MOVIE_KINDS, NO_CACHE, UPDATE_CACHE
 
 # kitty console:
 # * OJO: para usar pixcat hay que instalarlo:
@@ -273,32 +273,42 @@ def unserialize(str_obj):
     return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
 
 def get_imdb_movie(imdb_id):
-    cache_data = ImdbCache.objects.filter(imdb_id=imdb_id).all()
+    if not NO_CACHE:
+        cache_data = ImdbCache.objects.filter(imdb_id=imdb_id).all()
 
-    if cache_data.count() == 1:
-        return unserialize(cache_data[0].raw_data)
+        if cache_data.count() > 0:
+            if not UPDATE_CACHE:
+                return unserialize(cache_data[0].raw_data)
+            else:
+                ImdbCache.objects.filter(imdb_id=imdb_id).delete()
     
-    imdb_movie = IMDB_API.get_movie(imdb_id)
+    imdb_movie = IMDB_API.get_movie(imdb_id, ('main', 'plot', 'akas'))
 
-    ImdbCache.objects.create(
-        imdb_id=imdb_id,
-        raw_data=serialize(imdb_movie)
-    )
+    if not NO_CACHE or UPDATE_CACHE:
+        ImdbCache.objects.create(
+            imdb_id=imdb_id,
+            raw_data=serialize(imdb_movie)
+        )
 
     return imdb_movie
 
 def search_imdb_movies(search_query):
-    cache_data = ImdbCache.objects.filter(search_query=search_query).all()
+    if not NO_CACHE:
+        cache_data = ImdbCache.objects.filter(search_query=search_query).all()
 
-    if cache_data.count() == 1:
-        return unserialize(cache_data[0].raw_data)
+        if cache_data.count() > 0:
+            if not UPDATE_CACHE:
+                return unserialize(cache_data[0].raw_data)
+            else:
+                ImdbCache.objects.filter(search_query=search_query).delete()
     
     imdb_results = IMDB_API.search_movie(search_query)
 
-    ImdbCache.objects.create(
-        search_query=search_query,
-        raw_data=serialize(imdb_results)
-    )
+    if not NO_CACHE or UPDATE_CACHE:
+        ImdbCache.objects.create(
+            search_query=search_query,
+            raw_data=serialize(imdb_results)
+        )
 
     return imdb_results
 

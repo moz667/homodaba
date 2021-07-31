@@ -77,6 +77,7 @@ class ContentRatingTag(AbstractTag):
 
 class TitleAka(models.Model):
     title = models.CharField(max_length=255, unique=True)
+    country = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -84,6 +85,15 @@ class TitleAka(models.Model):
     class Meta:
         verbose_name = "título conocido (aka)"
         verbose_name_plural = "títulos conocidos (akas)"
+
+class Country(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 class Movie(models.Model):
     """
@@ -134,6 +144,8 @@ class Movie(models.Model):
     # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
     # del proxy: MoviePersonDirectorProxy
     directors = models.ManyToManyField(Person, through='MoviePersonDirectorProxy')
+
+    countries = models.ManyToManyField(Country)
 
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, 
         blank=False)
@@ -240,6 +252,14 @@ class Movie(models.Model):
             return ''
 
         return ' * '.join([(st.__str__() if not HOMODABA_MINI_DETAILS else st.str_mini()) + '\n' for st in storage_types])
+
+    def get_countries_as_text(self):
+        cc = []
+        for c in self.countries.all():
+            cc.append(c.name)
+        
+        return ', '.join(cc)
+        
 
     class Meta:
         verbose_name = "película"
@@ -377,3 +397,10 @@ def get_first_or_create_tag(class_model, **kwargs):
     
     return class_model.objects.create(**kwargs)
 
+def get_or_create_country(country):
+    countries = Country.objects.filter(name=country).all()
+
+    if len(countries) > 0:
+        return countries[0]
+    
+    return Country.objects.create(name=country)

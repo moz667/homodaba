@@ -94,7 +94,7 @@ class MovieAdmin(admin.ModelAdmin):
 
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results
-    search_fields = ('title',)
+    search_fields = ('title', 'title_original', 'title_preferred')
 
     list_per_page = ADMIN_MOVIE_LIST_PER_PAGE
 
