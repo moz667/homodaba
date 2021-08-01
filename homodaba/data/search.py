@@ -27,7 +27,11 @@ if ELASTICSEARCH_DSL:
             # Los objects se pueden consultar directamente sobre la consulta 
             # principal, como directores, escritores actores...
             query.should.append(DSL_Q("multi_match", query=search_term, 
-                fields=["title^4", "directors.name^3", "writers.name^2", "casting.name^2"]
+                fields=[
+                    "title^4", "title_original^4", "title_preferred^4", 
+                    "directors.name^3", 
+                    "writers.name^2", "casting.name^2"
+                ]
             ))
 
             query.should.append(DSL_Q("nested", path="title_akas", 
