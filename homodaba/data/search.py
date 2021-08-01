@@ -24,15 +24,26 @@ if ELASTICSEARCH_DSL:
         # puede ser que busquemos solo por año, (XXXX) en ese caso no tendremos
         # mas terminos de busqueda
         if search_term:
-            # Los objects se pueden consultar directamente sobre la consulta 
-            # principal, como directores, escritores actores...
-            query.should.append(DSL_Q("multi_match", query=search_term, 
+            query.should.append(DSL_Q("query_string", 
+                query='*%s*' % search_term, 
                 fields=[
                     "title^4", "title_original^4", "title_preferred^4", 
                     "directors.name^3", 
                     "writers.name^2", "casting.name^2"
                 ]
             ))
+
+            # Los objects se pueden consultar directamente sobre la consulta 
+            # principal, como directores, escritores actores...
+            query.should.append(DSL_Q("multi_match", query='*%s*' % search_term, 
+                fields=[
+                    "title^4", "title_original^4", "title_preferred^4", 
+                    "directors.name^3", 
+                    "writers.name^2", "casting.name^2"
+                ]
+            ))
+
+            # query='.*%s.*' % search_term
 
             query.should.append(DSL_Q("nested", path="title_akas", 
                 query=DSL_Q("multi_match", 
@@ -48,7 +59,7 @@ if ELASTICSEARCH_DSL:
                         query=search_term, fields=["tags.name^4"]
                     )
                 ))
-        
+
         # Para los nested hay que hacer una query especifica del tipo "nested"
         if tag:
             query.must.append(DSL_Q("nested", path="tags", 
