@@ -24,6 +24,8 @@ if ELASTICSEARCH_DSL:
         # puede ser que busquemos solo por año, (XXXX) en ese caso no tendremos
         # mas terminos de busqueda
         if search_term:
+            # Esto es un poco nyapa pero funcional:
+            # Matchea terminos parciales
             query.should.append(DSL_Q("query_string", 
                 query='*%s*' % search_term, 
                 fields=[
@@ -35,7 +37,8 @@ if ELASTICSEARCH_DSL:
 
             # Los objects se pueden consultar directamente sobre la consulta 
             # principal, como directores, escritores actores...
-            query.should.append(DSL_Q("multi_match", query='*%s*' % search_term, 
+            query.should.append(DSL_Q("multi_match", 
+                query=search_term, 
                 fields=[
                     "title^4", "title_original^4", "title_preferred^4", 
                     "directors.name^3", 

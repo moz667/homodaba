@@ -60,3 +60,28 @@
    ```bash
    manage.sh loaddata db.json
    ```
+
+## Elastic Search
+### Errores
+* "Cannot operate on a closed database." al reconstruir los indices (rebuild-es.sh):
+   ```
+   Traceback (most recent call last):
+   File "site-packages/django/db/models/sql/compiler.py", line 1602, in cursor_iter
+      cursor.close()
+   sqlite3.ProgrammingError: Cannot operate on a closed database.
+   ```
+   Mi primera impresion es que la bbdd se habia quedado pillada de alguna forma, pero no fue asi, el problema es que Elastic Search Requiere que tengas 50Gb libres de almacenamiento en el disco donde 
+   lo pongas, si no tienes ese espacio, se arranca el contenedor en modo lectura.
+
+   Lo vi al ejecutar lo siguiente: 
+   ```bash
+   manage.sh search_index --create
+   ```
+
+   Me dio un error distinto que googleando un poco encontre la raiz del problema:
+   ```
+      raise HTTP_EXCEPTIONS.get(status_code, TransportError)(
+   elasticsearch.exceptions.TransportError: TransportError(429, 'cluster_block_exception', 'index [movies] blocked by: [TOO_MANY_REQUESTS/12/disk usage exceeded flood-stage watermark, index has read-only-allow-delete block];')
+   ```
+
+   Solucion: Libera espacio del disco donde tienes el ES, borra el contenedor y vuelve a crearlo.

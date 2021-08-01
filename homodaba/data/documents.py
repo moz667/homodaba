@@ -1,10 +1,54 @@
+
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 
+from elasticsearch_dsl import analyzer
+
 from .models import Movie, MoviePerson, Person
 
+"""
+Necesitamos leer la documentacion de las cosas antes de usarlas...
+Elastic Search es muy extenso y no es prioritario, para empezar a usarlo con 
+cabeza tenemos que entender como funciona y sus posibilidades
+
+Info para que miremos: 
+    https://www.elastic.co/guide/en/elasticsearch/reference/7.x/index.html
+    https://elasticsearch-dsl.readthedocs.io/
+    https://django-elasticsearch-dsl-drf.readthedocs.io/
+"""
+
+# Analizador de texto personalizado para los titulos en ingles
+# Deberiamos hacer uno para spanish pero npi :P
+title_simple_en_analyzer = analyzer(
+    'simple', # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-simple-analyzer.html
+    tokenizer="standard", # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-standard-tokenizer.html
+    filter=[
+        "lowercase", # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-lowercase-tokenfilter.html
+        # stop lo he quitado porque esto tiene mas sentido para textos largos, 
+        # en el caso de los titulos, que es cuando se usa ahora, no parece 
+        # indicado quitar terminos como the, to... ya que los titulos son cadenas
+        # con pocas palabras
+        # "stop", # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-stop-tokenfilter.html
+        "snowball" # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-snowball-tokenfilter.html
+    ]
+)
 @registry.register_document
 class MovieDocument(Document):
+    title = fields.TextField(
+        analyzer=title_simple_en_analyzer,
+        fields={'raw': fields.KeywordField()}
+    )
+
+    title_original = fields.TextField(
+        analyzer=title_simple_en_analyzer,
+        fields={'raw': fields.KeywordField()}
+    )
+
+    title_preferred = fields.TextField(
+        analyzer=title_simple_en_analyzer,
+        fields={'raw': fields.KeywordField()}
+    )
+
     genres = fields.NestedField(properties={
         'name': fields.TextField(),
         'pk': fields.IntegerField(),
@@ -82,9 +126,6 @@ class MovieDocument(Document):
 
         # The fields of the model you want to be indexed in Elasticsearch
         fields = [
-            'title',
-            'title_original',
-            'title_preferred',
             'imdb_id',
             'year',
             # 'summary', TODO: he quitado summary por ahora para afinar busquedas por otros campos
