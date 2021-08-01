@@ -27,9 +27,9 @@ tag por cada peli dentro de una saga :P)
 1. [ ] quitar los raw de la base de datos (con la cache yo creo que nos basta) (esto nos obliga a quitar los sample_XXX.py de data/management/commands)
 
 ### Limpiando titulos
-1. [ ] Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".
-1. [ ] Problema con los akas (si buscas love te saca pelis con el titulo en sloveno)
-1. [ ] Para calcular el titulo original si tiene varios paises coger el primero de los akas que coincida con el primer pais, sino el segundo... etc... (por orden)
+1. [X] ~~Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".~~
+1. [X] ~~Problema con los akas (si buscas love te saca pelis con el titulo en sloveno)~~
+1. [ ] ~~Para calcular el titulo original si tiene varios paises coger el primero de los akas que coincida con el primer pais, sino el segundo... etc... (por orden)~~
 1. [ ] Datos incorrectos en los campos title de Movie, Ejemplos (title, title_original, title_preferred):
     - Suicide Squad, Bravo 14, Escuadrón suicida
     - Blue Is the Warmest Colour, Blue Is the Warmest Colour, La vida de Adèle

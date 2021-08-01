@@ -136,50 +136,6 @@ def normalize_age_certificate(raw_certificate):
     return raw_certificate
 
 """
-Por chorra que pueda parecer, recuperar el titulo original de una peli
-es dificil (al menos con esta api de imdb).
-hay un campo que es ia_movie['original title'], pero no suele venir con 
-el titulo original, viene mas con el titulo del entorno de la api (que 
-npi cual es, esto deberiamos investigarlo un poco... :P)
-"""
-def get_imdb_original_title(ia_movie, current_title=None):
-    trace.debug(' - %s (%s) [%s]' % (ia_movie['title'], ia_movie['year'], ia_movie.getID()))
-    if 'original title' in ia_movie.keys():
-        trace.debug('   * orinal_title: "%s"' % ia_movie['original title'])
-    if 'akas' in ia_movie.keys():
-        trace.debug('   * akas:')
-        for aka in ia_movie['akas']:
-            trace.debug("     - '%s'" % aka)
-
-    # Asumimos que si el pais de origen de la peli es españa
-    # el titulo que vamos a tener en el csv va a estar en español
-    # asi que el original no hace falta calcularlo (es el mismo)
-    # Esto se hace porque como se ha dicho con anterioridad, conseguir
-    # el titulo original en imdb es un dolor de webs... y para la peli
-    # Julieta (2016), devuelve "Silencio" lo cual no tiene puto sentido
-    # FIXME: Poner por setting estos 'spain'
-    if current_title and imdb_check_country_movie(ia_movie, 'spain'):
-        return current_title
-
-    if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
-        for country in ia_movie['countries']:
-            for aka in ia_movie['akas']:
-                if aka.endswith('(%s)' % country):
-                    return aka.replace('(%s)' % country, '').strip()
-    
-    # TODO: Comentar con perico... el problema es que casi nunca viene bien...
-    # return ia_movie['original title']
-    return current_title
-
-def imdb_check_country_movie(ia_movie, country):
-    if 'countries' in ia_movie.keys() and 'akas' in ia_movie.keys():
-        for c in ia_movie['countries']:
-            if c.lower() == country.lower():
-                return True
-    
-    return False
-
-"""
 Compara los datos recuperados de imdb en ia_movie con el title y director que 
 le pasamos como parametro.
 Si no coinciden, sacamos un mensaje notificando las diferencias.

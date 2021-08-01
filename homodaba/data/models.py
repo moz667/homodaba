@@ -230,18 +230,38 @@ class Movie(models.Model):
     get_storage_types_html_tg.short_description = 'Medios (para telegram)'
     
     def get_main_titles(self):
-        main_titles = [self.title]
-        if self.title_original and not self.title_original in main_titles:
-            main_titles.append(self.title_original)
-        if self.title_preferred and not self.title_preferred in main_titles:
-            main_titles.append(self.title_preferred)
+        main_titles = {
+            'title': {
+                'name': 'Internacional (Ingles)',
+                'short_name': 'int',
+                'value': self.title
+            },
+        }
+        if self.title_original:
+            main_titles['title_original'] = {
+                'name': 'Original',
+                'short_name': 'ori',
+                'value': self.title_original
+            }
+        if self.title_preferred:
+            main_titles['title_preferred'] = {
+                'name': 'Internacional (Ingles)',
+                'short_name': 'esp',
+                'value': self.title_preferred
+            }
+
         return main_titles
 
     def get_main_titles_html(self):
         main_titles = self.get_main_titles()
         html = '<ul class="main-titles">'
-        for t in main_titles:
-            html = html + format_html('<li>{}</li>', t)
+        for key in main_titles.keys():
+            item_title = main_titles[key]
+            html = html + format_html(
+                '<li>{} [{}]</li>', 
+                item_title['value'], 
+                item_title['short_name']
+            )
         html = html + '</ul>'
         return mark_safe(html)
     get_main_titles_html.short_description = 'Titulos'

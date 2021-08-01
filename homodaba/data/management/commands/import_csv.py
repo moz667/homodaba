@@ -7,13 +7,13 @@ from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, Genre
 from data.models import get_first_or_create_tag
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import facade_search
+from data.utils.imdbpy_facade import facade_search, get_imdb_titles
 
 import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, get_imdb_original_title, normalize_age_certificate, clean_csv_data, csv_validate, imdb_check_country_movie
+from .utils import trace_validate_imdb_movie, normalize_age_certificate, clean_csv_data, csv_validate
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -258,28 +258,13 @@ class Command(BaseCommand):
         else:
             trace.warning('\tNo encontramos casting para la pelicula "%s"' % title)
         
-        # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
-        # buscamos el titulo preferido:
-        if title_preferred is None:
-            # FIXME: Poner por setting estos ' (Spain)'
-            # Asumimos que las pelis españolas tienen el titulo en español
-            # y que el prefered es el mismo que este... asi evitamos 
-            # problemas con los datos de imdb (ver get_imdb_original_title para 
-            # mas info )
-            if imdb_check_country_movie(ia_movie, 'spain'):
-                title_preferred = title
-            
-            if 'akas' in ia_movie.keys():
-                for aka in ia_movie['akas']:
-                    if ' (Spain)' in aka:
-                        title_preferred = aka.replace(' (Spain)', '')
-                        break
+        new_titles, title_akas = get_imdb_titles(ia_movie)
         
         # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
         local_movie = Movie.objects.create(
-            title=ia_movie['title'],
-            title_original=title_original if not title_original is None and title_original else get_imdb_original_title(ia_movie, current_title=title),
-            title_preferred=title_preferred,
+            title=new_titles['title'],
+            title_original=title_original if not title_original is None and title_original else new_titles['title_original'],
+            title_preferred=title_preferred if not title_preferred is None and title_preferred else new_titles['title_preferred'],
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
             summary=ia_movie.summary(),
@@ -291,15 +276,29 @@ class Command(BaseCommand):
         )
 
         tagged = False
-        if 'akas' in ia_movie.keys():
-            tagged = True
 
-            for tag in ia_movie['akas']:
-                local_movie.title_akas.add(
-                    get_first_or_create_tag(
-                        TitleAka, title=tag
-                    )
+        if len(title_akas.keys()) > 0:
+            for country in title_akas.keys():
+                trace.debug("    - %s [%s]" % (title_akas[country], country))
+            
+                db_title_aka = get_first_or_create_tag(
+                    TitleAka, title=title_akas[country]
                 )
+
+                if db_title_aka.country:
+                    if db_title_aka.country != country:
+                        # El problema aqui es que el aka deberia permitir varios paises... 
+                        # pero tenemos un poco en el aire que hacemos con TitleAka (yo 
+                        # ultimamente pienso que tendriamos que borrarla... asi que por 
+                        # ahora solo informamos en modo debug)
+                        trace.debug("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
+                            title_akas[country], db_title_aka.country, country
+                        ))
+                else:
+                    db_title_aka.country = country
+                    db_title_aka.save()
+                
+                local_movie.title_akas.add(db_title_aka)
             
         if 'genres' in ia_movie.keys():
             tagged = True
