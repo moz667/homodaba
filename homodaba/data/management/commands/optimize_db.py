@@ -127,7 +127,8 @@ Antes de ejecutar conviene borrar la tabla primero con el argumento:
                             trace.error("No conseguimos encontrar los titulos de la pelicula '%s'. [movie.id='%s']" % (movie.title, movie.id))
                         else:
                             if not 'title' in new_titles:
-                                trace.error("La pelicula '%s' no tiene titulo internacional. [movie.id='%s']" % (movie.title, movie.id))
+                                # Que la pelicula no tenga titulo internacional no tiene porque ser un error... 
+                                trace.debug("La pelicula '%s' no tiene titulo internacional. [movie.id='%s']" % (movie.title, movie.id))
                                 new_titles['title'] = imdb_movie['title']
                                 """
                                 if 'title_original' in new_titles:
@@ -152,7 +153,11 @@ Antes de ejecutar conviene borrar la tabla primero con el argumento:
                                         is_spanish_movie = True
 
                                 if not is_spanish_movie:
-                                    trace.error("La pelicula '%s' no tiene titulo en español. [movie.id='%s']" % (movie.title, movie.id))
+                                    # Que la peli no tenga titulo en español no tiene porque ser un error
+                                    # muchas no lo tienen, aunque es un buen indicativo de que la peli
+                                    # puede estar mal capturada... (sobre todo si se trata de una peli
+                                    # popular)
+                                    trace.debug("La pelicula '%s' no tiene titulo en español. [movie.id='%s']" % (movie.title, movie.id))
                                 
                                 if 'title' in new_titles:
                                     new_titles['title_preferred'] = new_titles['title']
@@ -176,7 +181,11 @@ Antes de ejecutar conviene borrar la tabla primero con el argumento:
 
                         if db_title_aka.country:
                             if db_title_aka.country != country:
-                                trace.error("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
+                                # El problema aqui es que el aka deberia permitir varios paises... 
+                                # pero tenemos un poco en el aire que hacemos con TitleAka (yo 
+                                # ultimamente pienso que tendriamos que borrarla... asi que por 
+                                # ahora solo informamos en modo debug)
+                                trace.debug("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
                                     title_akas[country], db_title_aka.country, country
                                 ))
                         else:

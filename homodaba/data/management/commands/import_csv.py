@@ -118,7 +118,7 @@ class Command(BaseCommand):
         )
 
     def get_or_insert_movie(self, r):
-        trace.info('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
 
@@ -138,7 +138,7 @@ class Command(BaseCommand):
 
         if facade_result.is_local_data:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
-            trace.info("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
+            trace.warning("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
             # Solo insertamos storage si no fue una coincidencia de storage
             if not facade_result.storage_match:
@@ -194,7 +194,7 @@ class Command(BaseCommand):
 
         # de ser asi sacar mensaje notificandolo
         if storages.count() > 0:
-            trace.info('\tYa tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
+            trace.warning('\tYa tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
             return storages[0]
         
         # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
@@ -226,7 +226,7 @@ class Command(BaseCommand):
                 
                 directors.append(lp)
         else:
-            trace.info('\tinsert_movie: No encontramos directores para la pelicula "%s"' % title)
+            trace.warning('\tinsert_movie: No encontramos directores para la pelicula "%s"' % title)
         
         # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
         writers = []
@@ -241,7 +241,7 @@ class Command(BaseCommand):
                 
                 writers.append(lp)
         else:
-            trace.info('\tNo encontramos escritores para la pelicula "%s"' % title)
+            trace.warning('\tNo encontramos escritores para la pelicula "%s"' % title)
         
         # 2.2.5) Para cada uno de casting (lo mismo que para directores)
         casting = []
@@ -256,7 +256,7 @@ class Command(BaseCommand):
                 
                 casting.append(lp)
         else:
-            trace.info('\tNo encontramos casting para la pelicula "%s"' % title)
+            trace.warning('\tNo encontramos casting para la pelicula "%s"' % title)
         
         # 2.3) Damos de alta la pelicula con los datos recuperados de IMDbPy
         # buscamos el titulo preferido:
@@ -330,7 +330,7 @@ class Command(BaseCommand):
                     if not vc_tag in local_movie.content_rating_systems.all():
                         local_movie.content_rating_systems.add(vc_tag)
             else:
-                trace.info('No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
+                trace.warning('No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
         if len(tags):
             tagged = True
@@ -429,4 +429,4 @@ class Command(BaseCommand):
                         csv_writer_fails.writerow(csv_row)
                         raise
 
-                    trace.info("")
+                    trace.debug("")
