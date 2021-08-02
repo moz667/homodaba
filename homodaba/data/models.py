@@ -217,6 +217,88 @@ class Movie(models.Model):
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
 
+    def get_min_storage_types_html(self):
+        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        if storage_types.count() == 0:
+            return ''
+
+        others = []
+        # drives = {}
+        net_shares = {}
+
+        for st in storage_types:
+            # FIXME: Por ahora solo los de samba :P si necesitas nfs hay que hacerlo!!!
+            if st.storage_type == MovieStorageType.ST_NET_SHARE and st.path.startswith("smb://"):
+                cur_path = st.path.lstrip("smb://")
+                cur_path_parts = cur_path.split("/")
+
+                server = cur_path_parts[0]
+                share_folder = cur_path_parts[1]
+                file_path = '/'.join(cur_path_parts[2:])
+
+                if not server in net_shares:
+                    net_shares[server] = {}
+                
+                if not share_folder in net_shares[server]:
+                    net_shares[server][share_folder] = []
+                
+                net_shares[server][share_folder].append(file_path)
+                """ TODO: Si quieres hacer algo para drives...
+            elif st.storage_type == MovieStorageType.ST_DRIVE:
+                if not st.name in drives:
+                    drives[st.name] = []
+                drives[st.name].append(st)
+                """
+            else:
+                others.append(st)
+        
+        html = ''
+
+        if len(others) > 0:
+            html = '<ul class="storage-types">'
+
+            for key in others:
+                html = html + format_html('<li>{}</li>', st.str_mini())
+            
+            html = html + '</ul>'
+        
+        if len(net_shares):
+            for server in net_shares.keys():
+                # html = html + ('%s:<br/>' % server)
+                for share_folder in net_shares[server].keys():
+                    html = html + ('smb://%s/%s<br/>' % (server, share_folder))
+                    for file_path in  net_shares[server][share_folder]:
+                        html = html + (' <div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> - %s<div>' % file_path)
+        return mark_safe(html)
+    get_storage_types_html.short_description = 'Medios'
+
+    def get_the_ids(self):
+        return  mark_safe("""
+        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem; max-width: 10vw;">
+            db: %s / imdb: %s
+        </div>
+        """ % (self.id, self.imdb_id if self.imdb_id else ''))
+    get_the_ids.short_description = 'IDS'
+
+    def get_mini_detail_html(self):
+        html = format_html("""
+                <div style="text-align:center">
+                <strong style="margin-bottom: 0.2rem; display: block;">{}</strong>
+                <em style="margin-bottom: 0.5rem; display: block;">{}</em>
+                {}
+                </div>
+                <div style="margin-top: 0.5em;">{}</div>
+                {}
+        """, 
+            self.title,
+            ("(%s)" % self.get_directed_by()), 
+            self.get_poster_thumbnail_img(), 
+            self.get_other_titles_html(), 
+            self.get_min_storage_types_html()
+        )
+        return mark_safe(html)
+    get_mini_detail_html.short_description = 'Detalle'
+
     def get_storage_types_html_tg(self):
         storage_types = MovieStorageType.objects.filter(movie=self).all()
         if storage_types.count() == 0:
@@ -265,6 +347,29 @@ class Movie(models.Model):
         html = html + '</ul>'
         return mark_safe(html)
     get_main_titles_html.short_description = 'Titulos'
+
+    def get_other_titles_html(self):
+        main_titles = self.get_main_titles()
+        html = ''
+        for key in main_titles.keys():
+            item_title = main_titles[key]
+
+            if key != 'title' and item_title['value'] != self.title:
+                html = html + format_html(
+                    """
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;">
+                        {} 
+                        <span style="background-color: #44B78B; color: #FFF; padding: 0.2rem 0.2rem; border-radius: 0.5rem; display:inline-block;">
+                            {}
+                        </span>
+                    </div>
+                    """, 
+                    item_title['value'], 
+                    item_title['short_name']
+                )
+        return mark_safe(html)
+    get_other_titles_html.short_description = 'Titulos'
+
 
     def get_storage_types_text(self):
         storage_types = MovieStorageType.objects.filter(movie=self).all()
