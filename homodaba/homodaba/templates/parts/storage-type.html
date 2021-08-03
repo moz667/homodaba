@@ -1,0 +1,25 @@
+<div style="flex: 1 0 30%" class="card my-2">
+    <div class="card-header text-truncate">
+        {{ storage_type.storage_type }}
+    </div>
+    <div class="card-body">
+        <img style="max-width: 50%; margin-right: 1rem;" class="img-fluid float-left" 
+            src="{{ storage_type.movie.clean_poster_thumbnail_url }}" alt="{{ storage_type.movie.get_the_main_title }}" />
+        <p class="card-text">
+            {{ storage_type.movie.get_plot }}
+        </p>
+    </div>
+    <div class="card-footer">
+        <div class="storage-type-{{ storage_type.storage_type }}">
+            {% if storage_type.is_original %}
+                <span class="original">{{ storage_type.storage_type }}</path>
+            {% endif %}
+            {% if storage_type.is_drive %}
+                <span class="drive">{{ storage_type.name }}</path>
+            {% endif %}
+            {% if storage_type.is_net_share or storage_type.is_drive %}
+                <span class="path">{{ storage_type.path }}</path>
+            {% endif %}
+        </div>
+    </div>
+</div>

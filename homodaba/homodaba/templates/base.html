@@ -18,7 +18,7 @@
     <title>{% block title %}Homodaba{% endblock %}</title>
 </head>
 
-<body class="{% block body_class %}home-page another-class{% endblock %}">
+<body class="{% block body_class %}home-page{% endblock %}">
     <header>
         <!-- Fixed navbar -->
         <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
@@ -31,6 +31,9 @@
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item home-page active">
                         <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    </li>
+                    <li class="nav-item search-movies-page">
+                        <a class="nav-link" href="{% url 'search_movies' %}">Películas</a>
                     </li>
                     {% if user.is_staff %}
                         <li class="nav-item admin-page">
@@ -50,6 +53,7 @@
 
     <!-- Begin page content -->
     <main role="main" class="container">
+        {% block main_block %}{% endblock %}
         {% comment %}
         <h1 class="mt-5">Sticky footer with fixed navbar</h1>
         <p class="lead">Pin a fixed-height footer to the bottom of the viewport in desktop browsers with this custom HTML and CSS. A fixed navbar has been added with <code>padding-top: 60px;</code> on the <code>body &gt; .container</code>.</p>

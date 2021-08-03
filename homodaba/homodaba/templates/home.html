@@ -1,1 +1,31 @@
 {% extends 'base.html' %}
+
+{% block main_block %}
+    {% if last_movies %}
+        <div class="my-3 p-3">
+            <h4 class="border-bottom border-gray pb-2 mb-0">Ultimas peliculas</h4>
+            
+            <div class="card-deck">
+                {% for movie in last_movies %}
+                    {% include "parts/movie.html" with movie=movie %}
+                {% endfor %}
+            </div>
+
+            <small class="d-block text-right mt-3">
+                <a href="{% url 'search_movies' %}">Búsqueda de películas</a>
+            </small>
+        </div>
+    {% endif %}
+
+    {% if last_storage_types %}
+        <div class="my-3 p-3">
+            <h4 class="border-bottom border-gray pb-2 mb-0">Ultimos medios</h4>
+            
+            <div class="card-deck">
+                {% for storage_type in last_storage_types %}
+                    {% include "parts/storage-type.html" with storage_type=storage_type %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

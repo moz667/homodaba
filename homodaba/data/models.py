@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Q
 from django.utils.html import format_html
@@ -157,17 +158,19 @@ class Movie(models.Model):
     def get_complete_title(self):
         return '%s (%s)' % (self.title, str(self.year))
 
-    def get_other_titles(self):
-        other_titles = []
-        if self.title_original and self.title_original != self.title:
-            other_titles.append(self.title_original)
-        if self.title_preferred and self.title_preferred != self.title:
-            other_titles.append(self.title_preferred)
-        for ta in self.title_akas.all():
-            other_titles.append(ta.title)
+    def get_the_main_title(self):
+        return self.title_original if self.title_original else self.title
 
-        return ', '.join(other_titles)
-    get_other_titles.short_description = 'Otros títulos'
+    def get_other_main_titles(self):
+        main_title = self.get_the_main_title()
+        other_titles = []
+        if self.title and main_title != self.title:
+            other_titles.append(self.title)
+        if self.title_preferred and main_title != self.title_preferred:
+            other_titles.append(self.title_preferred)
+
+        return other_titles
+    get_other_main_titles.short_description = 'Otros títulos'
 
     def get_directed_by(self):
         directed_by = []
@@ -196,17 +199,34 @@ class Movie(models.Model):
     def get_actors(self):
         return self.get_persons(MoviePerson.RT_ACTOR)
 
+    def clean_poster_thumbnail_url(self):
+        return self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@._V1_SY150_CR0,0,101,150_.jpg'
+
+    def clean_poster_url(self):
+        return self.poster_url if self.poster_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@.jpg'
+
+    def get_plot(self):
+        if self.summary:
+            summary_parts = self.summary.split("Plot:")
+            if len(summary_parts) == 2:
+                return summary_parts[1].strip()
+        
+        return ''
+
     def get_poster_thumbnail_img(self):
         return format_html(
             '<a href="{}" target="_blank" class="modal-photo"><img src="{}" alt="{}" /></a>',
             'https://www.imdb.com/title/tt%s/' % self.imdb_id if self.imdb_id else 'https://www.imdb.com/title/tt0385307/',
-            self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@._V1_SY150_CR0,0,101,150_.jpg',
+            self.clean_poster_thumbnail_url(),
             self.title,
         )
     get_poster_thumbnail_img.short_description = 'Cartel'
 
+    def get_storage_types(self):
+        return MovieStorageType.objects.filter(movie=self).all()
+
     def get_storage_types_html(self):
-        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        storage_types = self.get_storage_types()
         if storage_types.count() == 0:
             return ''
 
@@ -218,7 +238,7 @@ class Movie(models.Model):
     get_storage_types_html.short_description = 'Medios'
 
     def get_min_storage_types_html(self):
-        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        storage_types = self.get_storage_types()
         if storage_types.count() == 0:
             return ''
 
@@ -228,7 +248,7 @@ class Movie(models.Model):
 
         for st in storage_types:
             # FIXME: Por ahora solo los de samba :P si necesitas nfs hay que hacerlo!!!
-            if st.storage_type == MovieStorageType.ST_NET_SHARE and st.path.startswith("smb://"):
+            if st.is_net_share() and st.path.startswith("smb://"):
                 cur_path = st.path.lstrip("smb://")
                 cur_path_parts = cur_path.split("/")
 
@@ -268,7 +288,7 @@ class Movie(models.Model):
                 for share_folder in net_shares[server].keys():
                     html = html + ('smb://%s/%s<br/>' % (server, share_folder))
                     for file_path in  net_shares[server][share_folder]:
-                        html = html + (' <div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> - %s<div>' % file_path)
+                        html = html + (' <div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> - %s</div>' % file_path)
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
 
@@ -300,7 +320,7 @@ class Movie(models.Model):
     get_mini_detail_html.short_description = 'Detalle'
 
     def get_storage_types_html_tg(self):
-        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        storage_types = self.get_storage_types()
         if storage_types.count() == 0:
             return ''
 
@@ -372,7 +392,7 @@ class Movie(models.Model):
 
 
     def get_storage_types_text(self):
-        storage_types = MovieStorageType.objects.filter(movie=self).all()
+        storage_types = self.get_storage_types()
         if storage_types.count() == 0:
             return ''
 
@@ -507,9 +527,15 @@ class MovieStorageType(models.Model):
 
     def str_mini(self):
         s = '(Original) ' if self.is_original else ''
-        s = s + (' [%s]' % self.name if self.name and self.storage_type != MovieStorageType.ST_NET_SHARE else '')
+        s = s + (' [%s]' % self.name if self.name and not self.is_net_share() else '')
         s = s + (' "%s"' % self.path if self.path else '')
         return s
+
+    def is_net_share(self):
+        return self.storage_type == MovieStorageType.ST_NET_SHARE
+
+    def is_drive(self):
+        return self.storage_type == MovieStorageType.ST_DRIVE
 
     class Meta:
         verbose_name = "tipo de almacenamiento"
@@ -529,3 +555,12 @@ def get_or_create_country(country):
         return countries[0]
     
     return Country.objects.create(name=country)
+
+def get_last_five(model_class):
+    all_objects = model_class.objects.all().order_by("-id")
+    
+    last_five = []
+    if all_objects.count() > 0:
+        last_five = Paginator(all_objects, 6).get_page(1).object_list
+
+    return last_five
