@@ -7,6 +7,7 @@ docker/.env*
 docker/volumes/import/*
 docker/volumes/sqlite/*
 docker/volumes/static/*
+node_modules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

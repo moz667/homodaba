@@ -1,0 +1,1 @@
+# TODO: Documentar todo el tema de estaticos que tiene miga

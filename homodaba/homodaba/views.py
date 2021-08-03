@@ -1,6 +1,7 @@
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 
-def index(request):
-    return redirect('admin:index')
+def home(request):
+    # return redirect('admin:index')
+    return render(request, 'home.html')
 

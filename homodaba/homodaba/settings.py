@@ -93,7 +93,9 @@ ROOT_URLCONF = 'homodaba.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+             os.path.join(BASE_DIR, 'homodaba/templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -102,6 +104,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'homotags': 'homodaba.templatetags.homotags',
+            }
         },
     },
 ]
@@ -185,6 +190,11 @@ HOME_URL_PATH = os.getenv('HOME_URL_PATH', '')
 # Variable para definir donde se sirven los estaticos, esto es util para 
 # servir estaticos en un reverse proxy que apunte a un contenedor docker
 STATIC_URL = os.getenv('STATIC_URL', '/%sstatic/' % HOME_URL_PATH)
+
+STATICFILES_DIRS = [
+    ('homodaba', BASE_DIR / './static/build'),
+]
+
 
 # Por ahora no usamos uploads, pero en un futuro... who knows!
 # MEDIA_URL = '/%supload/' % HOME_URL_PATH

@@ -1,0 +1,71 @@
+{% load static %}
+{% load homotags %}
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,500" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static "homodaba/css/main.thirdparty.css" %}?v={% homodaba_version %}" media="screen" />
+    <link rel="stylesheet" type="text/css" href="{% static "homodaba/css/main.css" %}?v={% homodaba_version %}" media="screen" />
+
+    <script type="text/javascript" src="{% static "homodaba/js/main.thirdparty.js" %}?v={% homodaba_version %}"></script>
+    <script type="text/javascript" src="{% static "homodaba/js/main.js" %}?v={% homodaba_version %}"></script>
+
+    <title>{% block title %}Homodaba{% endblock %}</title>
+</head>
+
+<body class="{% block body_class %}home-page another-class{% endblock %}">
+    <header>
+        <!-- Fixed navbar -->
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+            <a class="navbar-brand" href="{% url 'home' %}"><img src="{% static "homodaba/img/logo-horizontal.png" %}?v={% homodaba_version %}" alt="HOMODABA" class="img-fluid brand" /></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="main-navbar">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item home-page active">
+                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    </li>
+                    {% if user.is_staff %}
+                        <li class="nav-item admin-page">
+                            <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
+                        </li>
+                    {% endif %}
+                </ul>
+                {% comment %}
+                <form class="form-inline mt-2 mt-md-0">
+                <input class="form-control mr-sm-2" type="text" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                </form>
+                {% endcomment %}
+            </div>
+        </nav>
+    </header>
+
+    <!-- Begin page content -->
+    <main role="main" class="container">
+        {% comment %}
+        <h1 class="mt-5">Sticky footer with fixed navbar</h1>
+        <p class="lead">Pin a fixed-height footer to the bottom of the viewport in desktop browsers with this custom HTML and CSS. A fixed navbar has been added with <code>padding-top: 60px;</code> on the <code>body &gt; .container</code>.</p>
+        <p>Back to <a href="../sticky-footer/">the default sticky footer</a> minus the navbar.</p>
+        {% endcomment %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span class="text-muted">
+                🎥 <a href="https://github.com/moz667/homodaba">HOMODABA</a> &bullet; 
+                2021 ❤
+                <a href="https://github.com/bpk667">@bpk667</a> 
+                <a href="https://github.com/moz667">@moz667</a>
+            </span>
+        </div>
+    </footer>
+</body>
+</html>
