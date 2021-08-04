@@ -87,7 +87,7 @@ class MovieAdmin(admin.ModelAdmin):
         list_display = ('get_the_ids', 'get_mini_detail_html', 'year', 'rating',)
         # list_display = ('get_the_ids', 'get_main_titles_html', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_storage_types_html', 'rating',)
     else:
-        list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_other_titles', 'get_storage_types_html', 'rating',)
+        list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_main_titles_html', 'get_min_storage_types_html', 'rating',)
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)

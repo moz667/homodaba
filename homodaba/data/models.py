@@ -262,7 +262,10 @@ class Movie(models.Model):
                 if not share_folder in net_shares[server]:
                     net_shares[server][share_folder] = []
                 
-                net_shares[server][share_folder].append(file_path)
+                net_shares[server][share_folder].append({
+                    'relative_path': file_path,
+                    'url': st.get_url_to_storage_type(),
+                })
                 """ TODO: Si quieres hacer algo para drives...
             elif st.storage_type == MovieStorageType.ST_DRIVE:
                 if not st.name in drives:
@@ -287,8 +290,14 @@ class Movie(models.Model):
                 # html = html + ('%s:<br/>' % server)
                 for share_folder in net_shares[server].keys():
                     html = html + ('smb://%s/%s<br/>' % (server, share_folder))
-                    for file_path in  net_shares[server][share_folder]:
-                        html = html + (' <div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> - %s</div>' % file_path)
+                    for share_item in net_shares[server][share_folder]:
+                        html = html + (
+                            """<div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> 
+                                - <a style="font-weight: bold; text-decoration: underline;" href="%s" target="_blank">%s</a>
+                            </div>""" % (
+                                share_item["url"], share_item["relative_path"]
+                            )
+                        )
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
 

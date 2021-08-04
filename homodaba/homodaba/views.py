@@ -17,6 +17,3 @@ def home(request):
 def search_movies(request):
     return render(request, 'search_movies.html')
 
-@login_required
-def search_movies_by_director(request, id):
-    return render(request, 'search_movies.html')
