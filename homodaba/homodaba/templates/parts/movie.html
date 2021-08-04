@@ -3,22 +3,33 @@
         {{ movie.get_the_main_title }} ({{ movie.year }})
     </div>
     <div class="card-body">
-        <div style="max-width: 50%; margin-right: 1rem; position: relative; border:1px solid rgba(0, 0, 0, 0.125)" class="img-fluid float-left" >
-            <span style="position: absolute; right: 0.3rem; top: 0.3rem;" class="badge badge-primary">{{ movie.rating }}</span>
-            <img class="img-fluid float-left" 
-                src="{{ movie.clean_poster_thumbnail_url }}" alt="{{ movie.get_the_main_title }}" />
+        <div>
+            <div style="max-width: 50%; margin-right: 1rem; position: relative; border:1px solid rgba(0, 0, 0, 0.125)" class="img-fluid float-left" >
+                <span style="position: absolute; right: 0.3rem; top: 0.3rem;" class="badge badge-primary">{{ movie.rating }}</span>
+                <img class="img-fluid float-left" 
+                    src="{{ movie.clean_poster_thumbnail_url }}" alt="{{ movie.get_the_main_title }}" />
+            </div>
+            <p class="card-text">
+                {{ movie.get_plot }}
+            </p>
         </div>
-        <p class="card-text">
-            {{ movie.get_plot }}
-        </p>
 
-        <strong class="d-block">Dirigida por:</strong>
+        <strong style="clear: both; padding-top: 1rem;" class="d-block">Dirigida por:</strong>
         <ul>
             {% for director in movie.get_directors %}
                 <li>
                     <a href="{% url 'search_movies_by_director' id=director.id %}">
                         {{ director.name }}
                     </a>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <strong class="d-block">Original de:</strong>
+        <ul>
+            {% for country in movie.countries.all %}
+                <li>
+                    {{ country }}
                 </li>
             {% endfor %}
         </ul>
@@ -32,6 +43,30 @@
                     </li>
                 {% endfor %}
             </ul>
+        {% endif %}
+
+        {% if movie.tags.all %}
+            {% for tag in movie.tags.all %}
+                <a class="badge badge-success" href="{% url 'search_movies' %}?tag={{ tag }}">
+                    {{ tag }}
+                </a>
+            {% endfor %}
+        {% endif %}
+
+        {% if movie.genres.all %}
+            {% for tag in movie.genres.all %}
+                <a class="badge badge-info" href="{% url 'search_movies' %}?genre={{ tag }}">
+                    {{ tag }}
+                </a>
+            {% endfor %}
+        {% endif %}
+
+        {% if movie.content_rating_systems.all %}
+            {% for tag in movie.content_rating_systems.all %}
+                <a class="badge badge-danger" href="{% url 'search_movies' %}?cr_system={{ tag }}">
+                    {{ tag }}
+                </a>
+            {% endfor %}
         {% endif %}
     </div>
     <div class="card-footer">
