@@ -46,6 +46,10 @@ DEBUG = False if os.getenv("DJANGO_DEBUG", '1') == '0' else True
 LOCALNETIP = os.getenv("LOCALNETIP", '127.0.0.1')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', LOCALNETIP).split()
 
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
 # Application definition
 
 INSTALLED_APPS = [

@@ -19,6 +19,7 @@
 </head>
 
 <body class="{% block body_class %}home-page{% endblock %}">
+    {% block wrap_header %}
     <header>
         <!-- Fixed navbar -->
         <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
@@ -33,13 +34,16 @@
                         <a class="nav-link" href="{% url 'home' %}">Home</a>
                     </li>
                     <li class="nav-item search-movies-page">
-                        <a class="nav-link" href="{% url 'search_movies' %}">Películas</a>
+                        <a class="nav-link" href="{% url 'search_movies' %}">Buscar</a>
                     </li>
-                    {% if user.is_staff %}
+                    {% if request.user.is_staff %}
                         <li class="nav-item admin-page">
                             <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
                         </li>
                     {% endif %}
+                    <li class="nav-item logout-page">
+                        <a class="nav-link" href="{% url 'logout' %}">Salir</a>
+                    </li>
                 </ul>
                 {% comment %}
                 <form class="form-inline mt-2 mt-md-0">
@@ -50,7 +54,9 @@
             </div>
         </nav>
     </header>
+    {% endblock %}
 
+    {% block wrap_main %}
     <!-- Begin page content -->
     <main role="main" class="container">
         {% block main_block %}{% endblock %}
@@ -60,6 +66,7 @@
         <p>Back to <a href="../sticky-footer/">the default sticky footer</a> minus the navbar.</p>
         {% endcomment %}
     </main>
+    {% endblock %}
 
     <footer class="footer">
         <div class="container">

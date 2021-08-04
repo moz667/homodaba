@@ -1,0 +1,24 @@
+{% load homotags %}
+
+{% some_errors form.hidden_fields as error_on_hidden %}
+{% some_errors form.fields as error_on_field %}
+
+{% if form.non_field_errors or error_on_hidden or error_on_field %}
+    <div class="alert alert-danger non-field-errors" role="alert">
+        {% for error in form.non_field_errors %}
+            <div class="non-field-error">{{ error }}</div>
+        {% endfor %}
+
+        {% for hidden in form.hidden_fields %}
+            {% for error in hidden.errors %}
+                <div class="hidden-error">{{ error }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        {% for field in form.fields %}
+            {% for error in field.errors %}
+                <div class="field-error">{{ error }}</div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endif %}

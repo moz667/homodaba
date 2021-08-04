@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load homotags %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block wrap_header %}{% endblock %}
+
+{% block wrap_main %}
+    <form class="form-signin" method="post">
+        {% csrf_token %}
+
+        {% include "form/errors.html" %}
+
+        <img class="mb-4" src="{% static "homodaba/img/logo.png" %}?v={% homodaba_version %}" alt="" width="72" height="72">
+        <h1 class="h3 mb-3 font-weight-normal">Acceder a HDB</h1>
+
+        {% for field in form.visible_fields %}
+            <label for="{{ field.id_for_label }}" class="sr-only">
+                {{ field.label }}
+            </label>
+            {{ field|set_css_class:'form-control'|placeholder:field.label }}
+        {% endfor %}
+        
+        {% comment %}
+        <div class="checkbox mb-3">
+            <label>
+                <input type="checkbox" value="remember-me"> Remember me
+            </label>
+        </div>
+        {% endcomment %}
+
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Enviar</button>
+    </form>
+{% comment %}
+<div class="card my-5">
+    <div class="card-header">
+        <h1>{% trans 'Acceder con tus datos de registro' %}</h1>
+    </div>
+
+    <div class="card-body">
+        <form class="form_login ajax-content" method="post">
+            {% csrf_token %}
+
+            {% include "inc/form_non_field_errors.html" %}
+
+            <label for="{{ form.username.id_for_label }}" class="label_nice">{% trans 'Usuario o email *' %}</label>
+            {{ form.username|add_class:'form-control' }}
+            {% include "inc/form_field_error.html" with field=form.username %}
+
+            <label for="{{ form.password.id_for_label }}" class="label_nice">{% trans 'Contraseña *' %}</label>
+            {{ form.password|add_class:'form-control' }}
+            {% include "inc/form_field_error.html" with field=form.password %}
+
+            <div class="form-group no-modal main-form-buttons">
+                <button type="submit" class="btn btn-success">
+                    <span class="fa fa-user"></span> {% trans "Acceder" %}
+                </button>
+
+                <a href="{% url 'home' %}" class="btn btn-danger">
+                    <span class="fa fa-times"></span> {% trans 'Cancelar' %}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
+
+    <title>Signin Template for Bootstrap</title>
+
+    <link rel="canonical" href="https://getbootstrap.com/docs/4.0/examples/sign-in/">
+
+    <!-- Bootstrap core CSS -->
+    <link href="../../dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="signin.css" rel="stylesheet">
+  </head>
+
+  <body class="text-center">
+    <form class="form-signin">
+      <img class="mb-4" src="https://getbootstrap.com/docs/4.0/assets/brand/bootstrap-solid.svg" alt="" width="72" height="72">
+      <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+      <label for="inputEmail" class="sr-only">Email address</label>
+      <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
+      <label for="inputPassword" class="sr-only">Password</label>
+      <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+      <div class="checkbox mb-3">
+        <label>
+          <input type="checkbox" value="remember-me"> Remember me
+        </label>
+      </div>
+      <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+      <p class="mt-5 mb-3 text-muted">&copy; 2017-2018</p>
+    </form>
+  </body>
+</html>
+
+{% endcomment %}
+
+{% endblock %}
