@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from imdb.utils import KIND_MAP
 
-from homodaba.settings import HOMODABA_MINI_DETAILS
+from homodaba.settings import HOMODABA_MINI_DETAILS, SMB_SHARE_2_URL
 
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
@@ -537,6 +537,14 @@ class MovieStorageType(models.Model):
     def is_drive(self):
         return self.storage_type == MovieStorageType.ST_DRIVE
 
+    def get_url_to_storage_type(self):
+        if self.is_net_share():
+            for key in SMB_SHARE_2_URL.keys():
+                if self.path.startswith(key):
+                    return self.path.replace(key, SMB_SHARE_2_URL[key])
+
+        return ''
+
     class Meta:
         verbose_name = "tipo de almacenamiento"
         verbose_name_plural = "tipos de almacenamiento"
@@ -564,3 +572,4 @@ def get_last_five(model_class):
         last_five = Paginator(all_objects, 6).get_page(1).object_list
 
     return last_five
+
