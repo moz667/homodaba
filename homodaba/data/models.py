@@ -69,6 +69,13 @@ class GenreTag(AbstractTag):
         verbose_name = "género"
         verbose_name_plural = "géneros"
 
+class UserTag(AbstractTag):
+    LATER_TAG = 'later'
+
+    class Meta:
+        verbose_name = "etiqueta de usario"
+        verbose_name_plural = "etiquetas de usuario"
+
 # https://en.wikipedia.org/wiki/Motion_Picture_Association_film_rating_system
 # https://en.wikipedia.org/wiki/TV_Parental_Guidelines
 class ContentRatingTag(AbstractTag):
@@ -140,6 +147,8 @@ class Movie(models.Model):
     tags = models.ManyToManyField(Tag)
     genres = models.ManyToManyField(GenreTag)
     content_rating_systems = models.ManyToManyField(ContentRatingTag)
+
+    user_tags = models.ManyToManyField(UserTag)
 
     # Esto tiene miga... para mantener la relacion m2m a Person a traves de 
     # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
@@ -213,10 +222,15 @@ class Movie(models.Model):
         
         return ''
 
+    def get_imdb_url(self):
+        if self.imdb_id:
+            return 'https://www.imdb.com/title/tt%s/' % self.imdb_id
+        return 'https://www.imdb.com/title/tt0385307/'
+
     def get_poster_thumbnail_img(self):
         return format_html(
             '<a href="{}" target="_blank" class="modal-photo"><img src="{}" alt="{}" /></a>',
-            'https://www.imdb.com/title/tt%s/' % self.imdb_id if self.imdb_id else 'https://www.imdb.com/title/tt0385307/',
+            self.get_imdb_url(),
             self.clean_poster_thumbnail_url(),
             self.title,
         )
@@ -573,12 +587,21 @@ def get_or_create_country(country):
     
     return Country.objects.create(name=country)
 
-def get_last_five(model_class):
+def get_last_items(model_class, num_items=6):
     all_objects = model_class.objects.all().order_by("-id")
     
-    last_five = []
+    last_items = []
     if all_objects.count() > 0:
-        last_five = Paginator(all_objects, 6).get_page(1).object_list
+        last_items = Paginator(all_objects, num_items).get_page(1).object_list
 
-    return last_five
+    return last_items
 
+def get_or_create_user_tag(current_user, tag_type):
+    tag_name = '%s-%s' % (current_user.username, tag_type)
+    tags = UserTag.objects.filter(name=tag_name).all()
+    if tags.count() > 0:
+        return tags[0]
+    
+    return UserTag.objects.create(
+        name=tag_name
+    )

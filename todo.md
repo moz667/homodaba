@@ -1,3 +1,8 @@
+### Sin clasificar
+1. [X] ~~link a imdb en la carátula~~
+1. [X] ~~quitar ultimos medios (tiene una utilidad puntual)~~
+1. [ ] quitar toda la morralla del minidetail y limpiar
+
 ### Bugs
 1. [X] ~~Fallo al importar datos de sqlite3... title en TitleAka duplicado!!!~~
 
@@ -15,6 +20,7 @@
     - Mostrar forma alternativa de medios en las que solo saque la ruta
 1. [ ] Actualizacion de imdb_id desde la admin:
     Esto es una idea que puede estar bien, tener la posibilidad de cambiar el imdb_id a una peli que localizamos esta mal, el problema es que deberiamos tambien guardar la relacion con la peli antigua y la nueva, para que las futuras importaciones de ese archivo coincida con el nuevo imdb_id... pensar en esto
+1. [X] ~~marcar para ver mas tarde (con tag que sea XXX-nombre de user)~~
 
 ### Diseño
 1. [ ] Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)
