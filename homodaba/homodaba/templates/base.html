@@ -45,7 +45,7 @@
                         </li>
                     {% endif %}
                     <li class="nav-item logout-page">
-                        <a class="nav-link" href="{% url 'logout' %}">Salir</a>
+                        <a class="nav-link" href="{% url 'logout' %}">Salir ({{ request.user.username }})</a>
                     </li>
                 </ul>
                 {% comment %}

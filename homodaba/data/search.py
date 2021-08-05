@@ -163,6 +163,18 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
         
         search_query = search_query_new
 
+    """
+    # TODO: mirar get_search_results en admin.py
+    if director:
+        movie_ids = []
+        for mp in MoviePerson.objects.filter(person__pk=director, role=MoviePerson.RT_DIRECTOR).all():
+            movie_ids.append(mp.movie.id)
+        
+        use_distinct = True
+        
+        queryset = queryset.filter(id__in=movie_ids)
+    """
+
     if genre:
         search_query_new = Q(genres__pk=genre)
         

@@ -36,11 +36,12 @@ def search_movies(request):
     search_movies, use_distinct = populate_search_filter(
         Movie.objects, 
         search_term=search_term,
-        director=director,
+        director=director.id if director else None,
         tag=tag.id if tag else None,
         genre=genre.id if genre else None,
         content_rating_system=cr_system.id if cr_system else None,
         user_tag=user_tag.id if user_tag else None,
+        use_use_distinct=True
     )
 
     order_by = '-id'
