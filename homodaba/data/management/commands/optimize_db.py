@@ -140,6 +140,14 @@ Antes de ejecutar conviene borrar la tabla primero con el argumento:
 
                 else:
                     trace.error("La pelicula '%s' no tiene titulos nuevos. [movie.id='%s']" % (movie.title, movie.id))
+                    if len(new_titles.keys()) > 0:
+                        trace.debug(" * Los titulos nuevos para la pelicula '%s' son:" % movie.title)
+                        if 'title' in new_titles:
+                            trace.debug("    - %s: '%s'" % ('title', new_titles['title']))
+                        if 'title_original' in new_titles:
+                            trace.debug("    - %s: '%s'" % ('title_original', new_titles['title_original']))
+                        if 'title_preferred' in new_titles:
+                            trace.debug("    - %s: '%s'" % ('title_preferred', new_titles['title_preferred']))
                 
                     
 

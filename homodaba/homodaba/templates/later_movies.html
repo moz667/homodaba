@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block body_class %}later-movies-page{% endblock %}
+
+{% block main_block %}
+    {% if later_movies %}
+        <div class="later-movies mb-5">
+            <h4 class="border-bottom border-gray pb-2 mb-0">Películas para ver mas tarde</h4>
+            
+            <div class="card-deck">
+                {% for movie in later_movies %}
+                    {% include "parts/movie.html" with movie=movie %}
+                {% endfor %}
+            </div>
+
+            <small class="d-block text-right mt-3">
+                <a href="{% url 'search_movies' %}">Búsqueda de películas</a>
+            </small>
+        </div>
+    {% else %}
+        No tienes ninguna película marcada para ver mas tarde. Vete a la 
+        <a href="{% url 'search_movies' %}">búsqueda de películas</a> para añadir unas cuantas.
+    {% endif %}
+{% endblock %}

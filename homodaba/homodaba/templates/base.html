@@ -36,13 +36,16 @@
                     <li class="nav-item search-movies-page">
                         <a class="nav-link" href="{% url 'search_movies' %}">Buscar</a>
                     </li>
+                    <li class="nav-item later-movies-page">
+                        <a class="nav-link" href="{% url 'user_later_movies' %}">Ver despues</a>
+                    </li>
                     {% if request.user.is_staff %}
                         <li class="nav-item admin-page">
                             <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
                         </li>
                     {% endif %}
                     <li class="nav-item logout-page">
-                        <a class="nav-link" href="{% url 'logout' %}">Salir</a>
+                        <a class="nav-link" href="{% url 'logout' %}">Salir ({{ request.user.username }})</a>
                     </li>
                 </ul>
                 {% comment %}

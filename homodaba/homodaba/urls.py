@@ -22,7 +22,8 @@ from . import views
 urlpatterns = [
     path('%s' % HOME_URL_PATH, views.home, name='home'),
     path('%smovies/' % HOME_URL_PATH, views.search_movies, name='search_movies'),
-    path('%smovies/by-director/<int:id>' % HOME_URL_PATH, views.search_movies_by_director, name='search_movies_by_director'),
+    path('%smovies/later' % HOME_URL_PATH, views.user_later_movies, name='user_later_movies'),
+    path('%sjson/later/<int:movie_id>' % HOME_URL_PATH, views.json_switch_later_tag, name='json_switch_later_tag'),
     
     path('%sadmin/' % HOME_URL_PATH, admin.site.urls),
     path('%sauth/' % HOME_URL_PATH, include('django.contrib.auth.urls')),

@@ -16,6 +16,14 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
+SMB_SHARE_2_URL = {}
+
+i = 1
+while os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, ""):
+    SMB_SHARE_2_URL[os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, "")] = os.getenv("SMB_SHARE_2_URL_VALUE_%i" % i, "")
+    i = i + 1
+
+
 NO_CACHE = int(os.getenv("NO_CACHE", "0")) == 1
 UPDATE_CACHE = int(os.getenv("UPDATE_CACHE", "0")) == 1
 

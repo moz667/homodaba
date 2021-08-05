@@ -1,11 +1,78 @@
 {% extends 'base.html' %}
 
-{% block title %}Busqueda de peliculas{% endblock %}
+{% block title %}Buscador de peliculas{% endblock %}
 
 {% block body_class %}search-movies-page{% endblock %}
 
 {% block main_block %}
+    {# with "?search_term="|add:search_term|add:"&director="|add:filters.director|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url #}
     <div class="my-3 p-3">
-        <h1>TODO: Search movies</h1>
+        <h1>Buscador de películas</h1>
+        <div class="alert alert-primary" role="alert">
+            <form method="GET" action="{{ search_tags_url }}">
+                <input type="hidden" name="director" value="{{ filters.director }}" />
+                <input type="hidden" name="tag" value="{{ filters.tag }}" />
+                <input type="hidden" name="genre" value="{{ filters.genre }}" />
+                <input type="hidden" name="cr_system" value="{{ filters.cr_system }}" />
+                <input type="hidden" name="user_tag" value="{{ filters.user_tag }}" />
+
+                {% if filters.director %}
+                    {% with "?search_term="|add:search_term|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                        {% include "inc/filter_tag.html" with tag=filters.director badge_style='dark' remove_url=remove_tag_url %}
+                    {% endwith %}
+                {% endif %}
+
+                {% if filters.tag %}
+                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                        {% include "inc/filter_tag.html" with tag=filters.tag badge_style='success' remove_url=remove_tag_url %}
+                    {% endwith %}
+                {% endif %}
+
+                {% if filters.genre %}
+                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director|add:"&tag="|add:filters.tag|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                        {% include "inc/filter_tag.html" with tag=filters.genre badge_style='info' remove_url=remove_tag_url %}
+                    {% endwith %}
+                {% endif %}
+
+                {% if filters.cr_system %}
+                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                        {% include "inc/filter_tag.html" with tag=filters.cr_system badge_style='danger' remove_url=remove_tag_url %}
+                    {% endwith %}
+                {% endif %}
+
+                {% if filters.user_tag %}
+                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system as remove_tag_url %}
+                        {% include "inc/filter_tag.html" with tag=filters.user_tag badge_style='user-tag' remove_url=remove_tag_url %}
+                    {% endwith %}
+                {% endif %}
+
+                <div class="input-group my-3">
+                    <input name="search_term" value="{{ search_term }}" type="text" class="form-control" placeholder="Términos a buscar..." aria-label="Términos a buscar" aria-describedby="basic-addon2">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">Buscar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
+
+    {% if search_movies %}
+        <div class="later-movies mb-5">
+            <h4 class="border-bottom border-gray pb-2 mb-0">Resultados de la busqueda</h4>
+            
+            <div class="card-deck">
+                {% for movie in search_movies %}
+                    {% include "parts/movie.html" with movie=movie %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <h4>TODO: Paginacion</h4>
+        {% if next_page %}
+            {{ next_page }}
+        {% endif %}
+    {% else %}
+        No se han encontrado resultados.
+    {% endif %}
+
 {% endblock %}

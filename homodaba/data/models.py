@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from imdb.utils import KIND_MAP
 
-from homodaba.settings import HOMODABA_MINI_DETAILS
+from homodaba.settings import HOMODABA_MINI_DETAILS, SMB_SHARE_2_URL
 
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
@@ -68,6 +68,13 @@ class GenreTag(AbstractTag):
     class Meta:
         verbose_name = "género"
         verbose_name_plural = "géneros"
+
+class UserTag(AbstractTag):
+    LATER_TAG = 'later'
+
+    class Meta:
+        verbose_name = "etiqueta de usario"
+        verbose_name_plural = "etiquetas de usuario"
 
 # https://en.wikipedia.org/wiki/Motion_Picture_Association_film_rating_system
 # https://en.wikipedia.org/wiki/TV_Parental_Guidelines
@@ -141,6 +148,8 @@ class Movie(models.Model):
     genres = models.ManyToManyField(GenreTag)
     content_rating_systems = models.ManyToManyField(ContentRatingTag)
 
+    user_tags = models.ManyToManyField(UserTag)
+
     # Esto tiene miga... para mantener la relacion m2m a Person a traves de 
     # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
     # del proxy: MoviePersonDirectorProxy
@@ -213,10 +222,15 @@ class Movie(models.Model):
         
         return ''
 
+    def get_imdb_url(self):
+        if self.imdb_id:
+            return 'https://www.imdb.com/title/tt%s/' % self.imdb_id
+        return 'https://www.imdb.com/title/tt0385307/'
+
     def get_poster_thumbnail_img(self):
         return format_html(
             '<a href="{}" target="_blank" class="modal-photo"><img src="{}" alt="{}" /></a>',
-            'https://www.imdb.com/title/tt%s/' % self.imdb_id if self.imdb_id else 'https://www.imdb.com/title/tt0385307/',
+            self.get_imdb_url(),
             self.clean_poster_thumbnail_url(),
             self.title,
         )
@@ -262,7 +276,10 @@ class Movie(models.Model):
                 if not share_folder in net_shares[server]:
                     net_shares[server][share_folder] = []
                 
-                net_shares[server][share_folder].append(file_path)
+                net_shares[server][share_folder].append({
+                    'relative_path': file_path,
+                    'url': st.get_url_to_storage_type(),
+                })
                 """ TODO: Si quieres hacer algo para drives...
             elif st.storage_type == MovieStorageType.ST_DRIVE:
                 if not st.name in drives:
@@ -287,8 +304,14 @@ class Movie(models.Model):
                 # html = html + ('%s:<br/>' % server)
                 for share_folder in net_shares[server].keys():
                     html = html + ('smb://%s/%s<br/>' % (server, share_folder))
-                    for file_path in  net_shares[server][share_folder]:
-                        html = html + (' <div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> - %s</div>' % file_path)
+                    for share_item in net_shares[server][share_folder]:
+                        html = html + (
+                            """<div style="max-width: 40vw; overflow: hidden; display:block; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;"> 
+                                - <a style="font-weight: bold; text-decoration: underline;" href="%s" target="_blank">%s</a>
+                            </div>""" % (
+                                share_item["url"], share_item["relative_path"]
+                            )
+                        )
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
 
@@ -537,6 +560,14 @@ class MovieStorageType(models.Model):
     def is_drive(self):
         return self.storage_type == MovieStorageType.ST_DRIVE
 
+    def get_url_to_storage_type(self):
+        if self.is_net_share():
+            for key in SMB_SHARE_2_URL.keys():
+                if self.path.startswith(key):
+                    return self.path.replace(key, SMB_SHARE_2_URL[key])
+
+        return ''
+
     class Meta:
         verbose_name = "tipo de almacenamiento"
         verbose_name_plural = "tipos de almacenamiento"
@@ -556,11 +587,28 @@ def get_or_create_country(country):
     
     return Country.objects.create(name=country)
 
-def get_last_five(model_class):
+def get_last_items(model_class, num_items=6):
     all_objects = model_class.objects.all().order_by("-id")
     
-    last_five = []
+    last_items = []
     if all_objects.count() > 0:
-        last_five = Paginator(all_objects, 6).get_page(1).object_list
+        # Esto es una cosa rarisima... en algunas situaciones object_list puede 
+        # ser un queryset, en vez de una lista, pero la misma pagina puede ser 
+        # tambien una lista... (raro de cojones) por ello recorremos el iterable
+        # para meter item a item en last_items
+        object_list = Paginator(all_objects, num_items).get_page(1).object_list
 
-    return last_five
+        for o in object_list:
+            last_items.append(o)
+
+    return last_items
+
+def get_or_create_user_tag(current_user, tag_type):
+    tag_name = '%s-%s' % (current_user.username, tag_type)
+    tags = UserTag.objects.filter(name=tag_name).all()
+    if tags.count() > 0:
+        return tags[0]
+    
+    return UserTag.objects.create(
+        name=tag_name
+    )

@@ -3,7 +3,19 @@ from django import template
 from homodaba import settings
 from homodaba.version import VERSION
 
+from data.models import get_or_create_user_tag
+
 register = template.Library()
+
+@register.simple_tag
+def movie_contain_user_tag(movie, user, tag_type):
+    tag = get_or_create_user_tag(user, tag_type)
+
+    for t in movie.user_tags.all():
+        if t.name == tag.name:
+            return True
+
+    return False
 
 @register.filter
 def set_css_class(widget, class_value):

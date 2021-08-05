@@ -87,6 +87,11 @@ class MovieDocument(Document):
         'pk': fields.IntegerField(),
     })
 
+    user_tags = fields.NestedField(properties={
+        'name': fields.KeywordField(),
+        'pk': fields.IntegerField(),
+    })
+
     # TODO: ojo!!! esto es para que solo indexe los primeros X
     #def get_queryset(self):
     #    return super().get_queryset()[:50]
