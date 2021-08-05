@@ -1,4 +1,4 @@
-version: '2.0'
+version: '2.1'
 
 # homodaba docker:
 # Version sin Elastic search
@@ -15,9 +15,9 @@ services:
         env_file:
             - ./.env-no-es
         volumes:
-            - ./volumes/sqlite:/opt/app/sqlite
-            - ./volumes/import:/opt/app/import
-            - ./volumes/static:/opt/app/static
+            - ${HOST_SQLITE:-./volumes/sqlite}:/opt/app/sqlite
+            - ${HOST_IMPORT:-./volumes/import}:/opt/app/import
+            - ${HOST_STATIC:-./volumes/static}:/opt/app/static
         command: /init-homodaba.sh
     homodaba-tbot:
         build: ./

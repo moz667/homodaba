@@ -1,4 +1,4 @@
-version: '2.0'
+version: '2.1'
 
 # homodaba docker:
 # Version con Elastic search pero sin telegram bot (ver mas abajo si quieres ponerlo)
@@ -26,9 +26,9 @@ services:
         env_file:
             - ./.env
         volumes:
-            - ./volumes/sqlite:/opt/app/sqlite
-            - ./volumes/import:/opt/app/import
-            - ./volumes/static:/opt/app/static
+            - ${HOST_SQLITE:-./volumes/sqlite}:/opt/app/sqlite
+            - ${HOST_STATIC:-./volumes/static}:/opt/app/static
+            - ${HOST_IMPORT:-./volumes/import}:/opt/app/import
         command: /init-homodaba.sh
 # Si quieres el bot de telegram solo tienes que:
 #    1) Conseguir un token siguiendo a traves del botfather
