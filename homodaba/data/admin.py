@@ -11,9 +11,6 @@ from .views import PersonDirectorJsonView
 
 from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
 
-# from easy_select2 import select2_modelform
-# MovieForm = select2_modelform(Movie, attrs={'width': '250px'})
-
 class DirectorFilter(AutocompleteFilter):
     title = 'Director' # display title
     field_name = 'directors' # name of the foreign key field
@@ -124,6 +121,7 @@ class MovieAdmin(admin.ModelAdmin):
         if 'directors__pk__exact' in request.GET.keys():
             if request.GET['directors__pk__exact']:
                 director_filter = int(request.GET['directors__pk__exact'])
+                """
                 movie_ids = []
                 for mp in MoviePerson.objects.filter(person__pk=director_filter, role=MoviePerson.RT_DIRECTOR).all():
                     movie_ids.append(mp.movie.id)
@@ -132,6 +130,7 @@ class MovieAdmin(admin.ModelAdmin):
                 # print(queryset.query)
                 # print(dir(queryset))
                 # print(movie_ids)
+                """
 
         # Si No hay terminos de busqueda devolvemos el queryset tal como esta
         if not search_term:

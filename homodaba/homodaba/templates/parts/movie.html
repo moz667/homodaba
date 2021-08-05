@@ -105,7 +105,7 @@
 
                 {% if movie.user_tags.all %}
                     {% for tag in movie.user_tags.all %}
-                        <a style="background-color: magenta;" class="badge badge-danger" href="{% url 'search_movies' %}?user_tag={{ tag }}">
+                        <a class="badge badge-user-tag" href="{% url 'search_movies' %}?user_tag={{ tag }}">
                             {{ tag }}
                         </a>
                     {% endfor %}

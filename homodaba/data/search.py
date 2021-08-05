@@ -11,13 +11,14 @@ if ELASTICSEARCH_DSL:
     from .documents import MovieDocument
     from elasticsearch_dsl import Q as DSL_Q
 
-    def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, year=None, director=None):
+    def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
+        genre=None, content_rating_system=None, tag=None, year=None, 
+        director=None, user_tag=None):
+
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
         # TODO: stats de la busqueda (total encontrados para la paginacion)
         # TODO: paginacion
         # TODO: Analizadores de terminos para permitir busquedas por texto parcial
-
-        use_distinct = False
 
         query = DSL_Q('bool')
 
@@ -92,6 +93,11 @@ if ELASTICSEARCH_DSL:
                 query=DSL_Q("match", content_rating_systems__pk=content_rating_system)
             ))
         
+        if user_tag:
+            query.must.append(DSL_Q("nested", path="user_tags", 
+                query=DSL_Q("match", user_tags__pk=tag)
+            ))
+
         if year:
             query.must.append(DSL_Q("match", year=year))
         
@@ -106,18 +112,17 @@ if ELASTICSEARCH_DSL:
         if order_by_fields and (len(order_by_fields) > 1 or not '-pk' in order_by_fields):
             queryset = queryset.order_by(*order_by_fields)
         
-        if use_use_distinct:
-            return queryset.distinct() if use_distinct else queryset, use_distinct
-        else:
-            return queryset.distinct() if use_distinct else queryset
+        return queryset.distinct() if use_use_distinct else queryset, use_use_distinct
 
-def populate_search_filter_model(queryset, search_term, use_use_distinct=False, year=None, director=None):
+def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
+    year=None, director=None, genre=None, content_rating_system=None, tag=None, 
+    user_tag=None):
+
     # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
     # para varios
     contains_quote = False
 
-    query_title = None
-    use_distinct = False
+    search_query = None
 
     if search_term:
         if search_term.startswith('"'):
@@ -128,62 +133,72 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
             search_term = search_term[:-1]
 
         if not contains_quote:
-            query_title = Q(title__icontains=search_term)
-            query_title.add(Q(title_original__icontains=search_term), Q.OR)
-            query_title.add(Q(title_preferred__icontains=search_term), Q.OR)
+            search_query = Q(title__icontains=search_term)
+            search_query.add(Q(title_original__icontains=search_term), Q.OR)
+            search_query.add(Q(title_preferred__icontains=search_term), Q.OR)
         else:
-            query_title = Q(title__iexact=search_term)
-            query_title.add(Q(title__icontains=' ' + search_term), Q.OR)
-            query_title.add(Q(title__icontains=search_term + ' '), Q.OR)
-            query_title.add(Q(title_original__iexact=search_term), Q.OR)
-            query_title.add(Q(title_original__icontains=' ' + search_term), Q.OR)
-            query_title.add(Q(title_original__icontains=search_term+ ' '), Q.OR)
-            query_title.add(Q(title_preferred__iexact=search_term), Q.OR)
-            query_title.add(Q(title_preferred__icontains=' ' + search_term), Q.OR)
-            query_title.add(Q(title_preferred__icontains=search_term+ ' '), Q.OR)
-
-        """
-        He quitado esto porque engorrina...
-
-        if TitleAka.objects.filter(query_title).all().count() > 0:
-            query_title = Q(title_akas__in=TitleAka.objects.filter(query_title))
-            if not contains_quote:
-                query_title.add(Q(title__icontains=search_term), Q.OR)
-            else:
-                query_title.add(Q(title__iexact=search_term), Q.OR)
-            # query_title.add(Q(title_akas__in=TitleAka.objects.filter(query_title)), Q.OR)
-            use_distinct = True
-        """
+            search_query = Q(title__iexact=search_term)
+            search_query.add(Q(title__icontains=' ' + search_term), Q.OR)
+            search_query.add(Q(title__icontains=search_term + ' '), Q.OR)
+            search_query.add(Q(title_original__iexact=search_term), Q.OR)
+            search_query.add(Q(title_original__icontains=' ' + search_term), Q.OR)
+            search_query.add(Q(title_original__icontains=search_term+ ' '), Q.OR)
+            search_query.add(Q(title_preferred__iexact=search_term), Q.OR)
+            search_query.add(Q(title_preferred__icontains=' ' + search_term), Q.OR)
+            search_query.add(Q(title_preferred__icontains=search_term+ ' '), Q.OR)
 
     if year:
-        query_title_new = Q(year=year)
+        search_query_new = Q(year=year)
         
-        if query_title:
-            query_title_new.add(query_title, Q.AND)
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
         
-        query_title = query_title_new
+        search_query = search_query_new
 
-    # TODO: mirar get_search_results en admin.py
     if director:
-        movie_ids = []
-        for mp in MoviePerson.objects.filter(person__pk=director, role=MoviePerson.RT_DIRECTOR).all():
-            movie_ids.append(mp.movie.id)
+        search_query_new = Q(directors__pk=director)
         
-        use_distinct = True
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
         
-        queryset = queryset.filter(id__in=movie_ids)
+        search_query = search_query_new
 
-    # FIXME: investigar... Puede ocurrir que no tenga title del todo?
-    # creo que no... pero por si aca :P
-    if not query_title:
-        return queryset, use_distinct if use_use_distinct else queryset
+    if genre:
+        search_query_new = Q(genres__pk=genre)
+        
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
 
-    # TODO: Se pueden hacer mas cosas para mejorar la busqueda... 
-    # buscar tags y generos... por ahora lo vamos a dejar asi
-    if use_use_distinct:
-        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title), use_distinct
-    else:
-        return queryset.filter(query_title).distinct() if use_distinct else queryset.filter(query_title)
+    if content_rating_system:
+        search_query_new = Q(content_rating_systems__pk=content_rating_system)
+        
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
+
+    if tag:
+        search_query_new = Q(tags__pk=tag)
+        
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
+
+    if user_tag:
+        search_query_new = Q(user_tags__pk=user_tag)
+        
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
+
+    if search_query:
+        queryset = queryset.filter(search_query)
+
+    return queryset.distinct() if use_use_distinct else queryset, use_use_distinct
 
 
 def extract_year(search_term):
@@ -205,13 +220,21 @@ def extract_year(search_term):
     
     return None, search_term
 
-def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, director=None):
+def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, director=None, user_tag=None):
     year, search_term = extract_year(search_term)
 
     if ELASTICSEARCH_DSL:
-        return populate_search_filter_dsl(queryset, search_term, use_use_distinct=use_use_distinct, genre=genre, content_rating_system=content_rating_system, tag=tag, year=year, director=director)
+        return populate_search_filter_dsl(queryset, search_term, 
+            use_use_distinct=use_use_distinct, genre=genre, 
+            content_rating_system=content_rating_system, tag=tag, 
+            year=year, director=director, user_tag=user_tag
+        )
 
-    return populate_search_filter_model(queryset, search_term, use_use_distinct, year=year, director=director)
+    return populate_search_filter_model(queryset, search_term, use_use_distinct, 
+        year=year, director=director, genre=genre, 
+        content_rating_system=content_rating_system, tag=tag, 
+        user_tag=user_tag
+    )
 
 def movie_search_filter(search_term):
     return populate_search_filter(Movie.objects, search_term)
