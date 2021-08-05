@@ -592,7 +592,14 @@ def get_last_items(model_class, num_items=6):
     
     last_items = []
     if all_objects.count() > 0:
-        last_items = Paginator(all_objects, num_items).get_page(1).object_list
+        # Esto es una cosa rarisima... en algunas situaciones object_list puede 
+        # ser un queryset, en vez de una lista, pero la misma pagina puede ser 
+        # tambien una lista... (raro de cojones) por ello recorremos el iterable
+        # para meter item a item en last_items
+        object_list = Paginator(all_objects, num_items).get_page(1).object_list
+
+        for o in object_list:
+            last_items.append(o)
 
     return last_items
 
