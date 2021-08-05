@@ -11,12 +11,15 @@ from .views import PersonDirectorJsonView
 
 from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
 
+"""
+Problemilla con la relacion de Movie -> MoviePerson
 class DirectorFilter(AutocompleteFilter):
     title = 'Director' # display title
     field_name = 'directors' # name of the foreign key field
 
     def get_autocomplete_url(self, request, model_admin):
         return reverse('admin:json_autocomplete_director_search')
+"""
 
 class ImdbCacheAdmin(admin.ModelAdmin):
     pass
@@ -88,7 +91,9 @@ class MovieAdmin(admin.ModelAdmin):
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
-    list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
+    # Problemilla con la relacion de Movie -> MoviePerson
+    # list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
+    list_filter = (TagListFilter, GenreListFilter, ContentRatingListFilter)
 
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results

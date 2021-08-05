@@ -144,16 +144,11 @@ class Movie(models.Model):
     # TODO: oops... esta relacion deberia ser one2many VVVV
     title_akas = models.ManyToManyField(TitleAka)
     # TODO: oops... esta relacion deberia ser one2many ^^^^
-    tags = models.ManyToManyField(Tag)
-    genres = models.ManyToManyField(GenreTag)
-    content_rating_systems = models.ManyToManyField(ContentRatingTag)
+    tags = models.ManyToManyField(Tag, blank=True)
+    genres = models.ManyToManyField(GenreTag, blank=True)
+    content_rating_systems = models.ManyToManyField(ContentRatingTag, blank=True)
 
-    user_tags = models.ManyToManyField(UserTag)
-
-    # Esto tiene miga... para mantener la relacion m2m a Person a traves de 
-    # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
-    # del proxy: MoviePersonDirectorProxy
-    directors = models.ManyToManyField(Person, through='MoviePersonDirectorProxy')
+    user_tags = models.ManyToManyField(UserTag, blank=True)
 
     countries = models.ManyToManyField(Country)
 
@@ -454,21 +449,6 @@ class MoviePerson(models.Model):
     class Meta:
         verbose_name = 'reparto'
         verbose_name_plural = 'repartos'
-
-# Manager y Proxy para las relaciones que se pudieran sacar
-# de directores solo (role=MoviePerson.RT_DIRECTOR), esto se hace
-# para simplificar este tipo de relaciones (ahora mismo se esta usando
-# para sacar directors en Movie)
-class MoviePersonDirectorManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(role=MoviePerson.RT_DIRECTOR)
-
-class MoviePersonDirectorProxy(MoviePerson):
-    class Meta:
-        proxy = True
-    
-    objects = MoviePersonDirectorManager()
-# ^^^^^^^^^^^^
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'
