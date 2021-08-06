@@ -1,8 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import gettext as _
 
-from data.models import Movie, TitleAka, ContentRatingTag, Person, Tag, GenreTag
+from data.models import Movie, TitleAka, ContentRatingTag, Person, Tag, GenreTag, UserTag
 from data.utils import Trace as trace
+
+from django.db import connection
 
 import csv
 
@@ -77,8 +79,10 @@ class Command(BaseCommand):
             if len(Movie.objects.all()) > 0:
                 trace.error("No podemos borrar todos los datos ya que aun existe peliculas.")
             else:
-                TitleAka.objects.all().delete()
-                ContentRatingTag.objects.all().delete()
-                Person.objects.all().delete()
-                Tag.objects.all().delete()
-                GenreTag.objects.all().delete()
+                cursor = connection.cursor()
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(TitleAka._meta.db_table))
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(ContentRatingTag._meta.db_table))
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(Person._meta.db_table))
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(Tag._meta.db_table))
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(GenreTag._meta.db_table))
+                cursor.execute('TRUNCATE TABLE "{0}"'.format(UserTag._meta.db_table))
