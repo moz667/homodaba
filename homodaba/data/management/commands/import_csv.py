@@ -260,10 +260,14 @@ class Command(BaseCommand):
         
         new_titles, title_akas = get_imdb_titles(ia_movie)
         
+        title_original = title_original if not title_original is None and title_original else None
+        if not title_original:
+            title_original = new_titles['title_original'] if 'title_original' in new_titles and new_titles['title_original'] else title
+
         # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
         local_movie = Movie.objects.create(
             title=new_titles['title'] if 'title' in new_titles and new_titles['title'] else title,
-            title_original=title_original if not title_original is None and title_original else new_titles['title_original'],
+            title_original=title_original,
             title_preferred=title_preferred if not title_preferred is None and title_preferred else new_titles['title_preferred'],
             imdb_id=ia_movie.getID(),
             kind=ia_movie['kind'],
