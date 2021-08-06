@@ -17,7 +17,7 @@
         <div style="overflow: hidden; text-overflow: ellipsis;" class="directors">
             <em>
                 {% for director in movie.get_directors %}
-                    <a href="{% url 'search_movies' %}?director={{ director.name }}">
+                    <a href="{% url 'search_movies' %}?director={{ director.name }}{% if director.imdb_id %} [{{ director.imdb_id }}]{% endif %}{% search_filters_as_url_args filters 'director' %}">
                         {{ director.name }}
                     </a>{% if not forloop.last %}, {% endif %}
                 {% endfor %}
@@ -46,24 +46,6 @@
             </p>
         </div>
 
-        {% comment %}
-        <div style="clear: both; padding-top: 1rem;" class="directors">
-            <strong class="d-block">Dirigida por:</strong>
-            {% for director in movie.get_directors %}
-                <a href="{% url 'search_movies' %}?director={{ director.name }}">
-                    {{ director.name }}
-                </a>{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </div>
-
-        <div class="countries">
-            <strong class="d-block">Original de:</strong>
-            {% for country in movie.countries.all %}
-                {{ country }}{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </div>
-        {% endcomment %}
-
         {% if movie.get_other_main_titles %}
             <div class="other-titles" style="clear: both; padding-top: 1rem;">
                 <strong class="d-block">Tambien conocida como:</strong>
@@ -81,7 +63,7 @@
             <div class="tag-cloud" style="clear: both; padding-top: 1rem;">
                 {% if movie.tags.all %}
                     {% for tag in movie.tags.all %}
-                        <a class="badge badge-success" href="{% url 'search_movies' %}?tag={{ tag }}">
+                        <a class="badge badge-success" href="{% url 'search_movies' %}?tag={{ tag }}{% search_filters_as_url_args filters 'tag' %}">
                             {{ tag }}
                         </a>
                     {% endfor %}
@@ -89,7 +71,7 @@
 
                 {% if movie.genres.all %}
                     {% for tag in movie.genres.all %}
-                        <a class="badge badge-info" href="{% url 'search_movies' %}?genre={{ tag }}">
+                        <a class="badge badge-info" href="{% url 'search_movies' %}?genre={{ tag }}{% search_filters_as_url_args filters 'genre' %}">
                             {{ tag }}
                         </a>
                     {% endfor %}
@@ -97,7 +79,7 @@
 
                 {% if movie.content_rating_systems.all %}
                     {% for tag in movie.content_rating_systems.all %}
-                        <a class="badge badge-danger" href="{% url 'search_movies' %}?cr_system={{ tag }}">
+                        <a class="badge badge-danger" href="{% url 'search_movies' %}?cr_system={{ tag }}{% search_filters_as_url_args filters 'cr_system' %}">
                             {{ tag }}
                         </a>
                     {% endfor %}
@@ -105,7 +87,7 @@
 
                 {% if movie.user_tags.all %}
                     {% for tag in movie.user_tags.all %}
-                        <a class="badge badge-user-tag" href="{% url 'search_movies' %}?user_tag={{ tag }}">
+                        <a class="badge badge-user-tag" href="{% url 'search_movies' %}?user_tag={{ tag }}{% search_filters_as_url_args filters 'user_tag' %}">
                             {{ tag }}
                         </a>
                     {% endfor %}

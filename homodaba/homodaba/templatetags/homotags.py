@@ -8,6 +8,20 @@ from data.models import get_or_create_user_tag
 register = template.Library()
 
 @register.simple_tag
+def search_filters_as_url_args(filters, exlude_filter):
+    url_args = []
+    if filters:
+        # Director es un poco tricky porque lleva el imdb_id
+        if filters['director'] and filters['director_query'] and exlude_filter != 'director':
+            url_args.append("&director=%s" % filters['director_query'])
+        
+        for key in ['tag', 'genre', 'cr_system', 'user_tag']:
+            if filters[key] and exlude_filter != key:
+                url_args.append("&%s=%s" % (key, filters[key]))
+
+    return ''.join(url_args)
+
+@register.simple_tag
 def movie_contain_user_tag(movie, user, tag_type):
     tag = get_or_create_user_tag(user, tag_type)
 

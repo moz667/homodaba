@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -25,7 +27,8 @@ def home(request):
 
 @login_required
 def search_movies(request):
-    director = get_director_filter(request, 'director', Person)
+    director = get_director_filter(request, 'director')
+
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
     cr_system = get_tag_filter(request, 'cr_system', ContentRatingTag)
@@ -62,6 +65,8 @@ def search_movies(request):
         'paginator': paginator,
         'filters': {
             'director': director.name if director else '',
+            'director_query': (director.name if director else '') + 
+                (" [%s]" % director.imdb_id if director and director.imdb_id else ''),
             'tag': tag.name if tag else '',
             'genre': genre.name if genre else '',
             'cr_system': cr_system.name if cr_system else '',
@@ -79,15 +84,28 @@ def get_tag_filter(request, request_key, class_tag):
     
     return tag_filter
 
-def get_director_filter(request, request_key, class_tag):
-    tag_filter = None
+def get_director_filter(request, request_key):
+    director_filter = None
     if request_key in request.GET.keys():
         if request.GET[request_key]:
-            tags = class_tag.objects.filter(name=request.GET[request_key], is_director=True).all()
-            if tags.count() > 0:
-                tag_filter = tags[0]
+            imdb_id = None
+            pattern = re.compile(".*\[([0-9]+)\]")
+            director_name = request.GET[request_key]
+
+            if pattern.search(director_name):
+                imdb_id = pattern.search(director_name).groups()[0]
+                director_name = director_name.replace("[%s]" % imdb_id, "").strip()
+
+            directors = []
+            if imdb_id:
+                directors = Person.objects.filter(name=director_name, imdb_id=imdb_id, is_director=True).all()
+            else:
+                directors = Person.objects.filter(name=director_name, is_director=True).all()
+
+            if directors.count() > 0:
+                director_filter = directors[0]
     
-    return tag_filter
+    return director_filter
 
 
 @login_required
