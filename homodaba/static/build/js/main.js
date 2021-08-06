@@ -10,7 +10,45 @@ $(document).ready(function () {
     }
 
     user_tag_switcher_init();
+    copy_storage_types_init();
+
+    window.setTimeout(resize_storage_types_info, 500);
 });
+
+function copy_storage_types_init() {
+    $(".storage-types textarea.storage-type-info").off("focus").on("focus", function () {
+        $(this).select();
+    });
+    
+    $(".storage-types .storage-type-item").each(function () {
+        var $btn_copy = $(this).find(".btn-copy");
+        var $textarea = $(this).find("textarea.storage-type-info");
+        var $btn_open_url = $(this).find(".btn-open-url");
+
+        $btn_copy.off("click").on("click", function () {
+            $textarea.focus();
+            $textarea.select();
+
+            try {
+                var successful = document.execCommand('copy');
+                var msg = successful ? 'successful' : 'unsuccessful';
+                console.log('Copying text command was ' + msg);
+              } catch (err) {
+                console.log('Oops, unable to copy');
+              }
+        });
+
+        $btn_open_url.off("click").on("click", function () {
+            window.open($btn_open_url.data("url"), '_blank');
+        });
+    });
+}
+
+function resize_storage_types_info() {
+    $(".storage-types textarea.storage-type-info").each(function () {
+        $(this).css("height", $(this).prop("scrollHeight") + 8 + "px");
+    });
+}
 
 function user_tag_switcher_init() {
     $(".user-tag-switcher").each(function () {

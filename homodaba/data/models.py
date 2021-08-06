@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from imdb.utils import KIND_MAP
 
-from homodaba.settings import HOMODABA_MINI_DETAILS, SMB_SHARE_2_URL
+from homodaba.settings import SMB_SHARE_2_URL
 
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
@@ -245,18 +245,6 @@ class Movie(models.Model):
         if storage_types.count() == 0:
             return ''
 
-        html = '<ul class="storage-types">'
-        for st in storage_types:
-            html = html + format_html('<li>{}</li>', st if not HOMODABA_MINI_DETAILS else st.str_mini())
-        html = html + '</ul>'
-        return mark_safe(html)
-    get_storage_types_html.short_description = 'Medios'
-
-    def get_min_storage_types_html(self):
-        storage_types = self.get_storage_types()
-        if storage_types.count() == 0:
-            return ''
-
         others = []
         # drives = {}
         net_shares = {}
@@ -316,33 +304,6 @@ class Movie(models.Model):
         return mark_safe(html)
     get_storage_types_html.short_description = 'Medios'
 
-    def get_the_ids(self):
-        return  mark_safe("""
-        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem; max-width: 10vw;">
-            db: %s / imdb: %s
-        </div>
-        """ % (self.id, self.imdb_id if self.imdb_id else ''))
-    get_the_ids.short_description = 'IDS'
-
-    def get_mini_detail_html(self):
-        html = format_html("""
-                <div style="text-align:center">
-                <strong style="margin-bottom: 0.2rem; display: block;">{}</strong>
-                <em style="margin-bottom: 0.5rem; display: block;">{}</em>
-                {}
-                </div>
-                <div style="margin-top: 0.5em;">{}</div>
-                {}
-        """, 
-            self.title,
-            ("(%s)" % self.get_directed_by()), 
-            self.get_poster_thumbnail_img(), 
-            self.get_other_titles_html(), 
-            self.get_min_storage_types_html()
-        )
-        return mark_safe(html)
-    get_mini_detail_html.short_description = 'Detalle'
-
     def get_storage_types_html_tg(self):
         storage_types = self.get_storage_types()
         if storage_types.count() == 0:
@@ -350,7 +311,7 @@ class Movie(models.Model):
 
         html = '<pre>'
         for st in storage_types:
-            html = html + format_html('    * {}\n', st if not HOMODABA_MINI_DETAILS else st.str_mini() )
+            html = html + format_html('    * {}\n', st)
         html = html + '</pre>\n'
         return mark_safe(html)
     get_storage_types_html_tg.short_description = 'Medios (para telegram)'
@@ -392,43 +353,12 @@ class Movie(models.Model):
         return mark_safe(html)
     get_main_titles_html.short_description = 'Titulos'
 
-    def get_other_titles_html(self):
-        main_titles = self.get_main_titles()
-        html = ''
-        for key in main_titles.keys():
-            item_title = main_titles[key]
-
-            if key != 'title' and item_title['value'] != self.title:
-                html = html + format_html(
-                    """
-                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 0.5rem;">
-                        {} 
-                        <span style="background-color: #44B78B; color: #FFF; padding: 0.2rem 0.2rem; border-radius: 0.5rem; display:inline-block;">
-                            {}
-                        </span>
-                    </div>
-                    """, 
-                    item_title['value'], 
-                    item_title['short_name']
-                )
-        return mark_safe(html)
-    get_other_titles_html.short_description = 'Titulos'
-
-
-    def get_storage_types_text(self):
-        storage_types = self.get_storage_types()
-        if storage_types.count() == 0:
-            return ''
-
-        return ' * '.join([(st.__str__() if not HOMODABA_MINI_DETAILS else st.str_mini()) + '\n' for st in storage_types])
-
     def get_countries_as_text(self):
         cc = []
         for c in self.countries.all():
             cc.append(c.name)
         
         return ', '.join(cc)
-        
 
     class Meta:
         verbose_name = "película"

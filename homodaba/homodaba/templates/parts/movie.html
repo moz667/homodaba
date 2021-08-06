@@ -98,31 +98,23 @@
     <div class="card-footer">
         <div class="storage-types">
             {% if movie.get_storage_types %}
-                <strong class="d-block">Medios:</strong>
-
-                <ul>
                 {% for st in movie.get_storage_types %}
-                    <li class="storage-type-{{ st.storage_type }}">
-                        {% if st.is_original %}
-                            <span class="original">{{ st.storage_type }}</path>
-                        {% endif %}
-                        {% if st.is_drive %}
-                            <span class="drive">{{ st.name }}</path>
-                        {% endif %}
-                        {% if st.is_net_share or st.is_drive %}
-                            <span class="path">
-                                {% if st.get_url_to_storage_type %}
-                                    <a href="{{ st.get_url_to_storage_type }}">
-                                        {{ st.path }}
-                                    </a>
-                                {% else %}
-                                    {{ st.path }}
-                                {% endif %}
-                            </path>
-                        {% endif %}
-                    </li>
+                    <div style="" class="storage-type-item storage-type-{{ st.storage_type }}">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <button class="btn-copy btn btn-primary btn-sm{% if st.is_original %} disabled{% endif %}">
+                                    <em class="mdi mdi-content-copy"> </em>
+                                </button>
+                            </div>
+                            <textarea readonly="readonly" class="form-control storage-type-info">{% if st.is_original %}{{ st.storage_type }}{% endif %}{% if st.is_drive %}{{ st.name }}{% endif %}{% if st.is_net_share or st.is_drive %}{{ st.path }}{% endif %}</textarea>
+                            <div class="input-group-append">
+                                <button class="btn-open-url btn btn-primary btn-sm{% if not st.get_url_to_storage_type %} disabled{% endif %}" data-url="{% if st.get_url_to_storage_type %}{{ st.get_url_to_storage_type }}{% endif %}">
+                                    <em class="mdi mdi-link"> </em>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
-                </ul>
             {% else %}
                 <div class="alert alert-warning" role="alert">
                     No hay medios de almacenamiento para esta pelicula.

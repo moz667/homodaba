@@ -9,7 +9,7 @@ from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag,
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
-from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
+from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE
 
 # Problemilla con la relacion de Movie -> MoviePerson
 class DirectorFilter(AutocompleteFilter):
@@ -81,11 +81,7 @@ class ContentRatingListFilter(CustomAbstractTagListFilter):
 
 
 class MovieAdmin(admin.ModelAdmin):
-    if HOMODABA_MINI_DETAILS:
-        list_display = ('get_the_ids', 'get_mini_detail_html', 'year', 'rating',)
-        # list_display = ('get_the_ids', 'get_main_titles_html', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_storage_types_html', 'rating',)
-    else:
-        list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_main_titles_html', 'get_min_storage_types_html', 'rating',)
+    list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_main_titles_html', 'get_storage_types_html', 'rating',)
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
