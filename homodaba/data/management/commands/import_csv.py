@@ -351,6 +351,12 @@ class Command(BaseCommand):
                 person=d,
                 role=MoviePerson.RT_DIRECTOR
             )
+            # Tambien lo damos de alta en el m2m de directors:
+            local_movie.directors.add(d)
+        
+        if len(directors) > 0:
+            # Tenemos que guardar si habia directors:
+            local_movie.save()
 
         for w in writers:
             MoviePerson.objects.create(

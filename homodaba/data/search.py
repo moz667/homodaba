@@ -156,11 +156,7 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
         search_query = search_query_new
 
     if director:
-        movie_ids = []
-        for mp in MoviePerson.objects.filter(person__pk=director, role=MoviePerson.RT_DIRECTOR).all():
-            movie_ids.append(mp.movie.id)
-        
-        search_query_new = Q(id__in=movie_ids)
+        search_query_new = Q(directors__pk=director)
 
         if search_query:
             search_query_new.add(search_query, Q.AND)

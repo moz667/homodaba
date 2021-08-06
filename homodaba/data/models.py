@@ -147,13 +147,14 @@ class Movie(models.Model):
 
     user_tags = models.ManyToManyField(UserTag, blank=True)
 
-    """
-    Problemilla con la relacion de Movie -> MoviePerson
-    # Esto tiene miga... para mantener la relacion m2m a Person a traves de 
-    # MoviePerson, por ser un modelo a medida, se tiene que hacer a traves
-    # del proxy: MoviePersonDirectorProxy
-    directors = models.ManyToManyField(Person, through='MoviePersonDirectorProxy', blank=True)
-    """
+    # FIXME: No soy capaz de hacer que funcione la relacion
+    # ManyToMany con MoviePerson, asi que por ahora vamos a crear
+    # Una relacion distinta para directores.
+    # mas info en utils/n2m_filter
+    # Por ahora lo que vamos a hacer es tener otra tabla en la que esten solo
+    # los directores (no se muy bonito tener los datos duplicados, pero es la 
+    # mejor forma que veo para que directors se comporte como deberia)
+    directors = models.ManyToManyField(Person, blank=True)
 
     countries = models.ManyToManyField(Country)
 
@@ -454,24 +455,6 @@ class MoviePerson(models.Model):
     class Meta:
         verbose_name = 'reparto'
         verbose_name_plural = 'repartos'
-
-"""
-Problemilla con la relacion de Movie -> MoviePerson
-# Manager y Proxy para las relaciones que se pudieran sacar
-# de directores solo (role=MoviePerson.RT_DIRECTOR), esto se hace
-# para simplificar este tipo de relaciones (ahora mismo se esta usando
-# para sacar directors en Movie)
-class MoviePersonDirectorManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(role=MoviePerson.RT_DIRECTOR)
-
-class MoviePersonDirectorProxy(MoviePerson):
-    objects = MoviePersonDirectorManager()
-
-    class Meta:
-        proxy = True
-# ^^^^^^^^^^^^
-"""
 
 class MovieStorageType(models.Model):
     ST_DRIVE = 'hard-drive'

@@ -9,17 +9,15 @@ from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag,
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
-from homodaba.settings import ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
+from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE, HOMODABA_MINI_DETAILS
 
-"""
-Problemilla con la relacion de Movie -> MoviePerson
+# Problemilla con la relacion de Movie -> MoviePerson
 class DirectorFilter(AutocompleteFilter):
     title = 'Director' # display title
     field_name = 'directors' # name of the foreign key field
 
     def get_autocomplete_url(self, request, model_admin):
         return reverse('admin:json_autocomplete_director_search')
-"""
 
 class ImdbCacheAdmin(admin.ModelAdmin):
     pass
@@ -91,13 +89,11 @@ class MovieAdmin(admin.ModelAdmin):
     
     # TODO: Pensar que hacemos con title_akas
     exclude = ('title_akas',)
-    # Problemilla con la relacion de Movie -> MoviePerson
-    # list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
-    list_filter = (TagListFilter, GenreListFilter, ContentRatingListFilter)
+    list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
 
     # Lo ponemos para que saque la caja de texto pero la busqueda
     # la hacemos manualmente en get_search_results
-    search_fields = ('title', 'title_original', 'title_preferred')
+    search_fields = ('title', 'title_original', 'title_preferred',)
 
     list_per_page = ADMIN_MOVIE_LIST_PER_PAGE
 
@@ -113,54 +109,38 @@ class MovieAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def get_search_results(self, request, queryset, search_term):
-        director_filter = None
-        # TODO: Cuando buscamos por director sin search term tampoco podemos tirar de 
-        # la queryset ya que lo hace mal...
-        # Esto es un fallo de como esta definido el proxy directors en Movie o
-        # algo que hace mal django... npi...
-        # Para solucionarlo lo que hacemos es buscar los ids a pelo de la peli en los que
-        # el director es realmente ese y filtramos por ese id... 
-        # Ejemplos que cascan:
-        #   "Richard Donner", saca 4 pelis si no filtramos por  id ya que sale en otra
-        #   peli en otro papel que no es director... :P
-        if 'directors__pk__exact' in request.GET.keys():
-            if request.GET['directors__pk__exact']:
-                director_filter = int(request.GET['directors__pk__exact'])
-                """
-                movie_ids = []
-                for mp in MoviePerson.objects.filter(person__pk=director_filter, role=MoviePerson.RT_DIRECTOR).all():
-                    movie_ids.append(mp.movie.id)
-                
-                queryset = queryset.filter(id__in=movie_ids)
-                # print(queryset.query)
-                # print(dir(queryset))
-                # print(movie_ids)
-                """
-
         # Si No hay terminos de busqueda devolvemos el queryset tal como esta
         if not search_term:
             # Hace un distinct() porque las busquedas con el filtro de director
             # devolvia duplicados
             return queryset.distinct(), False
 
-        # OJO: Esto es solo para DSL VVVVV
-        genre_filter = None
-        if 'genre' in request.GET.keys():
-            if request.GET['genre']:
-                genre_filter = int(request.GET['genre'])
-        
-        crs_filter = None
-        if 'crs' in request.GET.keys():
-            if request.GET['crs']:
-                crs_filter = int(request.GET['crs'])
+        # OJO: Esto deberia ser necesario para ElasticSearch VVVVV
+        if ELASTICSEARCH_DSL:
+            genre_filter = None
+            if 'genre' in request.GET.keys():
+                if request.GET['genre']:
+                    genre_filter = int(request.GET['genre'])
+            
+            crs_filter = None
+            if 'crs' in request.GET.keys():
+                if request.GET['crs']:
+                    crs_filter = int(request.GET['crs'])
 
-        tag_filter = None
-        if 'tag' in request.GET.keys():
-            if request.GET['tag']:
-                tag_filter = int(request.GET['tag'])
-        # OJO: Esto es solo para DSL ^^^^
-        
-        return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter, director=director_filter)
+            tag_filter = None
+            if 'tag' in request.GET.keys():
+                if request.GET['tag']:
+                    tag_filter = int(request.GET['tag'])
+
+            director_filter = None
+            if 'directors__pk__exact' in request.GET.keys():
+                if request.GET['directors__pk__exact']:
+                    director_filter = int(request.GET['directors__pk__exact'])
+            
+            return populate_search_filter(queryset, search_term, use_use_distinct=True, genre=genre_filter, content_rating_system=crs_filter, tag=tag_filter, director=director_filter)
+        # OJO: Esto deberia ser necesario para ElasticSearch ^^^^
+
+        return populate_search_filter(queryset, search_term, use_use_distinct=True)
 
     # form = MovieForm
 admin.site.register(Movie, MovieAdmin)
