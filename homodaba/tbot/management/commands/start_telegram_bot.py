@@ -182,7 +182,8 @@ de datos (actualmente "%s") """ % self.home_name)
         if search_term:
             search_term = search_term[len('/search'):].strip() if search_term.startswith('/search') else search_term
             
-            movies = movie_search_filter(search_term).order_by('title').all()
+            movies, use_distinct = movie_search_filter(search_term)
+            movies = movies.order_by('title').all()
 
             if movies.count() == 0:
                 update.message.reply_text("""No encontramos películas con el término "%s".""" % search_term)
