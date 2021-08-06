@@ -25,7 +25,7 @@ def home(request):
 
 @login_required
 def search_movies(request):
-    director = get_tag_filter(request, 'director', Person)
+    director = get_director_filter(request, 'director', Person)
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
     cr_system = get_tag_filter(request, 'cr_system', ContentRatingTag)
@@ -74,6 +74,16 @@ def get_tag_filter(request, request_key, class_tag):
     if request_key in request.GET.keys():
         if request.GET[request_key]:
             tags = class_tag.objects.filter(name=request.GET[request_key]).all()
+            if tags.count() > 0:
+                tag_filter = tags[0]
+    
+    return tag_filter
+
+def get_director_filter(request, request_key, class_tag):
+    tag_filter = None
+    if request_key in request.GET.keys():
+        if request.GET[request_key]:
+            tags = class_tag.objects.filter(name=request.GET[request_key], is_director=True).all()
             if tags.count() > 0:
                 tag_filter = tags[0]
     
