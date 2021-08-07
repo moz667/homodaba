@@ -8,6 +8,8 @@ $(document).ready(function () {
         $("#main-navbar ." + body_classes[i]).addClass("active");
     }
 
+    $('[data-toggle="tooltip"]').tooltip();
+
     user_tag_switcher_init();
     copy_storage_types_init();
 
@@ -31,11 +33,14 @@ $(document).ready(function () {
         history: false,
     });
 
-    infScroll.on( 'append', function( body, path, items, response ) {
-        user_tag_switcher_init();
-        copy_storage_types_init();
-        resize_storage_types_info_init();
-    });
+    if (infScroll) {
+        $(".pagination").hide();
+        infScroll.on( 'append', function( body, path, items, response ) {
+            user_tag_switcher_init();
+            copy_storage_types_init();
+            resize_storage_types_info_init();
+        });
+    }
 });
 
 function copy_storage_types_init() {

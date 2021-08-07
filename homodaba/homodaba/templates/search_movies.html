@@ -90,6 +90,7 @@
             </div>
         </div>
 
+        {% comment %}
         <!-- status elements -->
         <div class="scroller-status">
             <div class="infinite-scroll-request loader-ellips">
@@ -99,6 +100,7 @@
                 <p class="infinite-scroll-last">No hay mas películas para la búsqueda actual.</p>
             {% endif %}
         </div>
+        {% endcomment %}
 
         {% if next_page %}
             <div style="padding-bottom: 2rem;" class="pagination">
