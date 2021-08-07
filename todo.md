@@ -31,6 +31,7 @@
 1. [X] ~~Borrar tablas con truncate en vez de delete (ver delete_all_movies.py)~~
 1. [X] ~~Generar tags por las decadas~~
 1. [ ] Tag de usuario para marcar pelis vistas
+1. [ ] Como comprobamos que un medio ha sido eliminado?
 
 ### Diseño
 1. [X] ~~Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)~~
@@ -48,6 +49,8 @@
 1. [ ] Posibilidad de alamacenar el tamaño del medio (interesante para re-ripear)
 
 ### Cache
+1. [ ] Sacar la cache y ponerlo en una app a parte. Quizas, opcionalmente, usar una bbdd alternativa para la cache
+1. [ ] Cachear las imagenes de las portadas?
 1. [ ] Poner fecha de caducidad a la cache (ImdbCache)
 1. [ ] quitar los raw de la base de datos (con la cache yo creo que nos basta) (esto nos obliga a quitar los sample_XXX.py de data/management/commands)
 1. [ ] Hacer algun comando para regenerar la cache (igual aplicarlo en el optimize_db)
