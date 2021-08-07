@@ -5,10 +5,10 @@ from django.utils.text import slugify
 
 
 from data.models import Movie, TitleAka, MoviePerson, Tag
-from data.models import get_first_or_create_tag, get_or_create_country
+from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import trace
-from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles, populate_movie_auto_tags
+from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles
 
 import csv
 import re
