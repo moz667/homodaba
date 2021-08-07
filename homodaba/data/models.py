@@ -8,6 +8,8 @@ from imdb.utils import KIND_MAP
 
 from homodaba.settings import SMB_SHARE_2_URL
 
+from data.utils import trace
+
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
     search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
@@ -528,3 +530,30 @@ def get_or_create_user_tag(current_user, tag_type):
     return UserTag.objects.create(
         name=tag_name
     )
+
+
+def populate_movie_auto_tags(movie):
+    tag = None
+
+    if not movie.year:
+        tag = 'no year'
+    elif movie.year < 1910:
+        tag = 'old'
+    # 10s 20s 30s ... 90s
+    elif movie.year < 2000:
+        tag = str((int(movie.year / 10) * 10) - 1900) + 's'
+    # Caso especial 2000-2009
+    elif movie.year < 2010:
+        tag = '2k'
+    # El resto ya la decada del year
+    else:
+        tag = str(int(movie.year / 10) * 10)
+    
+    db_tag = get_first_or_create_tag(
+        Tag, name=tag
+    )
+
+    if not db_tag in movie.tags.all():
+        trace.debug(" * Añadiendo tag '%s'." % tag)
+        movie.tags.add(db_tag)
+        movie.save()

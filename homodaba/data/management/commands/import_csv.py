@@ -4,7 +4,7 @@ from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag
+from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
 from data.utils import Trace as trace
 from data.utils.imdbpy_facade import facade_search, get_imdb_titles
@@ -132,6 +132,8 @@ class Command(BaseCommand):
             imdb_id=cd['imdb_id'],
         )
 
+        tags = r['tags'].split(',') if 'tags' in r and r['tags'] else []
+
         if not facade_result:
             trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
@@ -153,6 +155,24 @@ class Command(BaseCommand):
                     version=cd['version'], 
                 )
 
+                # Puede ocurrir, cuando se trata de un nuevo storage, que lleve nuevas 
+                # tags (por ejemplo, una version extendida de una peli, 3D...)
+                if len(tags):
+                    tagged = False
+
+                    for tag in tags:
+                        db_tag = get_first_or_create_tag(
+                            Tag, name=tag
+                        )
+
+                        if not db_tag in facade_result.movie.tags.all():
+                            tagged = True
+                            facade_result.movie.tags.add(db_tag)
+                    
+                    if tagged:
+                        facade_result.movie.save()
+
+                populate_movie_auto_tags(facade_result.movie)
             return facade_result.movie
        
         trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
@@ -160,11 +180,11 @@ class Command(BaseCommand):
         local_movie = self.insert_movie(
             r['title'],
             facade_result.movie, 
-            tags=r['tags'].split(',') if 'tags' in r and r['tags'] else [],
+            tags=tags,
             title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
             title_preferred=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None,
         )
-        
+
         self.get_or_insert_storage(
             movie=local_movie, 
             is_original=cd['is_original'], 
@@ -349,6 +369,8 @@ class Command(BaseCommand):
 
         if tagged:
             local_movie.save()
+
+        populate_movie_auto_tags(local_movie)
 
         # 2.4) Damos de alta las relaciones entre peliculas y personas de todas las recuperadas antes (directores, escritores, casting...)
         for d in directors:

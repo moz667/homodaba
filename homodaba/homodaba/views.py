@@ -60,8 +60,6 @@ def search_movies(request):
     if 'page' in request.GET.keys():
         current_page = int(request.GET['page'])
 
-    print(dir(paginator))
-
     return render(request, 'search_movies.html',context={
         'search_movies': paginator.get_page(current_page).object_list,
         'search_term': search_term,

@@ -3,8 +3,7 @@
 ### Bugs
 1. [X] ~~ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)~~
 1. [X] ~~Busqueda por año~~
-1. [ ] no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv
-
+1. [X] ~~no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv~~
 
 ### General
 1. [ ] Documentar en general (uff... que pereza  ^ _ ^)
@@ -16,8 +15,8 @@
 1. [X] ~~link a imdb en la carátula~~
 1. [X] ~~quitar ultimos medios (tiene una utilidad puntual)~~
 1. [X] ~~titulo original mal en algunas pelis
-1. [ ] Paginacion en busquedas (con infinite)
-1. [ ] Ordenacion de resultados
+1. [X] ~~Paginacion en busquedas (con infinite)~~
+1. [X] ~~Ordenacion de resultados~~
 
 ### Funcionalidad
 1. [X] ~~Escaneo de directorios para buscar nuevos o seguir usando csvs?~~
@@ -30,7 +29,7 @@
 1. [X] ~~marcar para ver mas tarde (con tag que sea XXX-nombre de user)~~
 1. [ ] Transcoding / Download
 1. [X] ~~Borrar tablas con truncate en vez de delete (ver delete_all_movies.py)~~
-1. [ ] Generar tags por las decadas
+1. [X] ~~Generar tags por las decadas~~
 1. [ ] Tag de usuario para marcar pelis vistas
 
 ### Diseño
