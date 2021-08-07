@@ -17,7 +17,7 @@
         <div style="overflow: hidden; text-overflow: ellipsis;" class="directors">
             <em>
                 {% for director in movie.get_directors %}
-                    <a href="{% url 'search_movies' %}?director={{ director.name }}&order_by={{ order_by }}{% if director.imdb_id %} [{{ director.imdb_id }}]{% endif %}{% search_filters_as_url_args filters 'director' %}">
+                    <a href="{% url 'search_movies' %}?director={{ director.name }}{% if director.imdb_id %} [{{ director.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'director' %}">
                         {{ director.name }}
                     </a>{% if not forloop.last %}, {% endif %}
                 {% endfor %}
@@ -36,7 +36,7 @@
         <div class="plot-and-image">
             <div style="max-width: 50%; margin-right: 1rem; position: relative; border:1px solid rgba(0, 0, 0, 0.125)" class="img-fluid float-left" >
                 <span style="position: absolute; right: 0.3rem; top: 0.3rem;" class="badge badge-primary">{{ movie.rating }}</span>
-                <a href="{{ movie.get_imdb_url }}" target="_blank">
+                <a href="{{ movie.get_imdb_url }}" target="_blank" ref="noopener noreferrer">
                     <img class="img-fluid float-left" 
                         src="{{ movie.clean_poster_thumbnail_url }}" alt="{{ movie.get_the_main_title }}" />
                 </a>

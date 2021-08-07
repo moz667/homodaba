@@ -221,7 +221,7 @@ def extract_year(search_term):
             min_year = list(Movie.objects.aggregate(Min('year')).values())[0]
             
             if year >= min_year and year <= max_year:
-                search_term = re.compile(' \(.*').sub('', search_term).strip()
+                search_term = re.compile('\(.*').sub('', search_term).strip()
                 return year, search_term
     
     return None, search_term

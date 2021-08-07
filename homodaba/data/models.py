@@ -230,7 +230,7 @@ class Movie(models.Model):
 
     def get_poster_thumbnail_img(self):
         return format_html(
-            '<a href="{}" target="_blank" class="modal-photo"><img src="{}" alt="{}" /></a>',
+            '<a href="{}" target="_blank" class="modal-photo" ref="noopener noreferrer"><img src="{}" alt="{}" /></a>',
             self.get_imdb_url(),
             self.clean_poster_thumbnail_url(),
             self.title,

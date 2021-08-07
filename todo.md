@@ -1,10 +1,10 @@
 ## Pendientes
 
 ### Bugs
-1. [ ] ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)
-1. [ ] Busqueda por año
-1. [ ] Generar tags por las decadas
-1. [ ] Tag de usuario para marcar pelis vistas
+1. [X] ~~ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)~~
+1. [X] ~~Busqueda por año~~
+1. [ ] no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv
+
 
 ### General
 1. [ ] Documentar en general (uff... que pereza  ^ _ ^)
@@ -30,6 +30,8 @@
 1. [X] ~~marcar para ver mas tarde (con tag que sea XXX-nombre de user)~~
 1. [ ] Transcoding / Download
 1. [X] ~~Borrar tablas con truncate en vez de delete (ver delete_all_movies.py)~~
+1. [ ] Generar tags por las decadas
+1. [ ] Tag de usuario para marcar pelis vistas
 
 ### Diseño
 1. [X] ~~Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)~~

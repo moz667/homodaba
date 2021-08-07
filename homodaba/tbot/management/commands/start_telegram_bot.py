@@ -73,7 +73,7 @@ de datos (actualmente "%s") """ % self.home_name)
 """)
 
     def get_movie_detail_mini_html(self, movie):
-        s = format_html('<b>id:{}</b> <a href="{}"><i>{}</i></a>\n',
+        s = format_html('<b>id:{}</b> <a href="{}" ref="noopener noreferrer"><i>{}</i></a>\n',
             movie.id, 
             'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
             movie.get_complete_title()
@@ -85,7 +85,7 @@ de datos (actualmente "%s") """ % self.home_name)
 
     def get_person_row_html(self, person):
         if person.imdb_id:
-            return ' * <a href="%s">%s</a>\n' % (
+            return ' * <a href="%s" ref="noopener noreferrer">%s</a>\n' % (
                 person.get_imdb_url(),
                 person,
             )
@@ -110,7 +110,7 @@ de datos (actualmente "%s") """ % self.home_name)
         return s
 
     def get_movie_detail_html(self, movie):
-        s = '<b>id:%s</b> <a href="%s"><i>%s</i></a>\n' % (
+        s = '<b>id:%s</b> <a href="%s" ref="noopener noreferrer"><i>%s</i></a>\n' % (
             str(movie.id), 
             'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
             movie.get_complete_title()

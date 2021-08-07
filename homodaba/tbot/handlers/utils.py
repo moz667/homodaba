@@ -15,7 +15,7 @@ def get_movie_detail_mini_html(movie):
 
 def get_person_row_html(person):
     if person.imdb_id:
-        return ' * <a href="%s">%s</a>\n' % (
+        return ' * <a href="%s" ref="noopener noreferrer">%s</a>\n' % (
             person.get_imdb_url(),
             person,
         )
