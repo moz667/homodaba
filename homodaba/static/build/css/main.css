@@ -83,4 +83,15 @@ body.login-page {
   color: #fff;
   background-color: magenta; }
 
+/* Pages */
+/* Busqueda de paginas .search-movies-page */
+body.search-movies-page .search-mini-form {
+  display: none; }
+
+@media (max-width: 800px) {
+  body.search-movies-page .search-controls .input-group-prepend {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem; } }
+
 /*# sourceMappingURL=main.css.map */

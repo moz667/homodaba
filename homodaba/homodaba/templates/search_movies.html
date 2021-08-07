@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
 
+{% load homotags %}
+
 {% block title %}Buscador de peliculas{% endblock %}
 
 {% block body_class %}search-movies-page{% endblock %}
 
 {% block main_block %}
-    {# with "?search_term="|add:search_term|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url #}
+    {# with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url #}
     <div class="my-3 p-3">
         <h1>Buscador de películas</h1>
         <div class="alert alert-primary" role="alert">
@@ -17,36 +19,49 @@
                 <input type="hidden" name="user_tag" value="{{ filters.user_tag }}" />
 
                 {% if filters.director %}
-                    {% with "?search_term="|add:search_term|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
                         {% include "inc/filter_tag.html" with tag=filters.director badge_style='dark' remove_url=remove_tag_url %}
                     {% endwith %}
                 {% endif %}
 
                 {% if filters.tag %}
-                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director_query|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
                         {% include "inc/filter_tag.html" with tag=filters.tag badge_style='success' remove_url=remove_tag_url %}
                     {% endwith %}
                 {% endif %}
 
                 {% if filters.genre %}
-                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
                         {% include "inc/filter_tag.html" with tag=filters.genre badge_style='info' remove_url=remove_tag_url %}
                     {% endwith %}
                 {% endif %}
 
                 {% if filters.cr_system %}
-                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
+                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
                         {% include "inc/filter_tag.html" with tag=filters.cr_system badge_style='danger' remove_url=remove_tag_url %}
                     {% endwith %}
                 {% endif %}
 
                 {% if filters.user_tag %}
-                    {% with "?search_term="|add:search_term|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system as remove_tag_url %}
+                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system as remove_tag_url %}
                         {% include "inc/filter_tag.html" with tag=filters.user_tag badge_style='user-tag' remove_url=remove_tag_url %}
                     {% endwith %}
                 {% endif %}
 
-                <div class="input-group my-3">
+                <div class="search-controls input-group my-3">
+                    <div class="input-group-prepend">
+                        <select class="select-order-by form-control" name="order_by">
+                            <option value="">Ordenado...</option>
+                            <option value="-id"{% if order_by == '-id' %} selected="selected"{% endif %}>... de mas nuevo a mas viejo</option>
+                            <option value="id"{% if order_by == 'id' %} selected="selected"{% endif %}>... de mas viejo a mas nuevo</option>
+                            <option value="-year"{% if order_by == '-year' %} selected="selected"{% endif %}>... por año (descendente)</option>
+                            <option value="year"{% if order_by == 'year' %} selected="selected"{% endif %}>... por año (ascendente)</option>
+                            <option value="title"{% if order_by == 'title' %} selected="selected"{% endif %}>... por titulo internacional</option>
+                            <option value="title_original"{% if order_by == 'title_original' %} selected="selected"{% endif %}>... por titulo original</option>
+                            <option value="title_preferred"{% if order_by == 'title_preferred' %} selected="selected"{% endif %}>... por titulo en español</option>
+                        </select>
+                    </div>
+                    
                     <input name="search_term" value="{{ search_term }}" type="text" class="form-control" placeholder="Términos a buscar..." aria-label="Términos a buscar" aria-describedby="basic-addon2">
                     <div class="input-group-append">
                         <button class="btn btn-primary" type="submit">Buscar</button>
@@ -57,22 +72,46 @@
     </div>
 
     {% if search_movies %}
-        <div class="later-movies mb-5">
+        <div class="search-results-wrap mb-5">
             <h4 class="border-bottom border-gray pb-2 mb-0">Resultados de la busqueda</h4>
             
-            <div class="card-deck">
+            <div class="results alert alert-info">
+                {% if paginator.count == 1 %}
+                    Se ha encontrado solo una película con esos criterios de búsqueda.
+                {% else %}
+                    {{ paginator.count }} peliculas encontradas.
+                {% endif %}
+            </div>
+
+            <div class="search-results card-deck">
                 {% for movie in search_movies %}
                     {% include "parts/movie.html" with movie=movie %}
                 {% endfor %}
             </div>
         </div>
 
-        <h4>TODO: Paginacion</h4>
+        <!-- status elements -->
+        <div class="scroller-status">
+            <div class="infinite-scroll-request loader-ellips">
+            ...
+            </div>
+            {% if not next_page %}
+                <p class="infinite-scroll-last">No hay mas películas para la búsqueda actual.</p>
+            {% endif %}
+        </div>
+
         {% if next_page %}
-            {{ next_page }}
+            <div style="padding-bottom: 2rem;" class="pagination">
+                <a class="pagination__next btn btn-primary btn-block" 
+                    href="?search_term={{ search_term }}&page={{ next_page }}&order_by={{ order_by }}{% search_filters_as_url_args filters '' %}">
+                    Siguiente página
+                </a>
+            </div>
         {% endif %}
     {% else %}
-        No se han encontrado resultados.
+        <div class="alert alert-warning">
+            No se ha encontrado películas con esos criterios de búsqueda.
+        </div>
     {% endif %}
 
 {% endblock %}

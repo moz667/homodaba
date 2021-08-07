@@ -47,19 +47,25 @@ def search_movies(request):
         use_use_distinct=True
     )
 
-    order_by = '-id'
-    if 'order_by' in request.GET.keys():
-        order_by = request.GET['order_by']
+    order_by = ['-id']
+    if 'order_by' in request.GET.keys() and request.GET['order_by']:
+        order_by = (request.GET['order_by'], )
 
-    paginator = Paginator(search_movies.all().order_by(order_by), per_page=12)
+        if not order_by[0] in ['id', '-id']:
+            order_by = (order_by[0], 'id')
+
+    paginator = Paginator(search_movies.all().order_by(*order_by), per_page=12)
 
     current_page = 1
     if 'page' in request.GET.keys():
         current_page = int(request.GET['page'])
 
+    print(dir(paginator))
+
     return render(request, 'search_movies.html',context={
         'search_movies': paginator.get_page(current_page).object_list,
         'search_term': search_term,
+        'order_by': request.GET['order_by'] if 'order_by' in request.GET.keys() else '',
         'current_page': current_page,
         'next_page': current_page + 1 if paginator.num_pages > current_page else None,
         'paginator': paginator,

@@ -12,7 +12,31 @@ $(document).ready(function () {
     user_tag_switcher_init();
     copy_storage_types_init();
 
-    window.setTimeout(resize_storage_types_info, 500);
+    window.setTimeout(resize_storage_types_info_init, 500);
+
+    // init Infinite Scroll
+    /*
+    $('.search-results').infiniteScroll({
+        path: '.pagination__next',
+        append: '.movie-item',
+        status: '.scroller-status',
+        hideNav: '.pagination',
+    });
+    */
+
+    var elem = document.querySelector('.search-results');
+    var infScroll = new InfiniteScroll( elem, {
+        // options
+        path: '.pagination__next',
+        append: '.movie-item',
+        history: false,
+    });
+
+    infScroll.on( 'append', function( body, path, items, response ) {
+        user_tag_switcher_init();
+        copy_storage_types_init();
+        resize_storage_types_info_init();
+    });
 });
 
 function copy_storage_types_init() {
@@ -44,9 +68,12 @@ function copy_storage_types_init() {
     });
 }
 
-function resize_storage_types_info() {
+function resize_storage_types_info_init() {
     $(".storage-types textarea.storage-type-info").each(function () {
-        $(this).css("height", $(this).prop("scrollHeight") + 8 + "px");
+        if (!$(this).data("fixed")) {
+            $(this).css("height", $(this).prop("scrollHeight") + 8 + "px");
+            $(this).data("fixed", true);
+        }
     });
 }
 
