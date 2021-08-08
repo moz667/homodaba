@@ -7,80 +7,8 @@
 {% block body_class %}search-movies-page{% endblock %}
 
 {% block main_block %}
-    {# with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url #}
     <div class="my-3 p-3">
-        <h1>Buscador de películas</h1>
-        <div class="alert alert-primary" role="alert">
-            <form method="GET" action="{{ search_tags_url }}">
-                <input type="hidden" name="director" value="{{ filters.director }}" />
-                <input type="hidden" name="tag" value="{{ filters.tag }}" />
-                <input type="hidden" name="genre" value="{{ filters.genre }}" />
-                <input type="hidden" name="cr_system" value="{{ filters.cr_system }}" />
-                <input type="hidden" name="user_tag" value="{{ filters.user_tag }}" />
-
-                {% if filters.director %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.director badge_style='dark' remove_url=remove_tag_url left_icon='bullhorn' %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.writer %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.writer badge_style='dark' remove_url=remove_tag_url left_icon='typewriter' %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.actor %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.actor badge_style='dark' remove_url=remove_tag_url left_icon='drama-masks' %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.tag %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.tag badge_style='success' remove_url=remove_tag_url %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.genre %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.genre badge_style='info' remove_url=remove_tag_url %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.cr_system %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.cr_system badge_style='danger' remove_url=remove_tag_url %}
-                    {% endwith %}
-                {% endif %}
-
-                {% if filters.user_tag %}
-                    {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system as remove_tag_url %}
-                        {% include "inc/filter_tag.html" with tag=filters.user_tag badge_style='user-tag' remove_url=remove_tag_url %}
-                    {% endwith %}
-                {% endif %}
-
-                <div class="search-controls input-group my-3">
-                    <div class="input-group-prepend">
-                        <select class="select-order-by form-control" name="order_by">
-                            <option value="">Ordenado...</option>
-                            <option value="-id"{% if order_by == '-id' %} selected="selected"{% endif %}>... de mas nuevo a mas viejo</option>
-                            <option value="id"{% if order_by == 'id' %} selected="selected"{% endif %}>... de mas viejo a mas nuevo</option>
-                            <option value="-year"{% if order_by == '-year' %} selected="selected"{% endif %}>... por año (descendente)</option>
-                            <option value="year"{% if order_by == 'year' %} selected="selected"{% endif %}>... por año (ascendente)</option>
-                            <option value="title"{% if order_by == 'title' %} selected="selected"{% endif %}>... por titulo internacional</option>
-                            <option value="title_original"{% if order_by == 'title_original' %} selected="selected"{% endif %}>... por titulo original</option>
-                            <option value="title_preferred"{% if order_by == 'title_preferred' %} selected="selected"{% endif %}>... por titulo en español</option>
-                        </select>
-                    </div>
-                    
-                    <input name="search_term" value="{{ search_term }}" type="text" class="form-control" placeholder="Términos a buscar..." aria-label="Términos a buscar" aria-describedby="basic-addon2">
-                    <div class="input-group-append">
-                        <button class="btn btn-primary" type="submit">Buscar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+        {% include "inc/search_form.html" %}
     </div>
 
     {% if search_movies %}
