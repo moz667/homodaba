@@ -7,17 +7,7 @@ from django.utils.text import slugify
 from data.models import ContentRatingTag, Movie
 from data.models import get_first_or_create_tag
 
-import xml.etree.ElementTree as ET
-
 from .utils import normalize_age_certificate
-
-"""
->>> from data.models import Movie
->>> zombieland = Movie.objects.filter(title='Zombieland')[0]
->>> xml_movie = ET.fromstring(zombieland.imdb_raw_data)
->>> xml_movie.findall("//certificates/item")
-
-"""
 
 class Command(BaseCommand):
     help = _("""Limpia las certificaciones de edad para que saque solo la parte principal

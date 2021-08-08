@@ -298,7 +298,6 @@ class Command(BaseCommand):
             poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie.keys() else None,
             year=ia_movie['year'],
             rating=ia_movie['rating'] if 'rating' in ia_movie.keys() else None,
-            imdb_raw_data=ia_movie.asXML(),
         )
 
         tagged = False

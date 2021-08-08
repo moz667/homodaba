@@ -141,14 +141,30 @@ if os.getenv('DATABASE_ENGINE', '') == 'mysql':
     DATABASES = {
         'default':{
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DATABASE_NAME', 'dbtest'),
-            'USER': os.getenv('DATABASE_USER', 'dbroot'),
-            'PASSWORD':  os.getenv('DATABASE_PASSWORD', 'dbpass.123'),
+            'NAME': os.getenv('DATABASE_NAME', ''),
+            'USER': os.getenv('DATABASE_USER', ''),
+            'PASSWORD':  os.getenv('DATABASE_PASSWORD', ''),
             'HOST': os.getenv('DATABASE_HOST', ''),
-            'PORT': '',
+            'PORT': os.getenv('DATABASE_PORT', ''),
         }
     }
 
+# cache en base de datos separada
+if os.getenv('CACHE_DATABASE', ''):
+    DATABASES['cache'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': SQLITE_ROOT / 'db-cache.sqlite3',
+    }
+
+    if os.getenv('CACHE_DATABASE_ENGINE', '') == 'mysql':
+        DATABASES['cache'] = {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('CACHE_DATABASE_NAME', ''),
+            'USER': os.getenv('CACHE_DATABASE_USER', ''),
+            'PASSWORD':  os.getenv('CACHE_DATABASE_PASSWORD', ''),
+            'HOST': os.getenv('CACHE_DATABASE_HOST', ''),
+            'PORT': os.getenv('CACHE_DATABASE_PORT', ''),
+        }
 
 
 

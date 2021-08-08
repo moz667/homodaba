@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 
 from imdb.utils import KIND_MAP
 
-from homodaba.settings import SMB_SHARE_2_URL
+from homodaba.settings import SMB_SHARE_2_URL, DATABASES
 
 from data.utils import trace
 
@@ -34,7 +34,6 @@ class Person(models.Model):
     is_writer = models.BooleanField('Escritor', default=False, null=False, blank=False)
     is_actor = models.BooleanField('Actor', default=False, null=False, blank=False)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
-    imdb_raw_data = models.TextField('RAW DATA IMDB', null=True, blank=True)
 
     def get_imdb_url(self):
         if self.imdb_id:
@@ -162,7 +161,6 @@ class Movie(models.Model):
 
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, 
         blank=False)
-    imdb_raw_data = models.TextField('RAW data IMDB', null=True, blank=True)
     
     def __str__(self):
         return self.title
@@ -531,7 +529,6 @@ def get_or_create_user_tag(current_user, tag_type):
         name=tag_name
     )
 
-
 def populate_movie_auto_tags(movie):
     tag = None
 
@@ -557,3 +554,6 @@ def populate_movie_auto_tags(movie):
         trace.debug(" * Añadiendo tag '%s'." % tag)
         movie.tags.add(db_tag)
         movie.save()
+
+def get_imdb_cache_objects():
+    return ImdbCache.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')

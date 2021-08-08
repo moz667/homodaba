@@ -49,10 +49,10 @@
 1. [ ] Posibilidad de alamacenar el tamaño del medio (interesante para re-ripear)
 
 ### Cache
-1. [ ] Sacar la cache y ponerlo en una app a parte. Quizas, opcionalmente, usar una bbdd alternativa para la cache
+1. [X] ~~Sacar la cache y ponerlo en una app a parte. Quizas, opcionalmente, usar una bbdd alternativa para la cache~~
 1. [ ] Cachear las imagenes de las portadas?
 1. [ ] Poner fecha de caducidad a la cache (ImdbCache)
-1. [ ] quitar los raw de la base de datos (con la cache yo creo que nos basta) (esto nos obliga a quitar los sample_XXX.py de data/management/commands)
+1. [X] ~~quitar los raw de la base de datos (con la cache yo creo que nos basta) (esto nos obliga a quitar los sample_XXX.py de data/management/commands)~~
 1. [ ] Hacer algun comando para regenerar la cache (igual aplicarlo en el optimize_db)
 
 ### Telegram Bot

@@ -60,6 +60,58 @@
    ```bash
    manage.sh loaddata db.json
    ```
+   - Si da algún problema del tipo :
+   ```
+   : Could not load data.TitleAka(pk=XXXX): (1062, "Duplicate entry 'Un titulo cualquiera' for key 'title'")
+
+   ```
+   Podemos ejecutar loaddata con la opcion "-e data.TitleAka" (para excluir de la importacion):
+   ```bash
+   manage.sh loaddata db.json -e data.TitleAka
+   ```
+   Lo unico que si hacemos esto, tendremos que corregir los titulos con:
+   ```bash
+   manage.sh optimize_db
+   ```
+
+
+## Base de datos separada para la cache
+Si bien no es necesario, es recomendable tener la base de datos de cache separada de la base de datos por defecto, de esta forma podemos ignorar completamente de hacer backcup. Para empezar a usar esta base de datos extra tenemos que:
+1. Establecer la variable de entorno CACHE_DATABASE=1
+   - Por defecto, usara una base de datos en el mismo sitio donde esta la base de datos por defecto ("db.sqlite3") pero con el nombre "db-cache.sqlite3"
+   - Si queremos usar mysql, tendremos que definir las variables entorno con la configuracion de acceso a esta base de datos:
+   ```
+   CACHE_DATABASE_ENGINE='mysql'
+   CACHE_DATABASE_NAME='[DATABASE_NAME]'
+   CACHE_DATABASE_USER='[DATABASE_USER]'
+   CACHE_DATABASE_PASSWORD='[DATABASE_PASSWORD]'
+   CACHE_DATABASE_HOST='[HOST_NAME]'
+   ```
+1. Crear la estructura de tablas:
+   ```bash
+   manage.sh migrate --database=cache
+   ```
+1. (Opcionalmente) Podemos migrar la actual cache a la nueva:
+   ```bash
+   manage.sh dumpdata > original-db.json
+   manage.sh shell
+   ```
+   ```python
+   from django.contrib.contenttypes.models import ContentType
+   ContentType.objects.all().delete()
+   ```
+   ```bash
+   manage.sh loaddata --database=cache original-db.json
+   ```
+1. (Opcionalmente) Borraremos la cache de la base de datos original:
+   ```bash
+   bash manage.sh delete_cache --default-database
+   ```
+1. (Opcionalmente) Borraremos el resto de datos que no se usan de la base de datos de cache:
+   ```bash
+   bash manage.sh delete_all_movies --cache-database
+   ```
+1. (Opcionalmente) Deberiamos borrar los datos de usuarios de la bbdd de cache (no son necesarios), pero me da perecer mirar que tablas/modelos son los que deberiamos borrar... :P
 
 ## Elastic Search
 ### Errores

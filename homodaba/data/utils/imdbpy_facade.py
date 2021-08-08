@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.utils.text import slugify
 
-from data.models import Movie, MovieStorageType, ImdbCache
+from data.models import Movie, MovieStorageType, get_imdb_cache_objects
 
 from imdb import IMDb
 
@@ -21,6 +21,8 @@ from homodaba.settings import IMDB_VALID_MOVIE_KINDS, NO_CACHE, UPDATE_CACHE
 # * OJO: para usar pixcat hay que instalarlo:
 #   ~ pip install pixcat
 # from pixcat import Image
+
+IMDB_CACHE_OBJS = get_imdb_cache_objects()
 
 """
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
@@ -366,18 +368,18 @@ def get_imdb_titles(imdb_movie):
 
 def get_imdb_movie(imdb_id):
     if not NO_CACHE:
-        cache_data = ImdbCache.objects.filter(imdb_id=imdb_id).all()
+        cache_data = IMDB_CACHE_OBJS.filter(imdb_id=imdb_id).all()
 
         if cache_data.count() > 0:
             if not UPDATE_CACHE:
                 return unserialize(cache_data[0].raw_data)
             else:
-                ImdbCache.objects.filter(imdb_id=imdb_id).delete()
+                IMDB_CACHE_OBJS.filter(imdb_id=imdb_id).delete()
     
     imdb_movie = IMDB_API.get_movie(imdb_id, ('main', 'plot', 'akas'))
 
     if not NO_CACHE or UPDATE_CACHE:
-        ImdbCache.objects.create(
+        IMDB_CACHE_OBJS.create(
             imdb_id=imdb_id,
             raw_data=serialize(imdb_movie)
         )
@@ -386,18 +388,18 @@ def get_imdb_movie(imdb_id):
 
 def search_imdb_movies(search_query):
     if not NO_CACHE:
-        cache_data = ImdbCache.objects.filter(search_query=search_query).all()
+        cache_data = IMDB_CACHE_OBJS.filter(search_query=search_query).all()
 
         if cache_data.count() > 0:
             if not UPDATE_CACHE:
                 return unserialize(cache_data[0].raw_data)
             else:
-                ImdbCache.objects.filter(search_query=search_query).delete()
+                IMDB_CACHE_OBJS.filter(search_query=search_query).delete()
     
     imdb_results = IMDB_API.search_movie(search_query)
 
     if not NO_CACHE or UPDATE_CACHE:
-        ImdbCache.objects.create(
+        IMDB_CACHE_OBJS.create(
             search_query=search_query,
             raw_data=serialize(imdb_results)
         )
