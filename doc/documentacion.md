@@ -75,7 +75,7 @@
    ```
 
 
-## Base de datos separada para la cache
+## Base de datos separada para la cache (generico)
 Si bien no es necesario, es recomendable tener la base de datos de cache separada de la base de datos por defecto, de esta forma podemos ignorar completamente de hacer backcup. Para empezar a usar esta base de datos extra tenemos que:
 1. Establecer la variable de entorno CACHE_DATABASE=1
    - Por defecto, usara una base de datos en el mismo sitio donde esta la base de datos por defecto ("db.sqlite3") pero con el nombre "db-cache.sqlite3"
@@ -112,6 +112,52 @@ Si bien no es necesario, es recomendable tener la base de datos de cache separad
    bash manage.sh delete_all_movies --cache-database
    ```
 1. (Opcionalmente) Deberiamos borrar los datos de usuarios de la bbdd de cache (no son necesarios), pero me da perecer mirar que tablas/modelos son los que deberiamos borrar... :P
+
+## Base de datos separada para la cache (solo sqlite)
+Podemos hacer algo mas sencillo si solo usamos sqlite como base de datos el proceso seria:
+1. Parar todas las instancias que tengamos corriendo que esten usando la base datos
+1. Migrar cambios ANTES de definir la variable CACHE_DATABASE:
+   ```bash
+   manage.sh migrate
+   ```
+1. Copiar la base de datos actual como la base de datos de cache:
+   ```bash
+   cd homodaba
+   cp db.sqlite3 db-cache.sqlite3
+   ls -lha *.sqlite3 # Para que veamos lo que encogen :P
+   cd ..
+   ```
+1. Meter la variable nueva de entorno CACHE_DATABASE=1, donde tengas las variables de entorno en mi caso por ejemplo seria:
+   ```bash
+   echo "export CACHE_DATABASE=1" >> .venv
+   ```
+1. Borrar datos de cache de la base de datos "default" y datos en general de la base de datos "cache":
+   ```bash
+   manage.sh delete_cache --default-database
+   manage.sh delete_all_movies --cache-database
+   ```
+1. (Opcionalmente) Muy recomendable limpiar las bases de datos de morralla temporal:
+   ```bash
+   cd homodaba
+   sqlite3 db.sqlite3
+   ```
+   ```sqlite
+   sqlite> VACUUM;
+   ```
+   ```bash
+   sqlite3 db-cache.sqlite3
+   ```
+   ```sqlite
+   sqlite> VACUUM;
+   ```
+   ```bash
+   ls -lha *.sqlite3 # Para que veamos lo que encogen :P
+   cd ..
+   ```
+1. Una vez hecho esto ya podemos arrancar de nuevo:
+   ```bash
+   start.sh
+   ```
 
 ## Elastic Search
 ### Errores
