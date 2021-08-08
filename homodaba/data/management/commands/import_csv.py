@@ -391,13 +391,21 @@ class Command(BaseCommand):
                 person=w,
                 role=MoviePerson.RT_WRITER
             )
+            # Tambien lo damos de alta en el m2m de writers:
+            local_movie.writers.add(w)
 
+        i = 0
         for c in casting:
             MoviePerson.objects.create(
                 movie=local_movie,
                 person=c,
                 role=MoviePerson.RT_ACTOR
             )
+            # Tambien lo damos de alta en el m2m de actors, pero en este caso: 
+            # solo cogemos los 6 primeros
+            if i < 6:
+                local_movie.actors.add(c)
+            i = i + 1
 
         return local_movie
 

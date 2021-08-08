@@ -47,7 +47,7 @@
         </div>
 
         {% if movie.get_other_main_titles %}
-            <div class="other-titles" style="clear: both; padding-top: 1rem;">
+            <div style="clear: both; padding-top: 1rem;" class="other-titles" style="clear: both; padding-top: 1rem;">
                 <strong class="d-block">Tambien conocida como:</strong>
                 <ul>
                     {% for other_title in movie.get_other_main_titles %}
@@ -59,8 +59,37 @@
             </div>
         {% endif %}
 
+        {% if movie.writers.all %}
+            <strong style="clear: both; padding-top: 1rem;" class="d-block"><em class="mdi mdi-typewriter"> </em> Escritores:</strong>
+            
+            <ul class="writers">
+                {% for writer in movie.writers.all %}
+                    <li style="overflow: hidden; text-overflow: ellipsis;" class="writer">
+                        <a href="{% url 'search_movies' %}?writer={{ writer.name }}{% if writer.imdb_id %} [{{ writer.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'writer' %}">
+                            {{ writer.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+
+        {% if movie.actors.all %}
+            <strong style="clear: both; padding-top: 1rem;" class="d-block"><em class="mdi mdi-drama-masks"> </em> Casting:</strong>
+            
+            <ul class="casting">
+                {% for actor in movie.actors.all %}
+                    <li style="overflow: hidden; text-overflow: ellipsis;" class="actor">
+                        <a href="{% url 'search_movies' %}?actor={{ actor.name }}{% if actor.imdb_id %} [{{ actor.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'actor' %}">
+                            {{ actor.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
         {% if movie.tags.all or movie.genres.all or movie.content_rating_systems.all or movie.user_tags.all %}
-            <div class="tag-cloud" style="clear: both; padding-top: 1rem;">
+            <div style="clear: both; padding-top: 1rem;" class="tag-cloud">
                 {% if movie.tags.all %}
                     {% for tag in movie.tags.all %}
                         <a class="badge badge-success" href="{% url 'search_movies' %}?tag={{ tag }}&order_by={{ order_by }}{% search_filters_as_url_args filters 'tag' %}">

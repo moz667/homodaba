@@ -27,7 +27,9 @@ def home(request):
 
 @login_required
 def search_movies(request):
-    director = get_director_filter(request, 'director')
+    director = get_person_filter(request, 'director', is_director=True)
+    writer = get_person_filter(request, 'writer', is_writer=True)
+    actor = get_person_filter(request, 'actor', is_actor=True)
 
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
@@ -40,6 +42,8 @@ def search_movies(request):
         Movie.objects, 
         search_term=search_term,
         director=director.id if director else None,
+        writer=writer.id if writer else None,
+        actor=actor.id if actor else None,
         tag=tag.id if tag else None,
         genre=genre.id if genre else None,
         content_rating_system=cr_system.id if cr_system else None,
@@ -71,6 +75,12 @@ def search_movies(request):
             'director': director.name if director else '',
             'director_query': (director.name if director else '') + 
                 (" [%s]" % director.imdb_id if director and director.imdb_id else ''),
+            'writer': writer.name if writer else '',
+            'writer_query': (writer.name if writer else '') + 
+                (" [%s]" % writer.imdb_id if writer and writer.imdb_id else ''),
+            'actor': actor.name if actor else '',
+            'actor_query': (actor.name if actor else '') + 
+                (" [%s]" % actor.imdb_id if actor and actor.imdb_id else ''),
             'tag': tag.name if tag else '',
             'genre': genre.name if genre else '',
             'cr_system': cr_system.name if cr_system else '',
@@ -88,28 +98,28 @@ def get_tag_filter(request, request_key, class_tag):
     
     return tag_filter
 
-def get_director_filter(request, request_key):
-    director_filter = None
+def get_person_filter(request, request_key, **kargs):
+    person_filter = None
     if request_key in request.GET.keys():
         if request.GET[request_key]:
             imdb_id = None
             pattern = re.compile(".*\[([0-9]+)\]")
-            director_name = request.GET[request_key]
+            person_name = request.GET[request_key]
 
-            if pattern.search(director_name):
-                imdb_id = pattern.search(director_name).groups()[0]
-                director_name = director_name.replace("[%s]" % imdb_id, "").strip()
+            if pattern.search(person_name):
+                imdb_id = pattern.search(person_name).groups()[0]
+                person_name = person_name.replace("[%s]" % imdb_id, "").strip()
 
-            directors = []
+            persons = []
             if imdb_id:
-                directors = Person.objects.filter(name=director_name, imdb_id=imdb_id, is_director=True).all()
+                persons = Person.objects.filter(name=person_name, imdb_id=imdb_id, **kargs).all()
             else:
-                directors = Person.objects.filter(name=director_name, is_director=True).all()
+                persons = Person.objects.filter(name=person_name, **kargs).all()
 
-            if directors.count() > 0:
-                director_filter = directors[0]
+            if persons.count() > 0:
+                person_filter = persons[0]
     
-    return director_filter
+    return person_filter
 
 
 @login_required

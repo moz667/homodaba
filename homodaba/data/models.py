@@ -156,6 +156,8 @@ class Movie(models.Model):
     # los directores (no se muy bonito tener los datos duplicados, pero es la 
     # mejor forma que veo para que directors se comporte como deberia)
     directors = models.ManyToManyField(Person, blank=True)
+    writers = models.ManyToManyField(Person, blank=True, related_name="writers")
+    actors = models.ManyToManyField(Person, blank=True, related_name="actors")
 
     countries = models.ManyToManyField(Country)
 

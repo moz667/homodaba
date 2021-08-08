@@ -107,7 +107,7 @@ class MovieAdmin(admin.ModelAdmin):
     list_display = ('title', 'year', 'get_poster_thumbnail_img', 'get_directed_by', 'get_main_titles_html', 'get_storage_types_html', 'rating',)
     
     # TODO: Pensar que hacemos con title_akas
-    exclude = ('title_akas',)
+    exclude = ('title_akas', 'directors', 'writers', 'actors')
     list_filter = (DirectorFilter, TagListFilter, GenreListFilter, ContentRatingListFilter)
 
     # Lo ponemos para que saque la caja de texto pero la busqueda

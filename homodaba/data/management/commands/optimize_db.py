@@ -69,7 +69,7 @@ class Command(BaseCommand):
             help='Optimiza y limpia los titulos principales y borra innecesarios TitleAka.',
         )
         parser.add_argument(
-            '--populate-directors',
+            '--populate-casting',
             action='store_true',
             help='Completa la lista de directores para cada pelicula.',
         )
@@ -111,8 +111,8 @@ class Command(BaseCommand):
             trace.debug('>> %s (%s) [id:%s]' % (movie.title, movie.get_countries_as_text(), movie.id))
             if 'title_and_akas' in options and options['title_and_akas']:
                 clean_title_and_akas(movie)
-            if 'populate_directors' in options and options['populate_directors']:
-                populate_directors(movie)
+            if 'populate_casting' in options and options['populate_casting']:
+                populate_casting(movie)
             if 'create_auto_tags' in options and options['create_auto_tags']:
                 populate_movie_auto_tags(movie)
         
@@ -156,19 +156,56 @@ class Command(BaseCommand):
                                 if tagged:
                                     movie.save()
 
-def populate_directors(movie):
+def populate_casting(movie):
+    got_changes = False
+
     if movie.directors.count() > 0:
         trace.debug("  - Ya tenemos directores")
-        return
+    else:
+        directors = MoviePerson.objects.filter(movie=movie, role=MoviePerson.RT_DIRECTOR).all()
+        
+        if directors.count():
+            got_changes = True
+            trace.debug("  - Añadimos los siguientes directores:")
+
+            for director in directors:
+                trace.debug("    * %s" % director.person.name)
+                movie.directors.add(director.person)
+
+    if movie.writers.count() > 0:
+        trace.debug("  - Ya tenemos escritores")
+    else:
+        got_changes = True
+        writers = MoviePerson.objects.filter(movie=movie, role=MoviePerson.RT_WRITER).all()
+
+        if writers.count():
+            got_changes = True
+            trace.debug("  - Añadimos los siguientes escritores:")
+
+            for writer in writers:
+                trace.debug("    * %s" % writer.person.name)
+                movie.writers.add(writer.person)
     
-    directors = MoviePerson.objects.filter(movie=movie, role=MoviePerson.RT_DIRECTOR).all()
+    # El caso de actores es un poco especial... salen demasiados, vamos a coger solo los 6 primeros para probar
+    if movie.actors.count() > 0:
+        trace.debug("  - Ya tenemos actores")
+    else:
+        actors = MoviePerson.objects.filter(movie=movie, role=MoviePerson.RT_ACTOR).all()
 
-    trace.debug("  - Añadimos los siguientes directores:")
-    for director in directors:
-        trace.debug("    * %s" % director.person.name)
-        movie.directors.add(director.person)
+        if actors.count():
+            got_changes = True
+            trace.debug("  - Añadimos los siguientes actores:")
+            i = 0
 
-    movie.save()
+            for actor in actors:
+                if i < 6:
+                    trace.debug("    * %s" % actor.person.name)
+                    movie.actors.add(actor.person)
+                else:
+                    break
+                
+    if got_changes:
+        movie.save()
 
     
 

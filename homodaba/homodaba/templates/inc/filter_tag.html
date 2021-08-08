@@ -1,4 +1,7 @@
 <span class="badge badge-{{ badge_style }} m-1 p-1">
+    {% if left_icon %}
+        <em class="mdi mdi-{{ left_icon }}"> </em>
+    {% endif %}
     <span class="tag-wrap p-1">
         {{ tag }}
     </span>

@@ -13,7 +13,7 @@ if ELASTICSEARCH_DSL:
 
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
         genre=None, content_rating_system=None, tag=None, year=None, 
-        director=None, user_tag=None):
+        director=None, writer=None, actor=None, user_tag=None):
 
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
         # TODO: stats de la busqueda (total encontrados para la paginacion)
@@ -83,6 +83,16 @@ if ELASTICSEARCH_DSL:
             #    query=director, fields=["director.pk"]
             # ))
 
+        if writer:
+            query.must.append(DSL_Q("nested", path="writers", 
+                query=DSL_Q("match", writers__pk=writer)
+            ))
+
+        if actor:
+            query.must.append(DSL_Q("nested", path="actors", 
+                query=DSL_Q("match", actors__pk=actor)
+            ))
+
         if genre:
             query.must.append(DSL_Q("nested", path="genres", 
                 query=DSL_Q("match", genres__pk=genre)
@@ -115,8 +125,8 @@ if ELASTICSEARCH_DSL:
         return queryset.distinct() if use_use_distinct else queryset, use_use_distinct
 
 def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
-    year=None, director=None, genre=None, content_rating_system=None, tag=None, 
-    user_tag=None):
+    year=None, director=None, writer=None, actor=None, 
+    genre=None, content_rating_system=None, tag=None, user_tag=None):
 
     # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
     # para varios
@@ -163,11 +173,21 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
         
         search_query = search_query_new
 
-    """
-    # TODO: mirar get_search_results en admin.py
-    if director:
+    if writer:
+        search_query_new = Q(writers__pk=writer)
 
-    """
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
+
+    if actor:
+        search_query_new = Q(actors__pk=actor)
+
+        if search_query:
+            search_query_new.add(search_query, Q.AND)
+        
+        search_query = search_query_new
 
     if genre:
         search_query_new = Q(genres__pk=genre)
@@ -226,18 +246,21 @@ def extract_year(search_term):
     
     return None, search_term
 
-def populate_search_filter(queryset, search_term, use_use_distinct=False, genre=None, content_rating_system=None, tag=None, director=None, user_tag=None):
+def populate_search_filter(queryset, search_term, use_use_distinct=False, 
+    genre=None, content_rating_system=None, tag=None, 
+    director=None, writer=None, actor=None, 
+    user_tag=None):
     year, search_term = extract_year(search_term)
 
     if ELASTICSEARCH_DSL:
         return populate_search_filter_dsl(queryset, search_term, 
             use_use_distinct=use_use_distinct, genre=genre, 
             content_rating_system=content_rating_system, tag=tag, 
-            year=year, director=director, user_tag=user_tag
+            year=year, director=director, writer=writer, actor=actor, user_tag=user_tag
         )
 
     return populate_search_filter_model(queryset, search_term, use_use_distinct, 
-        year=year, director=director, genre=genre, 
+        year=year, director=director, writer=writer, actor=actor, genre=genre, 
         content_rating_system=content_rating_system, tag=tag, 
         user_tag=user_tag
     )
