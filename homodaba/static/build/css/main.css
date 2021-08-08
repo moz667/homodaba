@@ -84,12 +84,12 @@ body.login-page {
   background-color: magenta; }
 
 /* Pages */
-/* Busqueda de paginas .search-movies-page */
-body.search-movies-page .search-mini-form {
+/* Busqueda de paginas y home */
+body.search-movies-page .search-mini-form, body.home-page .search-mini-form {
   display: none; }
 
 @media (max-width: 800px) {
-  body.search-movies-page .search-controls .input-group-prepend {
+  body.search-movies-page .search-controls .input-group-prepend, body.home-page .search-controls .input-group-prepend {
     display: block;
     width: 100%;
     margin-bottom: 1rem; } }

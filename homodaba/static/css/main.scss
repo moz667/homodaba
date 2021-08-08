@@ -104,12 +104,12 @@ body.login-page {
 
 /* Pages */
 
-/* Busqueda de paginas .search-movies-page */
-body.search-movies-page {
+/* Busqueda de paginas y home */
+body.search-movies-page, body.home-page {
     .search-mini-form {
         display: none;
     }
-
+    
     @media (max-width: 800px) {
         .search-controls {
             .input-group-prepend {
