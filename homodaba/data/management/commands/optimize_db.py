@@ -71,7 +71,12 @@ class Command(BaseCommand):
         parser.add_argument(
             '--populate-casting',
             action='store_true',
-            help='Completa la lista de directores para cada pelicula.',
+            help='Completa la lista de directores/escritores/actores para cada pelicula.',
+        )
+        parser.add_argument(
+            '--reset-casting',
+            action='store_true',
+            help='Borra el casting actual antes de completar la lista de directores/escritores/actores.',
         )
         parser.add_argument(
             '--create-auto-tags',
@@ -107,14 +112,31 @@ class Command(BaseCommand):
         if movie_id:
             query_movies = Movie.objects.filter(id=movie_id)
 
+        current_movie_index = 1
+        total_movies = query_movies.count()
         for movie in query_movies.all():
-            trace.debug('>> %s (%s) [id:%s]' % (movie.title, movie.get_countries_as_text(), movie.id))
+            trace.debug('>> %s (%s) [id:%s] (%s / %s)' % (
+                movie.title, movie.get_countries_as_text(), movie.id,
+                current_movie_index, total_movies
+            ))
             if 'title_and_akas' in options and options['title_and_akas']:
                 clean_title_and_akas(movie)
             if 'populate_casting' in options and options['populate_casting']:
+                if 'reset_casting' in options and options['reset_casting']:
+                    if movie.directors.count() > 0:
+                        movie.directors.clear()
+
+                    if movie.writers.count() > 0:
+                        movie.writers.clear()
+
+                    if movie.actors.count() > 0:
+                        movie.actors.clear()
+                
                 populate_casting(movie)
             if 'create_auto_tags' in options and options['create_auto_tags']:
                 populate_movie_auto_tags(movie)
+            
+            current_movie_index = current_movie_index + 1
         
         if 'csv_tag_file' in options and options['csv_tag_file'] and options['csv_tag_file'][0]:
             csv_delimiter = ';'
@@ -201,9 +223,10 @@ def populate_casting(movie):
                 if i < 6:
                     trace.debug("    * %s" % actor.person.name)
                     movie.actors.add(actor.person)
+                    i = i + 1
                 else:
                     break
-                
+
     if got_changes:
         movie.save()
 
