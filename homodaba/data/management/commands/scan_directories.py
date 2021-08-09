@@ -92,7 +92,7 @@ class Command(BaseCommand):
                         'title': video['title'],
                         'year': video['year'],
                         'imdb_id': video['imdb_id'],
-                        'not_an_imdb_movie': 'True' if video['imdb_id'] else 'False',
+                        'not_an_imdb_movie': 'False' if video['imdb_id'] else 'True',
                         'storage_name': config_dir['smb_path'],
                         'storage_type': MovieStorageType.ST_NET_SHARE,
                         'media_format': calculate_media_format(video),
