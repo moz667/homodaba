@@ -6,13 +6,14 @@ from django.utils.text import slugify
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag
 
-from data.utils.imdbpy_facade import facade_search, clean_string, match_director
+from data.utils.imdbpy_facade import clean_string, match_director
 from data.utils import Trace as trace
 
 from imdb import IMDb
 
 import csv
 from datetime import datetime
+from distutils.util import strtobool
 import json
 import re
 import sys
@@ -79,13 +80,21 @@ def clean_csv_data(r):
     1) Si se trata de una peli original
     2) El archivo donde se almacena si no lo es
     """
-    title = r['title']
-    title_alt = r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None
+    title = r['title']  
+    title_original = r['title_original'] if 'title_original' in r else None
+    title_preferred = r['title_preferred'] if 'title_preferred' in r else None
+    title_alt = title_preferred if title_preferred else title_original
+
     storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
     director = r['director'] if 'director' in r and r['director'] else None
-    year = r['year'] if 'year' in r and r['year'] else None
+    year = r['year'] if 'year' in r and r['year'] else 1800
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
+
+    not_an_imdb_movie = strtobool(r['not_an_imdb_movie']) if 'not_an_imdb_movie' and r['not_an_imdb_movie'] else False
+
+    tags = r['tags'].split(',') if 'tags' in r and r['tags'] else []
+    directors = director.split(",") if director else []
 
     storage_type = MovieStorageType.ST_DVD
     if 'storage_type' in r and r['storage_type']:
@@ -116,17 +125,22 @@ def clean_csv_data(r):
 
     return {
         'title':title,
+        'title_original':title_original,
+        'title_preferred':title_preferred,
         'title_alt':title_alt,
         'storage_name':storage_name,
         'director':director,
         'year':year,
         'is_original':is_original,
         'imdb_id':imdb_id,
+        'not_an_imdb_movie':not_an_imdb_movie,
         'storage_type':storage_type,
         'media_format':media_format,
         'path':path,
         'version':version,
         'resolution':resolution,
+        'tags': tags,
+        'directors': directors,
     }
 
 def normalize_age_certificate(raw_certificate):

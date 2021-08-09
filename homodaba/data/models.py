@@ -114,11 +114,13 @@ class Movie(models.Model):
         'tv miniseries': 'tv mini series'
     }
     """
+    MK_NOT_AN_IMDB_MOVIE = 'naim-movie'
     MK_MOVIE = 'movie'
     MK_SERIE = 'tv series'
 
     MOVIE_KINDS = [
         (MK_MOVIE, 'Película'),
+        (MK_NOT_AN_IMDB_MOVIE, 'Película (no dada de alta en imdb)'),
         (MK_SERIE, 'Serie de television'),
     ]
 

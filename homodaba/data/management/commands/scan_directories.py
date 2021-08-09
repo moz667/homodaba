@@ -71,7 +71,7 @@ class Command(BaseCommand):
         verbosity = options['verbosity']
         trace.set_verbosity(verbosity)
 
-        output_csv_header = ['title', 'year', 'imdb_id', 'path', 'storage_name', 'storage_type', 'media_format', 'tags']
+        output_csv_header = ['title', 'year', 'imdb_id', 'not_an_imdb_movie', 'path', 'storage_name', 'storage_type', 'media_format', 'tags']
 
         with open(output_csv_file, 'w+', newline='') as output_csv:
             writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
@@ -92,6 +92,7 @@ class Command(BaseCommand):
                         'title': video['title'],
                         'year': video['year'],
                         'imdb_id': video['imdb_id'],
+                        'not_an_imdb_movie': 'True' if video['imdb_id'] else 'False',
                         'storage_name': config_dir['smb_path'],
                         'storage_type': MovieStorageType.ST_NET_SHARE,
                         'media_format': calculate_media_format(video),
@@ -147,18 +148,28 @@ def scan_all_videos(path, is_root=True, tag=None):
         cur_item['fullname'] = '%s/%s' % (path, cur_item['fullname'])
 
         # OJO: Solo funciona con el formato sencillo siguiente:
-        # TITULO (AÑO) [ttIMDB_ID]
+        # TITULO (AÑO) [ttIMDB_ID] o TITULO (AÑO) [naim] (para los que no sean imdb)
         s = cur_item["name"]
         
-        pattern = re.compile(".* \(([0-9]+)\) \[tt([0-9]+)\]")
+        pattern = re.compile(".* \(([0-9]+)\) \[naim\]")
 
         if pattern.search(s):
-            cur_item["imdb_id"] = s.split("[tt")[1].split("]")[0]
+            cur_item["imdb_id"] = ""
             cur_item["year"] = s.split("(")[1].split(")")[0]
             cur_item["title"] = s.split("(")[0].strip()
-            if tag:
-                cur_item["tag"] = tag
+            
             all_video_files.append(cur_item)
+        else:
+            pattern = re.compile(".* \(([0-9]+)\) \[tt([0-9]+)\]")
+
+            if pattern.search(s):
+                cur_item["imdb_id"] = s.split("[tt")[1].split("]")[0]
+                cur_item["year"] = s.split("(")[1].split(")")[0]
+                cur_item["title"] = s.split("(")[0].strip()
+                if tag:
+                    cur_item["tag"] = tag
+        
+                all_video_files.append(cur_item)
         # OJO: Solo funciona con el formato sencillo
 
     return all_video_files

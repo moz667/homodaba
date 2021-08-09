@@ -1,9 +1,6 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.utils.translation import gettext as _
-from django.utils.text import slugify
+from django.core.management.base import BaseCommand
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
+from data.models import Tag
 from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
 from data.utils import Trace as trace
@@ -13,7 +10,9 @@ import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, normalize_age_certificate, clean_csv_data, csv_validate
+from .utils import trace_validate_imdb_movie, clean_csv_data, csv_validate
+
+from .import_data import get_or_insert_storage, insert_movie_from_imdb, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -26,6 +25,10 @@ OBLIGATORIOS:
 OPCIONALES:
     imdb_id: Identificador de imdb para forzar la busqueda de esa peli (por defecto: 
         None) (opcional)
+
+    not_an_imdb_movie: Indica que es una pelicula que no se encuentra en imdb. 
+        Esto es util para que el procesador no busque esas peliculas en el imdb
+        y nos de la murga con errores :P
 
     storage_name: identificador del almacenamiento (nombre del disco duro, 
         carpeta compartida...) (opcional, aunque hay que tener en cuenta
@@ -72,7 +75,7 @@ OPCIONALES:
 """
 
 class Command(BaseCommand):
-    help = _('Importa datos desde un CSV')
+    help = 'Importa datos desde un CSV'
 
     """
     Pinta la ayuda y sale
@@ -104,23 +107,12 @@ class Command(BaseCommand):
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
 
-
-    def get_or_create_person(self, ia_person):
-        local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
-
-        if local_persons.count() > 0:
-            return local_persons[0]
-        
-        return Person.objects.create(
-            name=ia_person['name'],
-            canonical_name=ia_person['canonical name'],
-            imdb_id=ia_person.getID(),
-        )
-
-    def get_or_insert_movie(self, r):
+    def process_movie(self, r):
         trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
+
+        not_an_imdb_movie = cd['not_an_imdb_movie']
 
         facade_result = facade_search(
             title=cd['title'], year=r['year'], 
@@ -130,282 +122,65 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
+            not_an_imdb_movie=not_an_imdb_movie
         )
 
-        tags = r['tags'].split(',') if 'tags' in r and r['tags'] else []
+        tags = cd['tags']
 
-        if not facade_result:
+        if not facade_result and not not_an_imdb_movie:
             trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             return None
 
-        if facade_result.is_local_data:
+        local_movie = None
+
+        # Para las que no encuentra pero que se tratan de pelis que no son 
+        # localizables en el imdb, las insertamos con los datos que tenemos
+        if not facade_result and not_an_imdb_movie:
+            local_movie = insert_movie_from_a_not_an_imdb_movie(
+                title=cd['title'], 
+                year=cd['year'], 
+                directors=cd['directors'], 
+                tags=tags, 
+                title_original=cd['title_original'], 
+                title_preferred=cd['title_preferred'], 
+            )
+        # Para pelis que ya hemos insertado anteriormente
+        elif facade_result.is_local_data:
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             trace.warning("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
-            # Solo insertamos storage si no fue una coincidencia de storage
-            if not facade_result.storage_match:
-                self.get_or_insert_storage(
-                    movie=facade_result.movie, 
-                    is_original=cd['is_original'], 
-                    storage_type=cd['storage_type'], 
-                    storage_name=cd['storage_name'], 
-                    path=cd['path'], 
-                    resolution=cd['resolution'], 
-                    media_format=cd['media_format'], 
-                    version=cd['version'], 
-                )
-
-                # Puede ocurrir, cuando se trata de un nuevo storage, que lleve nuevas 
-                # tags (por ejemplo, una version extendida de una peli, 3D...)
-                if len(tags):
-                    tagged = False
-
-                    for tag in tags:
-                        db_tag = get_first_or_create_tag(
-                            Tag, name=tag
-                        )
-
-                        if not db_tag in facade_result.movie.tags.all():
-                            tagged = True
-                            facade_result.movie.tags.add(db_tag)
-                    
-                    if tagged:
-                        facade_result.movie.save()
-
-                populate_movie_auto_tags(facade_result.movie)
-            return facade_result.movie
-       
-        trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
-
-        local_movie = self.insert_movie(
-            r['title'],
-            facade_result.movie, 
-            tags=tags,
-            title_original=r['title_original'] if 'title_original' in r and r['title_original'] else None,
-            title_preferred=r['title_preferred'] if 'title_preferred' in r and r['title_preferred'] else None,
-        )
-
-        self.get_or_insert_storage(
-            movie=local_movie, 
-            is_original=cd['is_original'], 
-            storage_type=cd['storage_type'], 
-            storage_name=cd['storage_name'], 
-            path=cd['path'], 
-            resolution=cd['resolution'], 
-            media_format=cd['media_format'], 
-            version=cd['version'], 
-        )
-
-        # 2.6) Devolvemos la pelicula
-        return local_movie
-
-    def get_or_insert_storage(self, movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None):
-        # Comprobamos que la relacion entre pelicula y tipo de almacenamiento no exista ya
-        storages = MovieStorageType.objects.filter(
-            movie=movie, 
-            is_original=is_original, 
-            storage_type=storage_type, 
-            name=storage_name,
-            path=path,
-            media_format=media_format,
-            resolution=resolution,
-            version=version
-        )
-
-        # de ser asi sacar mensaje notificandolo
-        if storages.count() > 0:
-            trace.warning('\tYa tenemos la pelicula "%s" del año "%s" dada de alta con esos datos de almacenamiento!' % (movie.title, movie.year))
-            return storages[0]
-        
-        # 2.5) Damos de alta la relacion entre pelicula y tipo de almacemaniento (MovieStorageType)
-        MovieStorageType.objects.create(
-            movie=movie, 
-            is_original=is_original, 
-            storage_type=storage_type, 
-            name=storage_name,
-            path=path,
-            media_format=media_format,
-            resolution=resolution,
-            version=version,
-        )
-
-    def insert_movie(self, title, ia_movie, tags=[], title_original=None, title_preferred=None):
-        # 2.2.4) Para cada uno de los directores
-        directors = []
-
-        if 'director' in ia_movie.keys():
-            for ia_person in ia_movie['director']:
-                # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
-                # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
-                # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
-                lp = self.get_or_create_person(ia_person)
-
-                if not lp.is_director:
-                    lp.is_director = True
-                    lp.save()
-                
-                directors.append(lp)
+            local_movie = facade_result.movie
+        # El resto son pelis nuevas (localizables por el imdb)
         else:
-            trace.warning('\tinsert_movie: No encontramos directores para la pelicula "%s"' % title)
-        
-        # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
-        writers = []
+            trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
 
-        if 'writer' in ia_movie.keys():
-            for ia_person in ia_movie['writer']:
-                lp = self.get_or_create_person(ia_person)
-
-                if not lp.is_writer:
-                    lp.is_writer = True
-                    lp.save()
-                
-                writers.append(lp)
-        else:
-            trace.warning('\tNo encontramos escritores para la pelicula "%s"' % title)
-        
-        # 2.2.5) Para cada uno de casting (lo mismo que para directores)
-        casting = []
-
-        if 'cast' in ia_movie.keys():
-            for ia_person in ia_movie['cast']:
-                lp = self.get_or_create_person(ia_person)
-
-                if not lp.is_actor:
-                    lp.is_actor = True
-                    lp.save()
-                
-                casting.append(lp)
-        else:
-            trace.warning('\tNo encontramos casting para la pelicula "%s"' % title)
-        
-        new_titles, title_akas = get_imdb_titles(ia_movie)
-        
-        if not title_original and 'title_original' in new_titles and new_titles['title_original']:
-            title_original = new_titles['title_original']
-
-        if not title_preferred and 'title_preferred' in new_titles and new_titles['title_preferred']:
-            title_preferred = new_titles['title_preferred']
-
-        # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
-        local_movie = Movie.objects.create(
-            title=new_titles['title'] if 'title' in new_titles and new_titles['title'] else title,
-            title_original=title_original,
-            title_preferred=title_preferred,
-            imdb_id=ia_movie.getID(),
-            kind=ia_movie['kind'],
-            summary=ia_movie.summary(),
-            poster_url=ia_movie['full-size cover url'] if 'full-size cover url' in ia_movie.keys() else None,
-            poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie.keys() else None,
-            year=ia_movie['year'],
-            rating=ia_movie['rating'] if 'rating' in ia_movie.keys() else None,
-        )
-
-        tagged = False
-
-        if len(title_akas.keys()) > 0:
-            for country in title_akas.keys():
-                trace.debug("    - %s [%s]" % (title_akas[country], country))
-            
-                db_title_aka = get_first_or_create_tag(
-                    TitleAka, title=title_akas[country]
-                )
-
-                if db_title_aka.country:
-                    if db_title_aka.country != country:
-                        # El problema aqui es que el aka deberia permitir varios paises... 
-                        # pero tenemos un poco en el aire que hacemos con TitleAka (yo 
-                        # ultimamente pienso que tendriamos que borrarla... asi que por 
-                        # ahora solo informamos en modo debug)
-                        trace.debug("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
-                            title_akas[country], db_title_aka.country, country
-                        ))
-                else:
-                    db_title_aka.country = country
-                    db_title_aka.save()
-                
-                local_movie.title_akas.add(db_title_aka)
-            
-        if 'genres' in ia_movie.keys():
-            tagged = True
-
-            for tag in ia_movie['genres']:
-                local_movie.genres.add(
-                    get_first_or_create_tag(
-                        GenreTag, name=tag
-                    )
-                )
-
-        if 'certificates' in ia_movie.keys():
-            valid_certs = []
-            if len(ia_movie['certificates']) > 0:
-                for c in ia_movie['certificates']:
-                    if c and c.startswith('United States:'):
-                        valid_cert = c.replace('United States:', '')
-                        if not valid_cert in valid_certs:
-                            valid_certs.append(valid_cert)
-
-            if len(valid_certs) > 0:
-                tagged = True
-                for vc in valid_certs:
-                    vc_tag = get_first_or_create_tag(
-                        ContentRatingTag, name=normalize_age_certificate(vc)
-                    )
-
-                    if not vc_tag in local_movie.content_rating_systems.all():
-                        local_movie.content_rating_systems.add(vc_tag)
-            else:
-                trace.warning('No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
-
-        if len(tags):
-            tagged = True
-
-            for tag in tags:
-                local_movie.tags.add(
-                    get_first_or_create_tag(
-                        Tag, name=tag
-                    )
-                )
-
-        if tagged:
-            local_movie.save()
-
-        populate_movie_auto_tags(local_movie)
-
-        # 2.4) Damos de alta las relaciones entre peliculas y personas de todas las recuperadas antes (directores, escritores, casting...)
-        for d in directors:
-            MoviePerson.objects.create(
-                movie=local_movie,
-                person=d,
-                role=MoviePerson.RT_DIRECTOR
+            local_movie = insert_movie_from_imdb(
+                r['title'],
+                facade_result.movie, 
+                tags=tags, 
+                title_original=cd['title_original'],
+                title_preferred=cd['title_preferred'],
             )
-            # Tambien lo damos de alta en el m2m de directors:
-            local_movie.directors.add(d)
-        
-        if len(directors) > 0:
-            # Tenemos que guardar si habia directors:
-            local_movie.save()
 
-        for w in writers:
-            MoviePerson.objects.create(
-                movie=local_movie,
-                person=w,
-                role=MoviePerson.RT_WRITER
+        # Solo insertamos storage si no fue una coincidencia de storage o se 
+        # trata de una peli nueva
+        if not facade_result or not facade_result.storage_match:
+            get_or_insert_storage(
+                movie=local_movie, 
+                is_original=cd['is_original'], 
+                storage_type=cd['storage_type'], 
+                storage_name=cd['storage_name'], 
+                path=cd['path'], 
+                resolution=cd['resolution'], 
+                media_format=cd['media_format'], 
+                version=cd['version'], 
             )
-            # Tambien lo damos de alta en el m2m de writers:
-            local_movie.writers.add(w)
 
-        i = 0
-        for c in casting:
-            MoviePerson.objects.create(
-                movie=local_movie,
-                person=c,
-                role=MoviePerson.RT_ACTOR
-            )
-            # Tambien lo damos de alta en el m2m de actors, pero en este caso: 
-            # solo cogemos los 6 primeros
-            if i < 6:
-                local_movie.actors.add(c)
-            i = i + 1
+        # Puede ocurrir, cuando se trata de un nuevo storage, que lleve nuevas 
+        # tags (por ejemplo, una version extendida de una peli, 3D...)
+        # es por esto que siempre comprobamos tags aunque la peli ya haya
+        # sido dada de alta con anterioridad
+        populate_local_movie_tags(local_movie, tags)
 
         return local_movie
 
@@ -459,7 +234,7 @@ class Command(BaseCommand):
                 
                 if start:
                     try:
-                        cur_movie = self.get_or_insert_movie(csv_row)
+                        cur_movie = self.process_movie(csv_row)
                         if cur_movie is None:
                             csv_writer_fails.writerow(csv_row)
                         else:
