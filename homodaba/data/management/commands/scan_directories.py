@@ -151,21 +151,26 @@ def scan_all_videos(path, is_root=True, tag=None):
         # TITULO (AÑO) [ttIMDB_ID] o TITULO (AÑO) [naim] (para los que no sean imdb)
         s = cur_item["name"]
         
-        pattern = re.compile(".* \(([0-9]+)\) \[naim\]")
+        pattern = re.compile("(.*) \(([0-9]+)\) \[naim\]")
+        reg_search = pattern.search(s)
 
-        if pattern.search(s):
+        if reg_search:
             cur_item["imdb_id"] = ""
-            cur_item["year"] = s.split("(")[1].split(")")[0]
-            cur_item["title"] = s.split("(")[0].strip()
+            cur_item["year"] = reg_search.group(2)
+            cur_item["title"] = reg_search.group(1)
+
+            if tag:
+                cur_item["tag"] = tag
             
             all_video_files.append(cur_item)
         else:
-            pattern = re.compile(".* \(([0-9]+)\) \[tt([0-9]+)\]")
+            pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
+            reg_search = pattern.search(s)
 
-            if pattern.search(s):
-                cur_item["imdb_id"] = s.split("[tt")[1].split("]")[0]
-                cur_item["year"] = s.split("(")[1].split(")")[0]
-                cur_item["title"] = s.split("(")[0].strip()
+            if reg_search:
+                cur_item["imdb_id"] = reg_search.group(3)
+                cur_item["year"] = reg_search.group(2)
+                cur_item["title"] = reg_search.group(1)
                 if tag:
                     cur_item["tag"] = tag
         

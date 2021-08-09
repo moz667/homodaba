@@ -4,7 +4,7 @@ from data.models import get_first_or_create_tag, populate_movie_auto_tags
 from data.utils import Trace as trace
 from data.utils.imdbpy_facade import get_imdb_titles
 
-from data.utils import normalize_age_certificate
+from data.management.commands.utils import normalize_age_certificate
 
 def get_or_create_person_not_an_imdb_movie(name):
     local_persons = Person.objects.filter(name__icontains=name).all()

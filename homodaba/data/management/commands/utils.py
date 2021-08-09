@@ -87,7 +87,7 @@ def clean_csv_data(r):
 
     storage_name = r['storage_name'] if 'storage_name' in r and r['storage_name'] and r['storage_name'] != 'Original' else None
     director = r['director'] if 'director' in r and r['director'] else None
-    year = r['year'] if 'year' in r and r['year'] else 1800
+    year = int(r['year']) if 'year' in r and r['year'] else 1800
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
 
