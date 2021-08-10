@@ -85,11 +85,11 @@ body.login-page {
 
 /* Pages */
 /* Busqueda de paginas y home */
-body.search-movies-page .search-mini-form, body.home-page .search-mini-form {
+body.base-search-page .search-mini-form, body.home-page .search-mini-form {
   display: none; }
 
 @media (max-width: 800px) {
-  body.search-movies-page .search-controls .input-group-prepend, body.home-page .search-controls .input-group-prepend {
+  body.base-search-page .search-controls .input-group-prepend, body.home-page .search-controls .input-group-prepend {
     display: block;
     width: 100%;
     margin-bottom: 1rem; } }

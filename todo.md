@@ -13,7 +13,7 @@
 1. [ ] Actualizacion de imdb_id desde la admin:
     Esto es una idea que puede estar bien, tener la posibilidad de cambiar el imdb_id a una peli que localizamos esta mal, el problema es que deberiamos tambien guardar la relacion con la peli antigua y la nueva, para que las futuras importaciones de ese archivo coincida con el nuevo imdb_id... pensar en esto
 1. [ ] Transcoding / Download
-1. [ ] Tag de usuario para marcar pelis vistas
+1. [X] ~~Tag de usuario para marcar pelis vistas~~
 1. [ ] Como comprobamos que un medio ha sido eliminado?
 
 ### Modelo
