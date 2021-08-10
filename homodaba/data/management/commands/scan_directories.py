@@ -102,7 +102,7 @@ class Command(BaseCommand):
                         'tags': tags
                     })
 
-        with open(output_csv_file, newline='') as csvfile:
+        with open(output_csv_file, newline='') as output_csv:
             reader = csv.DictReader(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
             sorted_rows = sorted(reader, key=lambda row:(row['year'],row['title']), reverse=False)
 
