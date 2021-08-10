@@ -35,12 +35,15 @@ fi
 # Comprueba al final si tenemos definida la variable que no tiene valor 
 # por defecto SECRET_KEY... de no tenerla tenemos que notificar y salirnos
 if [ "$SECRET_KEY" == "" ]; then
-    echo -e " * La variable SECRET_KEY es obligatoria * \n\
-mas info: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key\n\
-Se puede definir esta variable dentro del archivo .venv de la forma:\n\n\
-    export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'\n\n\
-Tambien es posible sobreescribir otras variables definidas en env.sh tales\n\
-como LOCALNETIP y ALLOWED_HOSTS."
+  cat <<EOF
+* La variable SECRET_KEY es obligatoria *
+Mas info: https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
+Se puede definir esta variable dentro del archivo .venv de la forma:
 
-    exit 1
+    export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'
+
+Tambien es posible sobreescribir otras variables definidas en env.sh tales
+como LOCALNETIP y ALLOWED_HOSTS.
+EOF
+  exit 1
 fi
