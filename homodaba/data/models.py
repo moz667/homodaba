@@ -25,6 +25,10 @@ class ImdbCache(models.Model):
         ]
 
 class Person(models.Model):
+    DEFAULT_NO_DIRECTOR = 'Sin Director'
+    DEFAULT_NO_WRITER = 'Sin Escritor'
+    DEFAULT_NO_ACTOR = 'Sin Actor'
+
     name = models.CharField('Nombre', max_length=200, null=False, blank=False)
     canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
@@ -58,6 +62,8 @@ class AbstractTag(models.Model):
         abstract = True
 
 class Tag(AbstractTag):
+    NO_YEAR = 'no year'
+
     class Meta:
         verbose_name = "etiqueta"
         verbose_name_plural = "etiquetas"
@@ -102,6 +108,7 @@ class Country(models.Model):
         return self.name
 
 class Movie(models.Model):
+    DEFAULT_NO_YEAR = 1800
     """
     KIND_MAP = {
         'tv': 'tv movie',

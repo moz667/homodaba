@@ -13,6 +13,8 @@ from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 from .filesystem.FileProcessor import FileProcessor
 from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT
 
+from data.models import Movie, Tag
+
 HELP_TEXT = """
 Ejemplo de fichero de configuracion (JSON):
 [
@@ -158,11 +160,6 @@ def scan_all_videos(path, is_root=True, tag=None):
             cur_item["imdb_id"] = ""
             cur_item["year"] = reg_search.group(2)
             cur_item["title"] = reg_search.group(1)
-
-            if tag:
-                cur_item["tag"] = tag
-            
-            all_video_files.append(cur_item)
         else:
             pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
             reg_search = pattern.search(s)
@@ -171,10 +168,27 @@ def scan_all_videos(path, is_root=True, tag=None):
                 cur_item["imdb_id"] = reg_search.group(3)
                 cur_item["year"] = reg_search.group(2)
                 cur_item["title"] = reg_search.group(1)
-                if tag:
-                    cur_item["tag"] = tag
-        
-                all_video_files.append(cur_item)
+            else:
+                pattern = re.compile("(.*) \(([0-9]+)\)")
+                reg_search = pattern.search(s)
+
+                if reg_search:
+                    cur_item["imdb_id"] = ""
+                    cur_item["year"] = reg_search.group(2)
+                    cur_item["title"] = reg_search.group(1)
+                else:
+                    cur_item["imdb_id"] = ""
+                    cur_item["year"] = Movie.DEFAULT_NO_YEAR
+                    cur_item["title"] = s
+
+                    tag = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
+
+        if 'title' in cur_item and 'year' in cur_item:
+            if tag:
+                cur_item["tag"] = tag
+            
+            all_video_files.append(cur_item)
+
         # OJO: Solo funciona con el formato sencillo
 
     return all_video_files

@@ -475,7 +475,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     if movies_local_data.count() == 1:
         return FacadeResult.local_data(movies_local_data[0])
-    else:
+    elif movies_local_data.count() > 1:
         trace.debug(" * Hemos encontrado varios resultados para la busqueda local (title='%s', year='%s', title_alt='%s')" % (title, year, title_alt))
     
     # Si se trata de una peli que no esta en el imdb, no la vamos a buscar alli

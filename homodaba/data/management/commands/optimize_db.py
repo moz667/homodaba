@@ -114,6 +114,7 @@ class Command(BaseCommand):
 
         current_movie_index = 1
         total_movies = query_movies.count()
+        
         for movie in query_movies.all():
             trace.debug('>> %s (%s) [id:%s] (%s / %s)' % (
                 movie.title, movie.get_countries_as_text(), movie.id,
@@ -217,20 +218,13 @@ def populate_casting(movie):
         if actors.count():
             got_changes = True
             trace.debug("  - Añadimos los siguientes actores:")
-            i = 0
 
             for actor in actors:
-                if i < 6:
-                    trace.debug("    * %s" % actor.person.name)
-                    movie.actors.add(actor.person)
-                    i = i + 1
-                else:
-                    break
+                trace.debug("    * %s" % actor.person.name)
+                movie.actors.add(actor.person)
 
     if got_changes:
         movie.save()
-
-    
 
 def clean_title_and_akas(movie):
     title_akas = {}

@@ -23,6 +23,10 @@ while os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, ""):
     SMB_SHARE_2_URL[os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, "")] = os.getenv("SMB_SHARE_2_URL_VALUE_%i" % i, "")
     i = i + 1
 
+# Variable que define un limite a la hora de dar de alta actores
+# scrapeados de imdb. Por defecto tiene un limite de 12 pero se puede
+# establecer a 0 por lo que no tendria limite
+CASTING_LIMIT = int(os.getenv("CASTING_LIMIT", "12"))
 
 NO_CACHE = int(os.getenv("NO_CACHE", "0")) == 1
 UPDATE_CACHE = int(os.getenv("UPDATE_CACHE", "0")) == 1

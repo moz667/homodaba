@@ -1,3 +1,5 @@
+from homodaba.settings import CASTING_LIMIT
+
 from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
 from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
@@ -111,18 +113,28 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     casting = []
 
     if 'cast' in ia_movie.keys():
+        i = 0
         for imdb_person in ia_movie['cast']:
-            lp = get_or_create_person_from_imdb(imdb_person)
+            # La alta de personas en la base de datos la hemos limitado para 
+            # intentar optimizar un poco el rendimiento. (ver settings para mas 
+            # info)
+            if not CASTING_LIMIT or i < CASTING_LIMIT:
+                lp = get_or_create_person_from_imdb(imdb_person)
 
-            if not lp.is_actor:
-                lp.is_actor = True
-                lp.save()
-            
-            casting.append(lp)
+                if not lp.is_actor:
+                    lp.is_actor = True
+                    lp.save()
+                
+                casting.append(lp)
+            else:
+                break
+            i = i + 1
     else:
         trace.warning('\tNo encontramos casting para la pelicula "%s"' % title)
-    
-    directors, writers, casting = populate_default_casting(directors=directors, writers=writers, casting=casting)
+
+    directors, writers, casting = populate_default_casting(
+        directors=directors, writers=writers, casting=casting
+    )
 
     new_titles, title_akas = get_imdb_titles(ia_movie)
     
@@ -289,23 +301,19 @@ def insert_casting_on_local_movie(local_movie, directors=[], writers=[], casting
         # Tambien lo damos de alta en el m2m de writers:
         local_movie.writers.add(w)
 
-    i = 0
     for c in casting:
         MoviePerson.objects.create(
             movie=local_movie,
             person=c,
             role=MoviePerson.RT_ACTOR
         )
-        # Tambien lo damos de alta en el m2m de actors, pero en este caso: 
-        # solo cogemos los 6 primeros
-        if i < 6:
-            local_movie.actors.add(c)
-        i = i + 1
+        # Tambien lo damos de alta en el m2m de actors
+        local_movie.actors.add(c)
 
 def populate_default_casting(directors=[], writers=[], casting=[]):
     if not len(directors):
         # Si no tiene director creamos una persona que sea Sin Director
-        lp = get_or_create_person_not_an_imdb_movie(name='Sin Director')
+        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_DIRECTOR)
 
         if not lp.is_director:
             lp.is_director = True
@@ -314,14 +322,14 @@ def populate_default_casting(directors=[], writers=[], casting=[]):
         directors = [lp]
     
     if not len(writers):
-        lp = get_or_create_person_not_an_imdb_movie(name='Sin Escritor')
+        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_WRITER)
         if not lp.is_writer:
             lp.is_writer = True
             lp.save()
         writers = [lp]
     
     if not len(casting):
-        lp = get_or_create_person_not_an_imdb_movie(name='Sin Actor')
+        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_ACTOR)
         if not lp.is_actor:
             lp.is_actor = True
             lp.save()
