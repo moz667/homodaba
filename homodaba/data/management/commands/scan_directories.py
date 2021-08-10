@@ -11,7 +11,7 @@ from .utils import save_json, split_filename_parts
 from .filesystem import clean_filename_for_samba_share, escape_single_quoute
 from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 from .filesystem.FileProcessor import FileProcessor
-from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT
+from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT, SUB_EXT
 
 from data.models import Movie, Tag
 
@@ -143,7 +143,8 @@ def scan_all_videos(path, is_root=True, tag=None):
         
         # ...y que tenga una extension valida
         if not 'ext' in cur_item or not cur_item['ext'].lower() in VIDEO_EXT:
-            trace.warning("El archivo '%s/%s' no una extension valida." % (path, cur_item['fullname']))
+            if not 'ext' in cur_item or not cur_item['ext'].lower() in SUB_EXT:
+                trace.warning("El archivo '%s/%s' no una extension valida." % (path, cur_item['fullname']))
             continue
         
         # corregimos el fullname con el path:
