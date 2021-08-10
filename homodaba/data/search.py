@@ -109,6 +109,19 @@ if ELASTICSEARCH_DSL:
                 query=DSL_Q("match", user_tags__pk=tag)
             ))
 
+        if not unseen is None and not seen_tag is None:
+            if unseen:
+                """
+                FIXME: hay que hacer el negativo de esto... (que no contenga esa tag)
+                query.must.append(DSL_Q("nested", path="user_tags", 
+                    query=DSL_Q("match", user_tags__pk=seen_tag)
+                ))
+                """
+            else:
+                query.must.append(DSL_Q("nested", path="user_tags", 
+                    query=DSL_Q("match", user_tags__pk=seen_tag)
+                ))
+
         if year:
             query.must.append(DSL_Q("match", year=year))
         
@@ -223,6 +236,17 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
         
         search_query = search_query_new
 
+    if not unseen is None and not seen_tag is None:
+        if unseen:
+            queryset = queryset.exclude(user_tags__pk=seen_tag)
+        else:
+            search_query_new = Q(user_tags__pk=seen_tag)
+            
+            if search_query:
+                search_query_new.add(search_query, Q.AND)
+            
+            search_query = search_query_new
+
     if search_query:
         queryset = queryset.filter(search_query)
 
@@ -259,13 +283,13 @@ def populate_search_filter(queryset, search_term, use_use_distinct=False,
             use_use_distinct=use_use_distinct, genre=genre, 
             content_rating_system=content_rating_system, tag=tag, 
             year=year, director=director, writer=writer, actor=actor, 
-            user_tag=user_tag, unseen=unseen, seen_tag=unseen
+            user_tag=user_tag, unseen=unseen, seen_tag=seen_tag
         )
 
     return populate_search_filter_model(queryset, search_term, use_use_distinct, 
         year=year, director=director, writer=writer, actor=actor, genre=genre, 
         content_rating_system=content_rating_system, tag=tag, 
-        user_tag=user_tag, unseen=unseen, seen_tag=unseen
+        user_tag=user_tag, unseen=unseen, seen_tag=seen_tag
     )
 
 def movie_search_filter(search_term):

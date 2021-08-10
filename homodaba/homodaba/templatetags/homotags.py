@@ -16,7 +16,7 @@ def search_filters_as_url_args(filters, exlude_filter):
             if filters[casting_type] and filters['%s_query' % casting_type] and exlude_filter != casting_type:
                 url_args.append("&%s=%s" % (casting_type, filters['%s_query' % casting_type]))
 
-        for key in ['tag', 'genre', 'cr_system', 'user_tag']:
+        for key in ['tag', 'genre', 'cr_system', 'user_tag', 'unseen']:
             if filters[key] and exlude_filter != key:
                 url_args.append("&%s=%s" % (key, filters[key]))
 

@@ -1,3 +1,5 @@
+{% load homotags %}
+
 <span class="badge badge-{{ badge_style }} m-1 p-1">
     {% if left_icon %}
         <em class="mdi mdi-{{ left_icon }}"> </em>
@@ -7,7 +9,7 @@
     </span>
 
     <span style="border-left: 2px solid #FFF;" class="remove-wrap p-1">
-        <a href="{{ remove_url }}" 
+        <a href="?search_term={{ search_term }}{% search_filters_as_url_args filters remove_url_tag %}" 
             class="mdi mdi-close" style="color: #FFF; text-decoration: none; padding-left: 0.5rem;">
         </a>
     </span>

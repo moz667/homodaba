@@ -1,5 +1,3 @@
-{# with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url #}
-
 <h1>Buscador de películas</h1>
 <div class="alert alert-primary" role="alert">
     <form method="GET" action="{% url 'search_movies' %}">
@@ -10,47 +8,38 @@
         <input type="hidden" name="genre" value="{{ filters.genre }}" />
         <input type="hidden" name="cr_system" value="{{ filters.cr_system }}" />
         <input type="hidden" name="user_tag" value="{{ filters.user_tag }}" />
+        <input type="hidden" name="unseen" value="{{ filters.unseen }}" />
 
         {% if filters.director %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.director badge_style='dark' remove_url=remove_tag_url left_icon='bullhorn' %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.director badge_style='dark' remove_url_tag='director' left_icon='bullhorn' %}
         {% endif %}
 
         {% if filters.writer %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.writer badge_style='dark' remove_url=remove_tag_url left_icon='typewriter' %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.writer badge_style='dark' remove_url_tag='writer' left_icon='typewriter' %}
         {% endif %}
 
         {% if filters.actor %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.actor badge_style='dark' remove_url=remove_tag_url left_icon='drama-masks' %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.actor badge_style='dark' remove_url_tag='actor' left_icon='drama-masks' %}
         {% endif %}
 
         {% if filters.tag %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.tag badge_style='success' remove_url=remove_tag_url %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.tag badge_style='success' remove_url_tag='tag' %}
         {% endif %}
 
         {% if filters.genre %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&cr_system="|add:filters.cr_system|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.genre badge_style='info' remove_url=remove_tag_url %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.genre badge_style='info' remove_url_tag='genre' %}
         {% endif %}
 
         {% if filters.cr_system %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&user_tag="|add:filters.user_tag as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.cr_system badge_style='danger' remove_url=remove_tag_url %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.cr_system badge_style='danger' remove_url_tag='cr_system' %}
         {% endif %}
 
         {% if filters.user_tag %}
-            {% with "?search_term="|add:search_term|add:"&order_by="|add:order_by|add:"&director="|add:filters.director_query|add:"&writer="|add:filters.writer_query|add:"&actor="|add:filters.actor_query|add:"&tag="|add:filters.tag|add:"&genre="|add:filters.genre|add:"&cr_system="|add:filters.cr_system as remove_tag_url %}
-                {% include "inc/filter_tag.html" with tag=filters.user_tag badge_style='user-tag' remove_url=remove_tag_url %}
-            {% endwith %}
+            {% include "inc/filter_tag.html" with tag=filters.user_tag badge_style='user-tag' remove_url_tag='user_tag' %}
+        {% endif %}
+
+        {% if filters.unseen %}
+            {% include "inc/filter_tag.html" with tag='No vistas' badge_style='dark' remove_url_tag='unseen' left_icon='mdi-eye-off-outline' %}
         {% endif %}
 
         <div class="search-controls input-group my-3">

@@ -31,7 +31,11 @@ def search_movies(request):
     director = get_person_filter(request, 'director', is_director=True)
     writer = get_person_filter(request, 'writer', is_writer=True)
     actor = get_person_filter(request, 'actor', is_actor=True)
+
     unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
+    seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
+
+    print(unseen)
 
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
@@ -50,6 +54,8 @@ def search_movies(request):
         genre=genre.id if genre else None,
         content_rating_system=cr_system.id if cr_system else None,
         user_tag=user_tag.id if user_tag else None,
+        unseen=unseen,
+        seen_tag=seen_tag.id,
         use_use_distinct=True
     )
 
@@ -87,6 +93,8 @@ def search_movies(request):
             'genre': genre.name if genre else '',
             'cr_system': cr_system.name if cr_system else '',
             'user_tag': user_tag.name if user_tag else '',
+            'unseen': unseen,
+            # 'unseen': 'True' if unseen else 'False',
         }
     })
 

@@ -4,7 +4,7 @@
 
 {% block title %}Buscador de peliculas{% endblock %}
 
-{% block body_class %}search-movies-page{% endblock %}
+{% block body_class %}{% if filters.unseen %}search-unseen-movies-page{% else %}search-movies-page{% endif %}{% endblock %}
 
 {% block main_block %}
     <div class="my-3 p-3">
@@ -45,7 +45,7 @@
         {% if next_page %}
             <div style="padding-bottom: 2rem;" class="pagination">
                 <a class="pagination__next btn btn-primary btn-block" 
-                    href="?search_term={{ search_term }}&page={{ next_page }}&order_by={{ order_by }}{% search_filters_as_url_args filters '' %}">
+                    href="?search_term={{ search_term }}{% search_filters_as_url_args filters '' %}&page={{ next_page }}&order_by={{ order_by }}">
                     Siguiente página
                 </a>
             </div>

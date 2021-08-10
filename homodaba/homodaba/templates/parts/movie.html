@@ -2,7 +2,7 @@
 
 <div style="flex: 1 0 30%" class="card my-2 movie-item movie-{{ movie.id }}">
     <div class="card-header text-truncate">
-        <div style="position: absolute; top: 0.4rem; right: 0.5rem;" class="user-tag-switcher-wrap">
+        <div style="position: absolute; top: 0.4rem; right: 0.5rem; line-height: 1.2;" class="user-tag-switcher-wrap">
             <a style="display: block;" class="user-tag-switcher" href="javascript:void(0);" 
                 data-url="{% url 'json_switch_user_tag' tag_type='later' movie_id=movie.id  %}" 
                 data-icon-on="mdi-star" data-icon-off="mdi-star-outline">
