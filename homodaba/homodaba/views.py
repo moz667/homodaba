@@ -93,8 +93,7 @@ def search_movies(request):
             'genre': genre.name if genre else '',
             'cr_system': cr_system.name if cr_system else '',
             'user_tag': user_tag.name if user_tag else '',
-            'unseen': unseen,
-            # 'unseen': 'True' if unseen else 'False',
+            'unseen': unseen or '',
         }
     })
 
