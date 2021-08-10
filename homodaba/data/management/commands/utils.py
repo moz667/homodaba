@@ -91,7 +91,7 @@ def clean_csv_data(r):
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
 
-    not_an_imdb_movie = strtobool(r['not_an_imdb_movie']) if 'not_an_imdb_movie' and r['not_an_imdb_movie'] else False
+    not_an_imdb_movie = strtobool(r['not_an_imdb_movie']) if 'not_an_imdb_movie' in r and r['not_an_imdb_movie'] else False
 
     tags = r['tags'].split(',') if 'tags' in r and r['tags'] else []
     directors = director.split(",") if director else []
