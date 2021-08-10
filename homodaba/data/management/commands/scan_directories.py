@@ -105,7 +105,7 @@ class Command(BaseCommand):
         with open(output_csv_file, newline='') as output_csv:
             reader = csv.DictReader(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
             sorted_rows = sorted(reader, key=lambda row:(row['title']), reverse=False)
-            sorted_rows = sorted(sorted_rows, key=lambda row:(row['year']), reverse=True)
+            sorted_rows = sorted(sorted_rows, key=lambda row:(row['year']), reverse=False)
 
         with open(output_csv_file, 'w', newline='') as output_csv:
             writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
