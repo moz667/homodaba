@@ -1,3 +1,4 @@
+from distutils.util import strtobool
 import re
 
 from django.contrib.auth.decorators import login_required
@@ -30,6 +31,7 @@ def search_movies(request):
     director = get_person_filter(request, 'director', is_director=True)
     writer = get_person_filter(request, 'writer', is_writer=True)
     actor = get_person_filter(request, 'actor', is_actor=True)
+    unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
 
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
@@ -132,9 +134,9 @@ def user_later_movies(request):
     })
 
 @login_required
-def json_switch_later_tag(request, movie_id):
+def json_switch_user_tag(request, tag_type, movie_id):
     movie = Movie.objects.get(id=movie_id)
-    tag = get_or_create_user_tag(request.user, UserTag.LATER_TAG)
+    tag = get_or_create_user_tag(request.user, tag_type)
     
     insert_tag = True
     for t in movie.user_tags.all():

@@ -98,6 +98,8 @@ function resize_storage_types_info_init() {
 function user_tag_switcher_init() {
     $(".user-tag-switcher").each(function () {
         var $link = $(this);
+        var icon_on = $link.data("icon-on");
+        var icon_off = $link.data("icon-off");
 
         $link.off("click").on("click", function () {
             $.ajax({
@@ -106,10 +108,10 @@ function user_tag_switcher_init() {
             }).always(function() {
                 var $icon = $link.find("em");
 
-                if ($icon.hasClass("mdi-star")) {
-                    $icon.removeClass("mdi-star").addClass("mdi-star-outline");
+                if ($icon.hasClass(icon_on)) {
+                    $icon.removeClass(icon_on).addClass(icon_off);
                 } else {
-                    $icon.removeClass("mdi-star-outline").addClass("mdi-star");
+                    $icon.removeClass(icon_off).addClass(icon_on);
                 }
             });
         })

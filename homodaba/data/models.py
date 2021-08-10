@@ -75,6 +75,7 @@ class GenreTag(AbstractTag):
 
 class UserTag(AbstractTag):
     LATER_TAG = 'later'
+    SEEN_TAG = 'seen'
 
     class Meta:
         verbose_name = "etiqueta de usario"

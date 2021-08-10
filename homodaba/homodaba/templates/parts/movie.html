@@ -2,15 +2,23 @@
 
 <div style="flex: 1 0 30%" class="card my-2 movie-item movie-{{ movie.id }}">
     <div class="card-header text-truncate">
-        <div style="position: absolute; top; 1rem; right: 1rem;" class="user-tag-switcher-wrap">
-            <a class="user-tag-switcher" href="javascript:void(0);" 
-                data-url="{% url 'json_switch_later_tag' movie_id=movie.id  %}">
+        <div style="position: absolute; top: 0.4rem; right: 0.5rem;" class="user-tag-switcher-wrap">
+            <a style="display: block;" class="user-tag-switcher" href="javascript:void(0);" 
+                data-url="{% url 'json_switch_user_tag' tag_type='later' movie_id=movie.id  %}" 
+                data-icon-on="mdi-star" data-icon-off="mdi-star-outline">
                 {% movie_contain_user_tag movie=movie user=request.user tag_type='later' as is_movie_contain_later_tag %}
                 <em style="color: #e79900; font-size: 1.5rem;" class="mdi mdi-star{% if not is_movie_contain_later_tag %}-outline{% endif %}"> </em>
             </a>
+            
+            <a style="display: block;" class="user-tag-switcher" href="javascript:void(0);" 
+                data-url="{% url 'json_switch_user_tag' tag_type='seen' movie_id=movie.id  %}"
+                data-icon-on="mdi-eye" data-icon-off="mdi-eye-off-outline">
+                {% movie_contain_user_tag movie=movie user=request.user tag_type='seen' as is_movie_contain_seen_tag %}
+                <em style="color: #888; font-size: 1.5rem;" class="mdi mdi-eye{% if not is_movie_contain_seen_tag %}-off-outline{% endif %}"> </em>
+            </a>
         </div>
 
-        <div style="overflow: hidden; text-overflow: ellipsis;" class="movie-title">
+        <div style="overflow: hidden; text-overflow: ellipsis; padding-right: 1rem;" class="movie-title">
             {{ movie.get_the_main_title }} ({{ movie.year }})
         </div>
 

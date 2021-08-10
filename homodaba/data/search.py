@@ -13,7 +13,8 @@ if ELASTICSEARCH_DSL:
 
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
         genre=None, content_rating_system=None, tag=None, year=None, 
-        director=None, writer=None, actor=None, user_tag=None):
+        director=None, writer=None, actor=None, user_tag=None, 
+        unseen=None, seen_tag=None):
 
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
         # TODO: stats de la busqueda (total encontrados para la paginacion)
@@ -126,7 +127,8 @@ if ELASTICSEARCH_DSL:
 
 def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
     year=None, director=None, writer=None, actor=None, 
-    genre=None, content_rating_system=None, tag=None, user_tag=None):
+    genre=None, content_rating_system=None, tag=None, user_tag=None, 
+    unseen=None, seen_tag=None):
 
     # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
     # para varios
@@ -249,20 +251,21 @@ def extract_year(search_term):
 def populate_search_filter(queryset, search_term, use_use_distinct=False, 
     genre=None, content_rating_system=None, tag=None, 
     director=None, writer=None, actor=None, 
-    user_tag=None):
+    user_tag=None, unseen=None, seen_tag=None):
     year, search_term = extract_year(search_term)
 
     if ELASTICSEARCH_DSL:
         return populate_search_filter_dsl(queryset, search_term, 
             use_use_distinct=use_use_distinct, genre=genre, 
             content_rating_system=content_rating_system, tag=tag, 
-            year=year, director=director, writer=writer, actor=actor, user_tag=user_tag
+            year=year, director=director, writer=writer, actor=actor, 
+            user_tag=user_tag, unseen=unseen, seen_tag=unseen
         )
 
     return populate_search_filter_model(queryset, search_term, use_use_distinct, 
         year=year, director=director, writer=writer, actor=actor, genre=genre, 
         content_rating_system=content_rating_system, tag=tag, 
-        user_tag=user_tag
+        user_tag=user_tag, unseen=unseen, seen_tag=unseen
     )
 
 def movie_search_filter(search_term):
