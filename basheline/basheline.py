@@ -8,7 +8,7 @@ import os
 import json
 
 input_csv_header = ['Localizacion', 'Título Original', 'Titulo traducido', 'Director', 'Año', 'Resolución', 'Formato']
-output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'imdb_id', 'tags' ]
+output_csv_header = ['storage_name', 'title', 'title_preferred', 'director', 'year', 'resolution', 'media_format', 'path', 'storage_type', 'version', 'imdb_id', 'tags', 'not_an_imdb_movie' ]
 
 def parse_arguments(args):
     parser = argparse.ArgumentParser(description='Bas[h]eline. Because even IMDB needs some lube ^_^')
