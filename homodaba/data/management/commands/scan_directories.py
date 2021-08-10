@@ -104,14 +104,15 @@ class Command(BaseCommand):
 
         with open(output_csv_file, newline='') as output_csv:
             reader = csv.DictReader(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
-            sorted_rows = sorted(reader, key=lambda row:(row['year'],row['title']), reverse=False)
+            sorted_rows = sorted(reader, key=lambda row:(row['title']), reverse=False)
+            sorted_rows = sorted(sorted_rows, key=lambda row:(row['year']), reverse=True)
 
-        with open(output_csv_file, 'w+', newline='') as output_csv:
+        with open(output_csv_file, 'w', newline='') as output_csv:
             writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
-            writer.writeheader()
 
             for row in sorted_rows:
                 writer.writerow(row)
+
         
 # TODO: Calcular el media_format
 # 'mp4', 'avi', 'mkv', 'wmv', 'iso', 'mpg', 'mpeg'
