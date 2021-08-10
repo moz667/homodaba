@@ -11,7 +11,7 @@ from .utils import save_json, split_filename_parts
 from .filesystem import clean_filename_for_samba_share, escape_single_quoute
 from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 from .filesystem.FileProcessor import FileProcessor
-from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT, SUB_EXT
+from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT, SUB_EXT, AUDIO_EXT
 
 from data.models import Movie, Tag
 
@@ -143,7 +143,7 @@ def scan_all_videos(path, is_root=True, tag=None):
         
         # ...y que tenga una extension valida
         if not 'ext' in cur_item or not cur_item['ext'].lower() in VIDEO_EXT:
-            if not 'ext' in cur_item or not cur_item['ext'].lower() in SUB_EXT:
+            if not 'ext' in cur_item or (not cur_item['ext'].lower() in SUB_EXT and not cur_item['ext'].lower() in AUDIO_EXT):
                 trace.warning("El archivo '%s/%s' no una extension valida." % (path, cur_item['fullname']))
             continue
         
@@ -182,10 +182,10 @@ def scan_all_videos(path, is_root=True, tag=None):
                     cur_item["year"] = Movie.DEFAULT_NO_YEAR
                     cur_item["title"] = s
 
-                    tag = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
+                    cur_item["tag"] = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
 
         if 'title' in cur_item and 'year' in cur_item:
-            if tag:
+            if tag and not 'tag' in cur_item:
                 cur_item["tag"] = tag
             
             all_video_files.append(cur_item)
