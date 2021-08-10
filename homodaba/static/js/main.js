@@ -12,6 +12,7 @@ $(document).ready(function () {
 
     user_tag_switcher_init();
     copy_storage_types_init();
+    show_more_init();
 
     window.setTimeout(resize_storage_types_info_init, 500);
 
@@ -25,23 +26,35 @@ $(document).ready(function () {
     });
     */
 
-    var elem = document.querySelector('.search-results');
-    var infScroll = new InfiniteScroll( elem, {
-        // options
-        path: '.pagination__next',
-        append: '.movie-item',
-        history: false,
-    });
-
-    if (infScroll) {
-        $(".pagination").hide();
-        infScroll.on( 'append', function( body, path, items, response ) {
-            user_tag_switcher_init();
-            copy_storage_types_init();
-            resize_storage_types_info_init();
+    if ($(".pagination").length) {
+        var elem = document.querySelector('.search-results');
+        var infScroll = new InfiniteScroll( elem, {
+            // options
+            path: '.pagination__next',
+            append: '.movie-item',
+            history: false,
         });
+
+        if (infScroll) {
+            $(".pagination").hide();
+            infScroll.on( 'append', function( body, path, items, response ) {
+                user_tag_switcher_init();
+                copy_storage_types_init();
+                resize_storage_types_info_init();
+                show_more_init();
+            });
+        }
     }
 });
+
+function show_more_init() {
+    $(".show-more").off("click").on("click", function () {
+        var $this = $(this);
+
+        $this.hide();
+        $($this.data("selector")).show();
+    });
+}
 
 function copy_storage_types_init() {
     $(".storage-types textarea.storage-type-info").off("focus").on("focus", function () {

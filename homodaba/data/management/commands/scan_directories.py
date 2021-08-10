@@ -102,6 +102,17 @@ class Command(BaseCommand):
                         'tags': tags
                     })
 
+        with open(output_csv_file, newline='') as csvfile:
+            reader = csv.DictReader(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
+            sorted_rows = sorted(reader, key=lambda row:(row['year'],row['title']), reverse=False)
+
+        with open(output_csv_file, 'w+', newline='') as output_csv:
+            writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
+            writer.writeheader()
+
+            for row in sorted_rows:
+                writer.writerow(row)
+        
 # TODO: Calcular el media_format
 # 'mp4', 'avi', 'mkv', 'wmv', 'iso', 'mpg', 'mpeg'
 def calculate_media_format(video_file):
@@ -151,38 +162,32 @@ def scan_all_videos(path, is_root=True, tag=None):
         cur_item['fullname'] = '%s/%s' % (path, cur_item['fullname'])
 
         # OJO: Solo funciona con el formato sencillo siguiente:
-        # TITULO (AÑO) [ttIMDB_ID] o TITULO (AÑO) [naim] (para los que no sean imdb)
+        #  - "TITULO (AÑO) [ttIMDB_ID]", para los scrapeados del imdb
+        #  - "TITULO (AÑO)", para los que no sean scrapeables en el imdb
+        #  - "TITULO", para los que no sean scrapeables en el imdb y no sepamos año
         s = cur_item["name"]
         
-        pattern = re.compile("(.*) \(([0-9]+)\) \[naim\]")
+        pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
         reg_search = pattern.search(s)
 
         if reg_search:
-            cur_item["imdb_id"] = ""
+            cur_item["imdb_id"] = reg_search.group(3)
             cur_item["year"] = reg_search.group(2)
             cur_item["title"] = reg_search.group(1)
         else:
-            pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
+            pattern = re.compile("(.*) \(([0-9]+)\)")
             reg_search = pattern.search(s)
 
             if reg_search:
-                cur_item["imdb_id"] = reg_search.group(3)
+                cur_item["imdb_id"] = ""
                 cur_item["year"] = reg_search.group(2)
                 cur_item["title"] = reg_search.group(1)
             else:
-                pattern = re.compile("(.*) \(([0-9]+)\)")
-                reg_search = pattern.search(s)
+                cur_item["imdb_id"] = ""
+                cur_item["year"] = Movie.DEFAULT_NO_YEAR
+                cur_item["title"] = s
 
-                if reg_search:
-                    cur_item["imdb_id"] = ""
-                    cur_item["year"] = reg_search.group(2)
-                    cur_item["title"] = reg_search.group(1)
-                else:
-                    cur_item["imdb_id"] = ""
-                    cur_item["year"] = Movie.DEFAULT_NO_YEAR
-                    cur_item["title"] = s
-
-                    cur_item["tag"] = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
+                cur_item["tag"] = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
 
         if 'title' in cur_item and 'year' in cur_item:
             if tag and not 'tag' in cur_item:

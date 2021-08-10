@@ -1,9 +1,6 @@
 ## Pendientes
 
 ### Bugs
-1. [X] ~~ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)~~
-1. [X] ~~Busqueda por año~~
-1. [X] ~~no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv~~
 
 ### General
 1. [ ] Documentar en general (uff... que pereza  ^ _ ^)
@@ -11,32 +8,13 @@
     - [ ] Variables de entorno
 1. [ ] Ver qué hacemos con las películas que no están en IMDB.
 
-### Public no staff
-1. [X] ~~link a imdb en la carátula~~
-1. [X] ~~quitar ultimos medios (tiene una utilidad puntual)~~
-1. [X] ~~titulo original mal en algunas pelis
-1. [X] ~~Paginacion en busquedas (con infinite)~~
-1. [X] ~~Ordenacion de resultados~~
-
 ### Funcionalidad
-1. [X] ~~Escaneo de directorios para buscar nuevos o seguir usando csvs?~~
 1. [ ] Busqueda por texto en participantes (peli o nombre de persona)
-1. [X] ~~Busqueda de peliculas en admin:~~
-    - ~~Hacer opcional que saque otros titulos (no tiene mucho sentido)~~
-    - ~~Mostrar forma alternativa de medios en las que solo saque la ruta~~
 1. [ ] Actualizacion de imdb_id desde la admin:
     Esto es una idea que puede estar bien, tener la posibilidad de cambiar el imdb_id a una peli que localizamos esta mal, el problema es que deberiamos tambien guardar la relacion con la peli antigua y la nueva, para que las futuras importaciones de ese archivo coincida con el nuevo imdb_id... pensar en esto
-1. [X] ~~marcar para ver mas tarde (con tag que sea XXX-nombre de user)~~
 1. [ ] Transcoding / Download
-1. [X] ~~Borrar tablas con truncate en vez de delete (ver delete_all_movies.py)~~
-1. [X] ~~Generar tags por las decadas~~
 1. [ ] Tag de usuario para marcar pelis vistas
 1. [ ] Como comprobamos que un medio ha sido eliminado?
-
-### Diseño
-1. [X] ~~Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)~~
-    - ~~Estoy dandole vueltas a esto y creo que lo mejor al final va a ser sacar una vista especial para las busquedas (y dejar la admin como estaba al principio :P)~~
-1. [X] ~~Mirar themes de admin con bootstrap~~
 
 ### Modelo
 1. [ ] Añadir campo para orden de visionado (para que bpk no este metiendo una tag por cada peli dentro de una saga :P)
@@ -71,6 +49,16 @@
 
 ### Bugs
 1. [X] ~~Fallo al importar datos de sqlite3... title en TitleAka duplicado!!!~~
+1. [X] ~~ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)~~
+1. [X] ~~Busqueda por año~~
+1. [X] ~~no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv~~
+
+### Public no staff
+1. [X] ~~link a imdb en la carátula~~
+1. [X] ~~quitar ultimos medios (tiene una utilidad puntual)~~
+1. [X] ~~titulo original mal en algunas pelis
+1. [X] ~~Paginacion en busquedas (con infinite)~~
+1. [X] ~~Ordenacion de resultados~~
 
 ### Limpiando titulos
 1. [X] ~~Ver qué hacemos con las películas cuyo título original no es en inglés. El IMDB usa "World-wide (English title)" en lugar de "original title".~~
@@ -86,3 +74,17 @@
     - ~~TitleAka (pillar solo los titulos que entendemos pueden ser interesantes o tener inclusive la opcion de pasar de esos titulos, con los tres que guardamos en Movie deberia ser suficiente)~~
 1. [X] ~~Configurar por settings el tamaño de paginacion de la busqueda de peliculas~~
 1. [X] ~~Usar MySql~~
+
+### Funcionalidad
+1. [X] ~~Escaneo de directorios para buscar nuevos o seguir usando csvs?~~
+1. [X] ~~Busqueda de peliculas en admin:~~
+    - ~~Hacer opcional que saque otros titulos (no tiene mucho sentido)~~
+    - ~~Mostrar forma alternativa de medios en las que solo saque la ruta~~
+1. [X] ~~marcar para ver mas tarde (con tag que sea XXX-nombre de user)~~
+1. [X] ~~Borrar tablas con truncate en vez de delete (ver delete_all_movies.py)~~
+1. [X] ~~Generar tags por las decadas~~
+
+### Diseño
+1. [X] ~~Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)~~
+    - ~~Estoy dandole vueltas a esto y creo que lo mejor al final va a ser sacar una vista especial para las busquedas (y dejar la admin como estaba al principio :P)~~
+1. [X] ~~Mirar themes de admin con bootstrap~~
