@@ -188,7 +188,8 @@ def scan_all_videos(path, is_root=True, tag=None):
                 cur_item["tag"] = tag
             
             all_video_files.append(cur_item)
-
+        else:
+            trace.warning("El archivo '%s/%s' no coincide con ningun patron de identificacion valido." % (path, cur_item['fullname']))
         # OJO: Solo funciona con el formato sencillo
 
     return all_video_files
