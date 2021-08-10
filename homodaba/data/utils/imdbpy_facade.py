@@ -445,7 +445,7 @@ def facade_get(imdb_id):
         return FacadeResult.imdb_data(get_imdb_movie(imdb_id))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None, imdb_id=None):
+    storage_name=None, path=None, imdb_id=None, not_an_imdb_movie=False):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
@@ -475,7 +475,14 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     if movies_local_data.count() == 1:
         return FacadeResult.local_data(movies_local_data[0])
-
+    elif movies_local_data.count() > 1:
+        trace.debug(" * Hemos encontrado varios resultados para la busqueda local (title='%s', year='%s', title_alt='%s')" % (title, year, title_alt))
+    
+    # Si se trata de una peli que no esta en el imdb, no la vamos a buscar alli
+    if not_an_imdb_movie:
+        trace.debug(" * La pelicula '%s (%s)' se trata de una pelicula que no se encuentra en el imdb y que todavia no hemos dado de alta." % (title, year))
+        return None
+    
     imdb_movie, search_results = match_imdb_movie(
         title, year, title_alt=title_alt, 
         director=director

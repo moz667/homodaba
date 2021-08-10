@@ -11,7 +11,9 @@ from .utils import save_json, split_filename_parts
 from .filesystem import clean_filename_for_samba_share, escape_single_quoute
 from .filesystem.JSONDirectory import JSONDirectoryScan, get_output_filename
 from .filesystem.FileProcessor import FileProcessor
-from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT
+from .filesystem.JSONDirectory import split_filename_parts, VIDEO_EXT, SUB_EXT, AUDIO_EXT
+
+from data.models import Movie, Tag
 
 HELP_TEXT = """
 Ejemplo de fichero de configuracion (JSON):
@@ -71,7 +73,7 @@ class Command(BaseCommand):
         verbosity = options['verbosity']
         trace.set_verbosity(verbosity)
 
-        output_csv_header = ['title', 'year', 'imdb_id', 'path', 'storage_name', 'storage_type', 'media_format', 'tags']
+        output_csv_header = ['title', 'year', 'imdb_id', 'not_an_imdb_movie', 'path', 'storage_name', 'storage_type', 'media_format', 'tags']
 
         with open(output_csv_file, 'w+', newline='') as output_csv:
             writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
@@ -92,6 +94,7 @@ class Command(BaseCommand):
                         'title': video['title'],
                         'year': video['year'],
                         'imdb_id': video['imdb_id'],
+                        'not_an_imdb_movie': 'False' if video['imdb_id'] else 'True',
                         'storage_name': config_dir['smb_path'],
                         'storage_type': MovieStorageType.ST_NET_SHARE,
                         'media_format': calculate_media_format(video),
@@ -99,6 +102,24 @@ class Command(BaseCommand):
                         'tags': tags
                     })
 
+        all_data_rows = []
+        with open(output_csv_file, newline='') as output_csv:
+            reader = csv.DictReader(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
+            for row in reader:
+                if row['title'] != 'title':
+                    all_data_rows.append(row)
+
+        sorted_rows = sorted(all_data_rows, key=lambda row:(row['title']), reverse=False)
+        sorted_rows = sorted(sorted_rows, key=lambda row:(row['year']), reverse=False)
+
+        with open(output_csv_file, 'w', newline='') as output_csv:
+            writer = csv.DictWriter(output_csv, fieldnames = output_csv_header, delimiter=";", quotechar='"')
+            writer.writeheader()
+
+            for row in sorted_rows:
+                writer.writerow(row)
+
+        
 # TODO: Calcular el media_format
 # 'mp4', 'avi', 'mkv', 'wmv', 'iso', 'mpg', 'mpeg'
 def calculate_media_format(video_file):
@@ -140,25 +161,48 @@ def scan_all_videos(path, is_root=True, tag=None):
         
         # ...y que tenga una extension valida
         if not 'ext' in cur_item or not cur_item['ext'].lower() in VIDEO_EXT:
-            trace.warning("El archivo '%s/%s' no una extension valida." % (path, cur_item['fullname']))
+            if not 'ext' in cur_item or (not cur_item['ext'].lower() in SUB_EXT and not cur_item['ext'].lower() in AUDIO_EXT):
+                trace.warning("El archivo '%s/%s' no una extension valida." % (path, cur_item['fullname']))
             continue
         
         # corregimos el fullname con el path:
         cur_item['fullname'] = '%s/%s' % (path, cur_item['fullname'])
 
         # OJO: Solo funciona con el formato sencillo siguiente:
-        # TITULO (AÑO) [ttIMDB_ID]
+        #  - "TITULO (AÑO) [ttIMDB_ID]", para los scrapeados del imdb
+        #  - "TITULO (AÑO)", para los que no sean scrapeables en el imdb
+        #  - "TITULO", para los que no sean scrapeables en el imdb y no sepamos año
         s = cur_item["name"]
         
-        pattern = re.compile(".* \(([0-9]+)\) \[tt([0-9]+)\]")
+        pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
+        reg_search = pattern.search(s)
 
-        if pattern.search(s):
-            cur_item["imdb_id"] = s.split("[tt")[1].split("]")[0]
-            cur_item["year"] = s.split("(")[1].split(")")[0]
-            cur_item["title"] = s.split("(")[0].strip()
-            if tag:
+        if reg_search:
+            cur_item["imdb_id"] = reg_search.group(3)
+            cur_item["year"] = reg_search.group(2)
+            cur_item["title"] = reg_search.group(1)
+        else:
+            pattern = re.compile("(.*) \(([0-9]+)\)")
+            reg_search = pattern.search(s)
+
+            if reg_search:
+                cur_item["imdb_id"] = ""
+                cur_item["year"] = reg_search.group(2)
+                cur_item["title"] = reg_search.group(1)
+            else:
+                cur_item["imdb_id"] = ""
+                cur_item["year"] = Movie.DEFAULT_NO_YEAR
+                cur_item["title"] = s
+
+                cur_item["tag"] = ','.join([tag, Tag.NO_YEAR]) if tag else Tag.NO_YEAR
+
+        if 'title' in cur_item and 'year' in cur_item:
+            if tag and not 'tag' in cur_item:
                 cur_item["tag"] = tag
+            
             all_video_files.append(cur_item)
+        else:
+            trace.warning("El archivo '%s/%s' no coincide con ningun patron de identificacion valido." % (path, cur_item['fullname']))
         # OJO: Solo funciona con el formato sencillo
 
     return all_video_files
