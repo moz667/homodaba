@@ -11,6 +11,8 @@
 ##      --rebuild, regenera el indice de ElasticSearch. Requiere que tengamos 
 ##          configuradas las variables ES_XXXXX en nuestro entorno.
 
+## Cambio para tocar los wevos
+
 source ./env.sh || exit 1
 
 if [ "$1" == "--help" ]
