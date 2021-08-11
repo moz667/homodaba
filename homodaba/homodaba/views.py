@@ -11,6 +11,12 @@ from data.models import UserTag, get_or_create_user_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
 
+def scraper(request):
+    if len(request.GET.keys()):
+        for k in request.GET.keys():
+            print("%s='%s'" % (k, request.GET[k]))
+    return render(request, 'scraper.html', {"foo": "bar"}, content_type="application/xhtml+xml")
+
 @login_required
 def home(request):
     last_movies = get_last_items(Movie)
@@ -34,8 +40,6 @@ def search_movies(request):
 
     unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
     seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
-
-    print(unseen)
 
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
