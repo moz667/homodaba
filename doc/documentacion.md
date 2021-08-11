@@ -1,3 +1,4 @@
+# Instalación de HoMoDaba en Linux
 ## Preparar el entorno python
 * Instalar pyenv y virtualenv
 ```bash
@@ -14,6 +15,94 @@
 ```bash
 ~ pip install -r python-requirements.txt
 ```
+
+## Obtenemos una nueva SECRET_KEY
+Todas las instalaciones de Django sequieren una SECRET_KEY única (ref. [Documentación de Django#secret-key](https://docs.djangoproject.com/en/dev/ref/settings/#secret-key))
+1. Creamos una nueva secret-key:
+```bash
+~ python homodaba/manage.py shell -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+2. Exportamos el valor devuelto por el comando anterior al fichero de configuración.
+```bash
+~ echo "export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'" >> .venv
+```
+
+
+## [OPCIONAL] Definimos otros parámetros de configuración en .venv
+Todos los parámetros, con la excepción del parámetro SECRET_KEY previamente definido, son opcionales:
+```bash
+# Desactivamos el modo debug de Django. Recomendado si se va a exponer el servicio en Internet.
+export DJANGO_DEBUG=False
+
+# IP y FQDN donde Django sirve el contenido.
+# Ejemplo publicando Django a través de IP y el dominio dominio.net
+# Más información en: https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts
+export ALLOWED_HOSTS="127.0.0.1 localhost 10.100.12.10 dominio.net"
+
+# PATH donde se publicará la aplicación. Si no se especifica, la aplicación se publicará en el path raíz, por ejemplo http://dominio.net/
+export HOME_URL_PATH="homodaba/"
+
+# Usar una base de datos dedicada para caché.
+export CACHE_DATABASE=1
+
+# Especificamos el número de elementos por página que devuelve la interfaz admin de Django.
+export ADMIN_MOVIE_LIST_PER_PAGE=100
+```
+
+# Instalación de versión dockerizada de HoMoDaBa (con docker-compose)
+<details>
+  <summary>TODO</summary>
+  Cómo desplegar HoMoDaBa con docker-compose
+</details>
+
+# Tareas recurrentes
+## Arrancar la aplicación
+Para arrancar la aplicación:
+```bash
+~ ./start.sh
+```
+
+Conectarse a la aplicación a través de http://dominio.net:8000/homodaba/
+
+Por defecto Django escucha en el puerto 8000.
+
+## [Basheline] Generar CSV
+
+### Primera importación (BBDD vacía)
+Generar CSV compatible con HoMoDaba.
+```bash
+~ ./basheline/basheline.py -i BSLN_Input_Files* -o ./basheline/Listado_Pelis.csv
+```
+Siendo `BSLN_Input_Files*`:
+ - Ficheros TXT resultado de ejecutar `find /media/bpk/ > BSLN_Input_Files-example.txt`  
+  Basheline sólo considera los ficheros y carpetas multimedia que coinciden con el PATH regex  
+  `/media/bpk/(HDD-(?:Pelis|Anime)-[0-9]{3})/([HS]D)`.  
+  Por ejemplo `/media/bpk/HDD-Anime-001/HD/` o `/media/bpk/HDD-Pelis-010/SD/`.  
+ - Ficheros CSV generados manualmente con los campos Localizacion, Título Original, Titulo traducido, Director, Año, Resolución y Formato.  
+  Usar como referencia la siguiente estructura:  
+  ```
+  Localizacion;Título Original;Titulo traducido;Director;Año;Resolución;Formato
+  Original;Black Swan;Cisne negro;Darren Aronofsky;2010;1080p;BLURAY
+  ```
+
+Tras generar el CSV con basheline, se puede importar en HoMoDaBa con el siguiente comando (definir el nivel de verbose al gusto):
+```bash
+~ ./import-csv.sh --csv-file ./basheline/Listado_Pelis.csv -v 2 
+```
+Nota: Esta operación puede tardar varias horas dependiendo del número de registros y la conexión a Internet.
+
+Una vez haya terminado la importación, ya se podrá ver los resultados en la [página de HoMoDaBa](http://dominio.net:8000/homodaba/) (http://dominio.net:8000/homodaba/)
+
+### Importaciones posteriores (BBDD con contenido)
+<details>
+  <summary>[TODO] basheline json files: HMDB_PATCH_JSON y HMDB_CSV2IMDB_JSON
+  </summary>
+
+```bash
+~ ./basheline/basheline.py -i BSLN_Input_Files*.txt  -p "${HMDB_PATCH_JSON}" -m "${HMDB_CSV2IMDB_JSON}" -o /tmp/Listado_Pelis_corrected.csv
+```
+</details>
+
 
 ## Rutina (TODO: bpk)
 * Generas csv con basheline

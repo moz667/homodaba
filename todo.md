@@ -43,6 +43,9 @@
 1. [ ] Leer como funciona elastic search y ampliar esto :P
 
 ### Rendimiento
+1. [ ] Parametrizar el PATH soportado por basheline (`/media/bpk/(HDD-(?:Pelis|Anime)-[0-9]{3})/([HS]D)`)
+
+### Rendimiento
 
 
 ## Terminado
@@ -52,6 +55,7 @@
 1. [X] ~~ref="noopener noreferrer" en los enlaces fuera (imgs, o imdb)~~
 1. [X] ~~Busqueda por año~~
 1. [X] ~~no importa tags nueva para un medio nuevo de peli existentes a traves del import_csv~~
+1. [ ] Eliminar `HOMODABA_MINI_DETAILS` del código.
 
 ### Public no staff
 1. [X] ~~link a imdb en la carátula~~
