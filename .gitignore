@@ -8,6 +8,7 @@ docker/volumes/import/*
 docker/volumes/sqlite/*
 docker/volumes/static/*
 node_modules
+kodi/samples
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
