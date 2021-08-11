@@ -1,5 +1,7 @@
 {% load homotags %}
 
+{% is_kodi_supported as is_kodi_supported %}
+
 <div style="flex: 1 0 30%" class="card my-2 movie-item movie-{{ movie.id }}">
     <div class="card-header text-truncate">
         <div style="position: absolute; top: 0.4rem; right: 0.5rem; line-height: 1.2;" class="user-tag-switcher-wrap">
@@ -40,11 +42,24 @@
             </small>
         </div>
 
-        {% if request.user.is_staff %}
+        {% if request.user.is_staff or is_kodi_supported %}
             <div style="clear: both; padding-top: 1rem;" class="admin-links-wrap">
-                <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}">
-                    <em class="mdi mdi-database"> </em> Editar
-                </a>
+                {% if request.user.is_staff %}
+                    <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}">
+                        <em class="mdi mdi-database"> </em> Editar
+                    </a>
+                {% endif %}
+
+                {% if is_kodi_supported %}
+                    {% for st in movie.get_storage_types %}
+                        <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                            data-storage-path="{{ st.path }}" 
+                            data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                            data-play-url="{% url 'kodi:json_kodi_play' %}">
+                            <em class="mdi mdi-play"> </em> Reproducir
+                        </button>
+                    {% endfor %}
+                {% endif %}
             </div>
         {% endif %}
     </div>

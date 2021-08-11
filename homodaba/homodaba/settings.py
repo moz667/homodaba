@@ -78,6 +78,9 @@ INSTALLED_APPS = [
     # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
 
+if os.getenv('HDB_KODI_SUPPORT', '0') == '1':
+    INSTALLED_APPS.append('kodi.apps.KodiConfig')
+
 elasticsearch_hosts = os.getenv("ES_DSL_HOSTS", False)
 if elasticsearch_hosts:
     INSTALLED_APPS.append('django_elasticsearch_dsl')

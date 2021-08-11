@@ -11,12 +11,6 @@ from data.models import UserTag, get_or_create_user_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
 
-def scraper(request):
-    if len(request.GET.keys()):
-        for k in request.GET.keys():
-            print("%s='%s'" % (k, request.GET[k]))
-    return render(request, 'scraper.html', {"foo": "bar"}, content_type="application/xhtml+xml")
-
 @login_required
 def home(request):
     last_movies = get_last_items(Movie)

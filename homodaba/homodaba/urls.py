@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .settings import HOME_URL_PATH
+from .settings import HOME_URL_PATH, INSTALLED_APPS
 
 from . import views
 
@@ -23,8 +23,6 @@ urlpatterns = [
     path('%s' % HOME_URL_PATH, views.home, name='home'),
     path('%smovies/' % HOME_URL_PATH, views.search_movies, name='search_movies'),
     path('%smovies/later' % HOME_URL_PATH, views.user_later_movies, name='user_later_movies'),
-    path('%sscraper/search' % HOME_URL_PATH, views.scraper, name='scraper_search'),
-    path('%sscraper/detail' % HOME_URL_PATH, views.scraper, name='scraper_detail'),
     path(
         '%sjson/user-tag/<str:tag_type>/<int:movie_id>' % HOME_URL_PATH, 
         views.json_switch_user_tag, name='json_switch_user_tag'
@@ -33,3 +31,6 @@ urlpatterns = [
     path('%sauth/' % HOME_URL_PATH, include('django.contrib.auth.urls')),
     path('%si18n/' % HOME_URL_PATH, include('django.conf.urls.i18n')),
 ]
+
+if 'kodi.apps.KodiConfig' in INSTALLED_APPS:
+    urlpatterns += [path(HOME_URL_PATH + 'kodi/', include('kodi.urls'))]

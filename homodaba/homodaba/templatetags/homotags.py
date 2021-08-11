@@ -8,6 +8,10 @@ from data.models import get_or_create_user_tag
 register = template.Library()
 
 @register.simple_tag
+def is_kodi_supported():
+    return 'kodi.apps.KodiConfig' in settings.INSTALLED_APPS
+
+@register.simple_tag
 def search_filters_as_url_args(filters, exlude_filter):
     url_args = []
     if filters:

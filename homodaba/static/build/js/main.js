@@ -42,6 +42,10 @@ $(document).ready(function () {
                 user_tag_switcher_init();
                 copy_storage_types_init();
                 resize_storage_types_info_init();
+                // Un poco nyapa... :P
+                if (window.kodi_init) {
+                    window.kodi_init();
+                }
                 show_more_init();
             });
         }
