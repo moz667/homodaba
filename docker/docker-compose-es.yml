@@ -1,9 +1,16 @@
 version: '2.0'
 
-# homodaba docker:
-# Version sin Elastic search
+# homodaba docker
+# Version con Elasticsearch.
 
 services:
+    homodaba-es:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.9.1
+        hostname: homodaba-es-host
+        container_name: homodaba-es-container
+        restart: always
+        environment:
+            - discovery.type=single-node
     homodaba-app:
         build: ./
         image: homodaba:trunk
@@ -13,20 +20,11 @@ services:
             - "8000:8000"
         restart: always
         env_file:
-            - ./.env-no-es
+          - .env
+        environment:
+          - ES_DSL_HOSTS=localhost:9200
         volumes:
             - ${HOST_SQLITE}:/opt/app/sqlite
             - ${HOST_IMPORT}:/opt/app/import
             - ${HOST_STATIC}:/opt/app/static
         command: /init-homodaba.sh
-    homodaba-tbot:
-        build: ./
-        image: homodaba:trunk
-        hostname: homodaba-tbot-host
-        container_name: homodaba-tbot-container
-        restart: always
-        env_file:
-            - ./.env-no-es
-        volumes:
-            - ${HOST_SQLITE}:/opt/app/sqlite
-        command: /init-homodaba-tbot.sh

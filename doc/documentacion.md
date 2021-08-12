@@ -1,4 +1,7 @@
-# Instalación de HoMoDaba en Linux
+# Instalación de HoMoDaba
+Se puede instalar directamente en el sistema operativo (probado en Ubuntu y Debian) o su versión dockerizada.
+
+# Instalación en Linux
 ## Preparar el entorno python
 * Instalar pyenv y virtualenv
 ```bash
@@ -15,22 +18,40 @@
 ```bash
 ~ pip install -r python-requirements.txt
 ```
+**Nota**: Para los parámetros de configuración utilizaremos el fichero `.venv` situado en el directorio raíz del proyecto.
 
 ## Obtenemos una nueva SECRET_KEY
-Todas las instalaciones de Django sequieren una SECRET_KEY única (ref. [Documentación de Django#secret-key](https://docs.djangoproject.com/en/dev/ref/settings/#secret-key))
+Todas las instalaciones de Django sequieren una SECRET_KEY única (ref. [Documentación de Django#secret-key](https://docs.djangoproject.com/en/dev/ref/settings/#secret-key)).
 1. Creamos una nueva secret-key:
+```bash
+~ python3 -c "import secrets; print(secrets.token_urlsafe(37))"
+```
+<!-- Versión alternativa para generar la SECRET_KEY (versión nativa de Django). No se muestra esta opción para mantener consistencia con la versión dockerizada.
 ```bash
 ~ python homodaba/manage.py shell -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
+ -->
+
 2. Exportamos el valor devuelto por el comando anterior al fichero de configuración.
 ```bash
 ~ echo "export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'" >> .venv
 ```
 
+<details>
+  <summary>TODO: Documentar cómo habilitar tbot en la solución no dockerizada</summary>
+</details>
 
-## [OPCIONAL] Definimos otros parámetros de configuración en .venv
+## [OPCIONAL] Definimos otros parámetros de configuración en `.venv`.
 Todos los parámetros, con la excepción del parámetro SECRET_KEY previamente definido, son opcionales:
 ```bash
+# SECRET_KEY es un requisito de Django.
+# Ver documento de instalación para generar un token en nuevas instalaciones.
+#export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'
+
+# Si se quiere usar el bot de Telegram, se tiene que conseguir un token a traves de botFather (ref. https://core.telegram.org/bots#6-botfather).
+# Ver documento de instalación para generar un token del bot de Telegram.
+#export TBOT_TOKEN='XX_DIFFERENT_AND_WEIRD_STRING_XX'
+
 # Desactivamos el modo debug de Django. Recomendado si se va a exponer el servicio en Internet.
 export DJANGO_DEBUG=False
 
@@ -47,21 +68,158 @@ export CACHE_DATABASE=1
 
 # Especificamos el número de elementos por página que devuelve la interfaz admin de Django.
 export ADMIN_MOVIE_LIST_PER_PAGE=100
+
+# Si queremos ElasticSearch, tenemos que especificar donde está.
+# Descomentar si se quiere usar ElasticSearch:
+# ES_DSL_HOSTS=localhost:9200
 ```
 
-# Instalación de versión dockerizada de HoMoDaBa (con docker-compose)
-<details>
-  <summary>TODO</summary>
-  Cómo desplegar HoMoDaBa con docker-compose
-</details>
+# Instalación de versión dockerizada (con docker-compose)
+
+**Nota**: En la versión dockerizada, todos los parámetros de configuración están en el fichero `.env` situado en el directorio `./docker/`.  
+A tener en cuenta sobre el fichero de configuración:
+ - docker-compose no interpreta las comillas simples ('"') dentro del fichero de configuración, por lo que no se deben usar.
+ - Si se añaden los parámtros más de una vez, docker-compose sólo procesará la última asignación.
+
+## Definir los volúmenes donde mantendremos la información persistente
+Lo primero que debemos hacer es especificar dónde almacenaremos los datos de forma que la información sea persistente tras eliminar los contenedores.  
+Para ello:
+1 Definimos la ruta donde están las bases de datos:
+```bash
+~ echo 'HOST_SQLITE=./volumes/sqlite' >> ./docker/.env
+```
+
+1. Definimos la ruta para los ficheros CSV y JSON que utiliza basheline.
+```bash
+~ echo 'HOST_IMPORT=./volumes/import' >> ./docker/.env
+```
+
+1. Definimos la ruta para el contenido estático de la propia aplicación y dependencias de terceros.
+```bash
+~ echo 'HOST_STATIC=./volumes/static' >> ./docker/.env
+```
+
+## Definir la versión de homodaba
+Por defecto, la instalación no utiliza el bot the Telegram o la versión de Elasticsearch.  
+Si se quiere cambiar este comportamiento, debemos indicar qué versiones de docker-compose queremos lanzar. Para ello:
+- `docker/docker-compose.yml`. Versión por defecto.
+- `docker/docker-compose-es.yml`. Versión de homodaba con Elasticsearch.
+- `docker/docker-compose-telegram.yml`. Servicio adicional para el bot the Telegram.
+
+Si se quiere lanzar la versión por defecto, no es necesario ejecutar nada, salta a la [sección siguiente](#generar-secret_key).
+
+Si se quiere la versión sin Elasticsearch con bot the Telegram, ejecutar el siguiente comando (más adelante se indica cómo obtener un token):
+```bash
+~ echo 'COMPOSE_FILE=docker-compose.yml:docker-compose-telegram.yml' >> ./docker/.env
+```
+
+Si se quiere la versión con Elasticsearch y bot de Telegram.
+```bash
+~ echo 'COMPOSE_FILE=docker-compose-es.yml:docker-compose-telegram.yml' >> ./docker/.env
+```
+
+## Generar SECRET_KEY
+Tal como se comentaba en la [instalación no dockerizada](#obtenemos-una-nueva-secret_key), necesitamos generar una SECRET_KEY para Django.  
+Para ello:
+1. Creamos una nueva secret-key:
+```bash
+~ python3 -c "import secrets; print(secrets.token_urlsafe(37))"
+```
+2. Exportamos el valor devuelto por el comando anterior al fichero de configuración (en esta ocasión docker-compose utiliza `.env`).
+```bash
+~ echo "export SECRET_KEY='XX_RANDOM_AND_WEIRD_STRING_XX'" >> ./docker/.env
+```
+
+## [OPCIONAL] Bot de Telegram
+Si queremos utilizar el bot de Telegram, debemos generar un token (ref. [Documentación de BotFather](https://core.telegram.org/bots#6-botfather)).  
+Para ello, desde Telegram:
+1. Nos conectamos al bot  `@BotFather`.
+2. Ejecutamos `/newbot`.
+3. Definimos un name y username.
+5. Exportamos el token al fichero de configuración (será el token que utilicemos para autenticarnos con la API de Telegram):
+```bash
+~ echo "export TBOT_TOKEN='XX_DIFFERENT_AND_WEIRD_STRING_XX'" >> ./docker/.env
+```
+
+## [OPCIONAL] Definimos otros parámetros de configuración en `./docker/.env`
+Al igual que en la versión no dockerizada, se pueden definir ciertos parámetros de configuración opcionales (fichero `docker/.venv`).  
+La versión final del fichero de configuración sería similar a la siguiente:
+```bash
+# Especificar docker VOLUMES (los directorios donde se guardarán los datos persistentes).
+# PATH donde están las bases de datos si se quiere utilizar una BBDD previa
+HOST_SQLITE=./volumes/sqlite
+
+# PATH donde están los ficheros CSV y JSON que utiliza basheline.
+HOST_IMPORT=./volumes/import
+
+# PATH con el contenido estático de la propia aplicación y dependencias de terceros.
+HOST_STATIC=./volumes/static
+
+# COMPOSE_FILE define qué servicios vamos a arrancar.
+# Por defecto, arrancamos la version de homodaba sin Elasticsearch ni bot de Telegram (no necesita parámetro de configuración).
+# Descomentar si se quiere la versión sin Elasticsearch con bot de Telegram:
+#COMPOSE_FILE=docker-compose.yml:docker-compose-telegram.yml
+# Descomentar si se quiere la versión con Elasticsearch y bot de Telegram:
+#COMPOSE_FILE=docker-compose-es.yml:docker-compose-telegram.yml
+
+# SECRET_KEY es un requisito de Django.
+# Ver documento de instalación para generar un token en nuevas instalaciones.
+#SECRET_KEY=
+
+# Si se quiere usar el bot de Telegram, se tiene que conseguir un token a traves de botFather (ref. https://core.telegram.org/bots#6-botfather).
+# Ver documento de instalación para generar un token del bot de Telegram.
+#TBOT_TOKEN=
+
+# Desactivamos el modo debug de Django. Recomendado si se va a exponer el servicio en Internet.
+DJANGO_DEBUG=False
+
+# IP y FQDN donde Django sirve el contenido.
+# Ejemplo publicando Django a través de IP y el dominio dominio.net
+# Más información en: https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts
+ALLOWED_HOSTS=127.0.0.1 localhost 10.100.12.10 dominio.net
+
+# PATH donde se publicará la aplicación. Si no se especifica, la aplicación se publicará en el path raíz, por ejemplo http://dominio.net/
+HOME_URL_PATH=homodaba/
+
+# Usar una base de datos dedicada para caché.
+CACHE_DATABASE=1
+
+# Especificamos el número de elementos por página que devuelve la interfaz admin de Django.
+ADMIN_MOVIE_LIST_PER_PAGE=100
+```
+## Contruir la solución dockerizada (imágenes, contenedores y los servicios)
+Una vez tengamos el fichero de configuración listo, leanzamos docker-compose para que despliegue el entorno.
+```bash
+~ cd ./docker/
+~ docker-compose --project-directory . up
+```
+**Nota**: Debemos indicar `--project-directory .` debido a un bug previo a la versión 1.28 de docker-compose (ref. https://docs.docker.com/compose/environment-variables/).
+
+## Crear usuario admin de la aplicación
+Para ello, ejecutar el siguiente comando
+```bash
+docker-compose exec homodaba-app python ./homodaba/homodaba/manage.py createsuperuser
+```
+
+## Probar que la aplicación es accesible.
+Para ello, conectarse a la aplicación a través de http://dominio.net:8000/homodaba/
+
 
 # Tareas recurrentes
-## Arrancar la aplicación
+## Arrancar la aplicación no dockerizada
 Para arrancar la aplicación:
 ```bash
 ~ ./start.sh
 ```
 
+## Arrancar la aplicación dockerizada
+Ir al directorio donde tenemos los ficheros docker-compose y levantar el servicio
+```bash
+~ cd ./docker/
+~ docker-compose --project-directory . up
+```
+
+## Acceso a la aplicación.
 Conectarse a la aplicación a través de http://dominio.net:8000/homodaba/
 
 Por defecto Django escucha en el puerto 8000.
@@ -111,6 +269,11 @@ Una vez haya terminado la importación, ya se podrá ver los resultados en la [p
 * Compruebas con csv_2_imdb
    - Verificas resultados
    - Si hay nuevos imdb_id, volver a importar
+
+# Troubleshooting
+```bash
+docker exec -ti homodaba-app-container bash
+```
 
 ## Pasar de sqlite3 a mysql
 [source shubhamdipt.com](https://www.shubhamdipt.com/blog/django-transfer-data-from-sqlite-to-another-database/)

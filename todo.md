@@ -42,7 +42,7 @@
 ### Elastic Search
 1. [ ] Leer como funciona elastic search y ampliar esto :P
 
-### Rendimiento
+### Homodaba
 1. [ ] Parametrizar el PATH soportado por basheline (`/media/bpk/(HDD-(?:Pelis|Anime)-[0-9]{3})/([HS]D)`)
 
 ### Rendimiento

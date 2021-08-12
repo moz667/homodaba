@@ -51,7 +51,8 @@ IMDB_VALID_MOVIE_KINDS = os.getenv("IMDB_VALID_MOVIE_KINDS", 'movie').split(',')
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False if os.getenv("DJANGO_DEBUG", '1') == '0' else True
+# Default value set to False
+DEBUG = False if os.getenv("DJANGO_DEBUG", '0') == '0' else True
 
 LOCALNETIP = os.getenv("LOCALNETIP", '127.0.0.1')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', LOCALNETIP).split()

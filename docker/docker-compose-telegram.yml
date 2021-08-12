@@ -1,0 +1,21 @@
+version: '2.0'
+
+# BotFather. Telegram bot para homodaba
+#
+# Para utilizar el tbot, primero necesitas un token de botfather.
+# Ref.: https://core.telegram.org/bots#6-botfather
+#
+# Una vez se tenga el token, añadirlo al fichero .env en la variable de entorno TBOT_TOKEN
+
+services:
+    homodaba-tbot:
+        build: ./
+        image: homodaba:trunk
+        hostname: homodaba-tbot-host
+        container_name: homodaba-tbot-container
+        restart: always
+        env_file:
+          - .env
+        volumes:
+            - ${HOST_SQLITE}:/opt/app/sqlite
+        command: /init-homodaba-tbot.sh
