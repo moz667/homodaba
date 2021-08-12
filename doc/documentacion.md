@@ -21,7 +21,7 @@ Se puede instalar directamente en el sistema operativo (probado en Ubuntu y Debi
 **Nota**: Para los parámetros de configuración utilizaremos el fichero `.venv` situado en el directorio raíz del proyecto.
 
 ## Obtenemos una nueva SECRET_KEY
-Todas las instalaciones de Django sequieren una SECRET_KEY única (ref. [Documentación de Django#secret-key](https://docs.djangoproject.com/en/dev/ref/settings/#secret-key)).
+Todas las instalaciones de Django requieren una SECRET_KEY única (ref. [Documentación de Django#secret-key](https://docs.djangoproject.com/en/dev/ref/settings/#secret-key)).
 1. Creamos una nueva secret-key:
 ```bash
 ~ python3 -c "import secrets; print(secrets.token_urlsafe(37))"
@@ -84,20 +84,19 @@ A tener en cuenta sobre el fichero de configuración:
 ## Definir los volúmenes donde mantendremos la información persistente
 Lo primero que debemos hacer es especificar dónde almacenaremos los datos de forma que la información sea persistente tras eliminar los contenedores.  
 Para ello:
-1 Definimos la ruta donde están las bases de datos:
-```bash
-~ echo 'HOST_SQLITE=./volumes/sqlite' >> ./docker/.env
-```
 
-1. Definimos la ruta para los ficheros CSV y JSON que utiliza basheline.
-```bash
-~ echo 'HOST_IMPORT=./volumes/import' >> ./docker/.env
-```
-
-1. Definimos la ruta para el contenido estático de la propia aplicación y dependencias de terceros.
-```bash
-~ echo 'HOST_STATIC=./volumes/static' >> ./docker/.env
-```
+1. Definimos la ruta donde están las bases de datos:  
+    ```bash
+    ~ echo 'HOST_SQLITE=./volumes/sqlite' >> ./docker/.env
+    ```
+1. Definimos la ruta para los ficheros CSV y JSON que utiliza basheline.  
+    ```bash
+    ~ echo 'HOST_IMPORT=./volumes/import' >> ./docker/.env
+    ```
+1. Definimos la ruta para el contenido estático de la propia aplicación y dependencias de terceros.  
+    ```bash
+    ~ echo 'HOST_STATIC=./volumes/static' >> ./docker/.env
+    ```
 
 ## Definir la versión de homodaba
 Por defecto, la instalación no utiliza el bot the Telegram o la versión de Elasticsearch.  
