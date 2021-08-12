@@ -5,7 +5,7 @@ Infinitas gracias a romanvm ya que en este ejemplo es en el que me he basado:
 https://github.com/romanvm/plugin.video.example
 """
 
-import json, urllib, urllib.request
+import json, urllib
 import requests
 import sys
 from urllib.parse import urlencode, parse_qsl, quote_plus
