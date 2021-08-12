@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .settings import HOME_URL_PATH
+from .settings import HOME_URL_PATH, INSTALLED_APPS
 
 from . import views
 
@@ -31,3 +31,6 @@ urlpatterns = [
     path('%sauth/' % HOME_URL_PATH, include('django.contrib.auth.urls')),
     path('%si18n/' % HOME_URL_PATH, include('django.conf.urls.i18n')),
 ]
+
+if 'kodi.apps.KodiConfig' in INSTALLED_APPS:
+    urlpatterns += [path(HOME_URL_PATH + 'kodi/', include('kodi.urls'))]

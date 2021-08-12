@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="yes"?>
+{% comment %}
+https://kodi.wiki/view/Scrapers#.3CGetDetails.3E
+
+Inputs:
+$$x where x= 1 to 9: Variable x holds the content of the URL specified in the 
+<url> tag number x in GetSearchResults.
+e.g. if there are two <url> tags (without argument function) returned by 
+GetSearchResults. Variable 1 will contain the content of the first url tag and 
+variable 2 the content of the second url tag.
+
+<thumb>:
+The thumb tag can have a spoof argument (like <url>). This feature can be used 
+to circumvent direct linking protections. The firefox extensions refspoof 
+http://refspoof.mozdev.org/ can help in testing if referrer spoofing works.
+
+Multiple tags:
+The following tags can appear more than once in <details>:
+    genre
+    credits
+    director
+    actor
+
+{% endcomment %}
+<details>
+    <title>Un titulo</title>
+    <year>2021</year>
+    <director>Un director</director>
+    <top250></top250>
+    <mpaa></mpaa>
+    <tagline>una tag</tagline>
+    <tagline>otra tag</tagline>
+    <runtime></runtime>
+    <thumb>http://example.com/imagen.jpg</thumb>
+    <credits></credits>
+    <rating>7.5</rating>
+    <votes></votes>
+    <genre></genre>
+    <actor>
+        <name>Un actor</name>
+        <role>Actor</role>
+    </actor>
+    <actor>
+        <name>Otro actor</name>
+        <role>Actor</role>
+    </actor>
+    <outline></outline>
+    <plot>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam lobortis 
+        condimentum porttitor. Orci varius natoque penatibus et magnis dis  
+        montes, nascetur ridiculus mus. Donec feugiat et ipsum sit amet ornare.
+    </plot>
+</details>

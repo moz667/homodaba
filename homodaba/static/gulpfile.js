@@ -18,7 +18,8 @@ var __CLEAN = false;
 
 // SOURCE PATH OPTIONS
 const __SRC_JS = [
-    './js/main.js'
+    './js/main.js',
+	'./js/kodi.js'
 ];
 const __SRC_JS_THIRDPARTY = [
     './js/main.thirdparty.js'

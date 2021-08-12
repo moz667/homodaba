@@ -35,8 +35,6 @@ def search_movies(request):
     unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
     seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
 
-    print(unseen)
-
     tag = get_tag_filter(request, 'tag', Tag)
     genre = get_tag_filter(request, 'genre', GenreTag)
     cr_system = get_tag_filter(request, 'cr_system', ContentRatingTag)

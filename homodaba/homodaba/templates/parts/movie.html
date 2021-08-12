@@ -1,28 +1,30 @@
 {% load homotags %}
 
-<div style="flex: 1 0 30%" class="card my-2 movie-item movie-{{ movie.id }}">
+{% is_kodi_supported as is_kodi_supported %}
+
+<div class="card my-2 movie-item movie-{{ movie.id }}">
     <div class="card-header text-truncate">
-        <div style="position: absolute; top: 0.4rem; right: 0.5rem; line-height: 1.2;" class="user-tag-switcher-wrap">
-            <a style="display: block;" class="user-tag-switcher" href="javascript:void(0);" 
+        <div class="user-tag-switcher-wrap">
+            <a class="user-tag-switcher later-tag" href="javascript:void(0);" 
                 data-url="{% url 'json_switch_user_tag' tag_type='later' movie_id=movie.id  %}" 
                 data-icon-on="mdi-star" data-icon-off="mdi-star-outline">
                 {% movie_contain_user_tag movie=movie user=request.user tag_type='later' as is_movie_contain_later_tag %}
-                <em style="color: #e79900; font-size: 1.5rem;" class="mdi mdi-star{% if not is_movie_contain_later_tag %}-outline{% endif %}"> </em>
+                <em class="mdi mdi-star{% if not is_movie_contain_later_tag %}-outline{% endif %}"> </em>
             </a>
             
-            <a style="display: block;" class="user-tag-switcher" href="javascript:void(0);" 
+            <a class="user-tag-switcher seen-tag" href="javascript:void(0);" 
                 data-url="{% url 'json_switch_user_tag' tag_type='seen' movie_id=movie.id  %}"
                 data-icon-on="mdi-eye" data-icon-off="mdi-eye-off-outline">
                 {% movie_contain_user_tag movie=movie user=request.user tag_type='seen' as is_movie_contain_seen_tag %}
-                <em style="color: #888; font-size: 1.5rem;" class="mdi mdi-eye{% if not is_movie_contain_seen_tag %}-off-outline{% endif %}"> </em>
+                <em class="mdi mdi-eye{% if not is_movie_contain_seen_tag %}-off-outline{% endif %}"> </em>
             </a>
         </div>
 
-        <div style="overflow: hidden; text-overflow: ellipsis; padding-right: 1rem;" class="movie-title">
+        <div class="movie-title">
             {{ movie.get_the_main_title }} ({{ movie.year }})
         </div>
 
-        <div style="overflow: hidden; text-overflow: ellipsis;" class="directors">
+        <div class="directors">
             <em>
                 {% for director in movie.get_directors %}
                     <a href="{% url 'search_movies' %}?director={{ director.name }}{% if director.imdb_id %} [{{ director.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'director' %}">
@@ -32,7 +34,7 @@
             </em>
         </div>
 
-        <div style="overflow: hidden; text-overflow: ellipsis;" class="countries">
+        <div class="countries">
             <small>
                 {% for country in movie.countries.all %}
                     {{ country }}{% if not forloop.last %}, {% endif %}
@@ -40,32 +42,50 @@
             </small>
         </div>
 
-        {% if request.user.is_staff %}
-            <div style="clear: both; padding-top: 1rem;" class="admin-links-wrap">
-                <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}">
-                    <em class="mdi mdi-database"> </em> Editar
-                </a>
+        {% if request.user.is_staff or is_kodi_supported %}
+            <div class="top-links-wrap clear-pt">
+                {% if request.user.is_staff %}
+                    <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}">
+                        <em class="mdi mdi-database"> </em> Editar
+                    </a>
+                {% endif %}
+
+                {% if is_kodi_supported %}
+                    {% for st in movie.get_storage_types %}
+                        {% if forloop.first %}
+                            <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                data-storage-path="{{ st.path }}" 
+                                data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                data-movie-id="{{ movie.id }}">
+                                <em class="mdi mdi-play"> </em> Reproducir
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             </div>
         {% endif %}
     </div>
+
     <div class="card-body">
         <div class="plot-and-image">
-            <div style="max-width: 50%; margin-right: 1rem; position: relative; border:1px solid rgba(0, 0, 0, 0.125)" class="img-fluid float-left" >
+            <div class="img-fluid-wrap float-left" >
                 {% if movie.rating %}
-                    <span style="position: absolute; right: 0.3rem; top: 0.3rem;" class="badge badge-primary">{{ movie.rating }}</span>
+                    <span class="movie-rating badge badge-primary">{{ movie.rating }}</span>
                 {% endif %}
                 <a href="{{ movie.get_imdb_url }}" target="_blank" ref="noopener noreferrer">
                     <img class="img-fluid float-left" 
                         src="{{ movie.clean_poster_thumbnail_url }}" alt="{{ movie.get_the_main_title }}" />
                 </a>
             </div>
+
             <p class="card-text">
                 {{ movie.get_plot }}
             </p>
         </div>
 
         {% if movie.get_other_main_titles %}
-            <div style="clear: both; padding-top: 1rem;" class="other-titles" style="clear: both; padding-top: 1rem;">
+            <div class="other-titles clear-pt">
                 <strong class="d-block">Tambien conocida como:</strong>
                 <ul>
                     {% for other_title in movie.get_other_main_titles %}
@@ -78,43 +98,47 @@
         {% endif %}
 
         {% if movie.writers.all %}
-            <strong style="clear: both; padding-top: 1rem;" class="d-block"><em class="mdi mdi-typewriter"> </em> Escritores:</strong>
-            
-            <ul style="padding-left: 1.3rem;" class="writers">
-                {% for writer in movie.writers.all %}
-                    <li style="overflow: hidden; text-overflow: ellipsis;" class="writer">
-                        <a href="{% url 'search_movies' %}?writer={{ writer.name }}{% if writer.imdb_id %} [{{ writer.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'writer' %}">
-                            {{ writer.name }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
+            <div class="writers-wrap clear-pt">
+                <strong class="d-block"><em class="mdi mdi-typewriter"> </em> Escritores:</strong>
+                
+                <ul class="writers">
+                    {% for writer in movie.writers.all %}
+                        <li class="writer">
+                            <a href="{% url 'search_movies' %}?writer={{ writer.name }}{% if writer.imdb_id %} [{{ writer.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'writer' %}">
+                                {{ writer.name }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
         {% endif %}
 
 
         {% if movie.actors.all %}
-            <strong style="clear: both; padding-top: 1rem;" class="d-block">
-                <em class="mdi mdi-drama-masks"> </em> Casting:
-                {% if movie.actors.count > 6 %}
-                    <a href="javascript:void(0);" class="show-more" data-selector=".movie-{{ movie.id }} .casting .actor">
-                        (+)
-                    </a>
-                {% endif %}
-            </strong>
-            
-            <ul style="padding-left: 1.3rem;" class="casting">
-                {% for actor in movie.actors.all %}
-                    <li style="overflow: hidden; text-overflow: ellipsis;{% if forloop.counter > 6 %} display: none;{% endif %}" class="actor">
-                        <a href="{% url 'search_movies' %}?actor={{ actor.name }}{% if actor.imdb_id %} [{{ actor.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'actor' %}">
-                            {{ actor.name }}
+            <div class="casting-wrap clear-pt">
+                <strong class="d-block">
+                    <em class="mdi mdi-drama-masks"> </em> Casting:
+                    {% if movie.actors.count > 6 %}
+                        <a href="javascript:void(0);" class="show-more" data-selector=".movie-{{ movie.id }} .casting .actor">
+                            (+)
                         </a>
-                    </li>
-                {% endfor %}
-            </ul>
+                    {% endif %}
+                </strong>
+                
+                <ul class="casting">
+                    {% for actor in movie.actors.all %}
+                        <li style="{% if forloop.counter > 6 %} display: none;{% endif %}" class="actor">
+                            <a href="{% url 'search_movies' %}?actor={{ actor.name }}{% if actor.imdb_id %} [{{ actor.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'actor' %}">
+                                {{ actor.name }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
         {% endif %}
 
         {% if movie.tags.all or movie.genres.all or movie.content_rating_systems.all or movie.user_tags.all %}
-            <div style="clear: both; padding-top: 1rem;" class="tag-cloud">
+            <div class="tag-cloud clear-pt">
                 {% if movie.tags.all %}
                     {% for tag in movie.tags.all %}
                         <a class="badge badge-success" href="{% url 'search_movies' %}?tag={{ tag }}&order_by={{ order_by }}{% search_filters_as_url_args filters 'tag' %}">
@@ -153,7 +177,8 @@
         <div class="storage-types">
             {% if movie.get_storage_types %}
                 {% for st in movie.get_storage_types %}
-                    <div style="" class="storage-type-item storage-type-{{ st.storage_type }}">
+                    <div class="storage-type-item storage-type-{{ st.storage_type }}">
+                        {% comment %}
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <button class="btn-copy btn btn-primary btn-sm{% if st.is_original %} disabled{% endif %}">
@@ -165,9 +190,40 @@
                                 <button class="btn-open-url btn btn-primary btn-sm{% if not st.get_url_to_storage_type %} disabled{% endif %}" data-url="{% if st.get_url_to_storage_type %}{{ st.get_url_to_storage_type }}{% endif %}">
                                     <em class="mdi mdi-link"> </em>
                                 </button>
+                                {% if is_kodi_supported %}
+                                    <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                        data-storage-path="{{ st.path }}" 
+                                        data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                        data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                        data-movie-id="{{ movie.id }}">
+                                        <em class="mdi mdi-play"> </em>
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
+                        {% endcomment %}
+                        <div class="btn-group">
+                            <button class="btn-copy btn btn-primary btn-sm{% if st.is_original %} disabled{% endif %}">
+                                <em class="mdi mdi-content-copy"> </em>
+                            </button>
+                            <button class="btn-open-url btn btn-primary btn-sm{% if not st.get_url_to_storage_type %} disabled{% endif %}" data-url="{% if st.get_url_to_storage_type %}{{ st.get_url_to_storage_type }}{% endif %}">
+                                <em class="mdi mdi-link"> </em>
+                            </button>
+                            {% if is_kodi_supported %}
+                                <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                    data-storage-path="{{ st.path }}" 
+                                    data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                    data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                    data-movie-id="{{ movie.id }}">
+                                    <em class="mdi mdi-play"> </em>
+                                </button>
+                            {% endif %}
+                        </div>
+                        <textarea readonly="readonly" class="form-control storage-type-info">{% if st.is_original %}{{ st.storage_type }}{% endif %}{% if st.is_drive %}{{ st.name }}{% endif %}{% if st.is_net_share or st.is_drive %}{{ st.path }}{% endif %}</textarea>
                     </div>
+                    {% if not forloop.last %}
+                    <hr/>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="alert alert-warning" role="alert">

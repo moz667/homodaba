@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="yes"?>
+{% comment %}
+https://kodi.wiki/view/Scrapers#.3CGetSearchResults.3E
+
+There can be up to 9 <url> tags within each movie tag. The webpages specified in 
+the url tags should hold detailed information about the movie/tv series/mvid. In 
+most cases one url will be enough. The url tag can have the argument 
+function="nameoffunction" e.g. 
+<xml><url function="CustomFunction">theurl</url></xml> 
+In this case other then GetDetails, "CustomFunction" will be executed after 
+GetDetails has run.
+
+When using the scraper the user will be asked in Kodi to select one of the movies 
+from the list which was returned by this function. The one which gets selected 
+will be processed from there on.
+
+By default Kodi will try to intelligently re-order the list of returned entries 
+by comparing titles with the search string. If the results you are returning are 
+already in a properly sorted order set <results sorted="yes">.
+{% endcomment %}
+
+<results>
+    <entity>
+        <title>Peli 1</title>
+        <url>url detail 1</url>
+    </entity>
+    <entity>
+        <title>Peli 2</title>
+        <url>url detail 2</url>
+    </entity>
+</results>

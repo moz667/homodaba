@@ -13,6 +13,10 @@
     <link rel="stylesheet" type="text/css" href="{% static "homodaba/css/main.css" %}?v={% homodaba_version %}" media="screen" />
 
     <script type="text/javascript" src="{% static "homodaba/js/main.thirdparty.js" %}?v={% homodaba_version %}"></script>
+    {% is_kodi_supported as is_kodi_supported %}
+    {% if is_kodi_supported %}
+        <script type="text/javascript" src="{% static "homodaba/js/kodi.js" %}?v={% homodaba_version %}"></script>
+    {% endif %}
     <script type="text/javascript" src="{% static "homodaba/js/main.js" %}?v={% homodaba_version %}"></script>
 
     <title>{% block title %}Homodaba{% endblock %}</title>
