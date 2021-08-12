@@ -8,6 +8,54 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import render
 
 from .models import KodiHost
+from .decorators import json_basic_auth
+
+from data.models import Tag, Movie
+
+@json_basic_auth
+def json_movie_search(request):
+    data = {
+        "results": [],
+    }
+
+    if 'tag' in request.GET.keys():
+        tag = None
+        for t in Tag.objects.filter(name=request.GET['tag']).all():
+            tag = t
+        
+        protocol = 'SMB'
+        if 'protocol' in request.GET.keys() and request.GET["protocol"] in ["SMB", "HTTP"]:
+            protocol = request.GET["protocol"]
+
+        if tag:
+            for movie in Movie.objects.filter(tags__pk=tag.id).all():
+                alt_titles = movie.get_other_main_titles()
+
+                for st in movie.get_storage_types():
+                    if st.is_net_share():
+                        file_url = st.get_url_to_storage_type() if protocol == 'HTTP' else st.path
+
+                        if file_url:
+                            data["results"].append({
+                                "title": movie.get_the_main_title(),
+                                "alt_title": alt_titles[0] if len(alt_titles) else '',
+                                "year": movie.year,
+                                "file": file_url,
+                                "thumb": movie.clean_poster_thumbnail_url(),
+                            })
+
+    return JsonResponse(data)
+
+@json_basic_auth
+def json_tags(request):
+    data = {
+        "tags": [],
+    }
+
+    for tag in Tag.objects.filter().all():
+        data["tags"].append(tag.name)
+
+    return JsonResponse(data)
 
 def scraper_search(request):
     if len(request.GET.keys()):

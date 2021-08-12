@@ -81,6 +81,9 @@ INSTALLED_APPS = [
 
 if os.getenv('HDB_KODI_SUPPORT', '0') == '1':
     INSTALLED_APPS.append('kodi.apps.KodiConfig')
+    KODI_API_USER = os.getenv('HDB_KODI_API_USER', None)
+    KODI_API_KEY = os.getenv('HDB_KODI_API_KEY', None)
+
 
 elasticsearch_hosts = os.getenv("ES_DSL_HOSTS", False)
 if elasticsearch_hosts:

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <setting label="Homodaba URL" id="homodaba_url" type="text" default="http://127.0.0.1:8000/homodaba" />
+    <setting label="Usuario" id="homodaba_username" type="text" default="" />
+    <setting label="API KEY" id="homodaba_api_key" type="text" default="" />
+    <setting label="Protocolo" id="homodaba_share_protocol" type="labelenum" values="SMB|HTTP" default="SMB" />
+</settings>

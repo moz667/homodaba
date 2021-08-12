@@ -1,0 +1,205 @@
+"""
+Ejemplo de addon para la integracion de kodi con homodaba.
+
+Infinitas gracias a romanvm ya que en este ejemplo es en el que me he basado:
+https://github.com/romanvm/plugin.video.example
+"""
+
+import json, urllib, urllib.request
+import requests
+import sys
+from urllib.parse import urlencode, parse_qsl, quote_plus
+
+import xbmcaddon, xbmcgui, xbmcplugin
+
+# Get the plugin url in plugin:// notation.
+_URL = sys.argv[0]
+# Get the plugin handle as an integer number.
+_HANDLE = int(sys.argv[1])
+
+addon = xbmcaddon.Addon(id="plugin.homodaba.movies")
+HDB_URL_BASE = addon.getSetting('homodaba_url')
+
+def get_hdb_json(url, no_data_default={}):
+    response = requests.get(url, headers={
+        'Authorization': 'Basic %s:%s' % (
+            addon.getSetting('homodaba_username'),
+            addon.getSetting('homodaba_api_key')
+        )
+    })
+
+    if response.ok:
+        return response.json()
+
+    return no_data_default
+
+def get_url(**kwargs):
+    """
+    Create a URL for calling the plugin recursively from the given set of keyword arguments.
+
+    :param kwargs: "argument=value" pairs
+    :return: plugin call URL
+    :rtype: str
+    """
+    return '{}?{}'.format(_URL, urlencode(kwargs))
+
+
+def get_categories():
+    data = get_hdb_json("%s/kodi/json/tags" % HDB_URL_BASE, {"tags": []})
+
+    return data["tags"]
+
+def get_videos(category):
+    query_get_vars = {
+        'tag': category, 
+        'protocol': addon.getSetting('homodaba_share_protocol'),
+    }
+
+    url = "%s/kodi/json/movie/search?%s" % (
+        HDB_URL_BASE, 
+        urlencode(query_get_vars, quote_via=quote_plus)
+    )
+
+    data = get_hdb_json(url, {"results": []})
+
+    return data["results"]
+
+
+def list_categories():
+    """
+    Create the list of video categories in the Kodi interface.
+    """
+    # Set plugin category. It is displayed in some skins as the name
+    # of the current section.
+    xbmcplugin.setPluginCategory(_HANDLE, 'My Video Collection')
+    # Set plugin content. It allows Kodi to select appropriate views
+    # for this type of content.
+    xbmcplugin.setContent(_HANDLE, 'videos')
+    # Get video categories
+    categories = get_categories()
+    # Iterate through categories
+    for category in categories:
+        # Create a list item with a text label and a thumbnail image.
+        list_item = xbmcgui.ListItem(label=category)
+        """
+        # Set graphics (thumbnail, fanart, banner, poster, landscape etc.) for the list item.
+        # Here we use the same image for all items for simplicity's sake.
+        # In a real-life plugin you need to set each image accordingly.
+        list_item.setArt({'thumb': VIDEOS[category][0]['thumb'],
+                          'icon': VIDEOS[category][0]['thumb'],
+                          'fanart': VIDEOS[category][0]['thumb']})
+        """
+        # Set additional info for the list item.
+        # Here we use a category name for both properties for for simplicity's sake.
+        # setInfo allows to set various information for an item.
+        # For available properties see the following link:
+        # https://codedocs.xyz/xbmc/xbmc/group__python__xbmcgui__listitem.html#ga0b71166869bda87ad744942888fb5f14
+        # 'mediatype' is needed for a skin to display info for this ListItem correctly.
+        list_item.setInfo('video', {'title': category,
+                                    'genre': category,
+                                    'mediatype': 'video'})
+        # Create a URL for a plugin recursive call.
+        # Example: plugin://plugin.video.example/?action=listing&category=Animals
+        url = get_url(action='listing', category=category)
+        # is_folder = True means that this item opens a sub-list of lower level items.
+        is_folder = True
+        # Add our item to the Kodi virtual folder listing.
+        xbmcplugin.addDirectoryItem(_HANDLE, url, list_item, is_folder)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_HANDLE, xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_HANDLE)
+
+
+def list_videos(category):
+    """
+    Create the list of playable videos in the Kodi interface.
+
+    :param category: Category name
+    :type category: str
+    """
+    # Set plugin category. It is displayed in some skins as the name
+    # of the current section.
+    xbmcplugin.setPluginCategory(_HANDLE, category)
+    # Set plugin content. It allows Kodi to select appropriate views
+    # for this type of content.
+    xbmcplugin.setContent(_HANDLE, 'videos')
+    # Get the list of videos in the category.
+    videos = get_videos(category)
+    # Iterate through videos.
+    for video in videos:
+        # Create a list item with a text label and a thumbnail image.
+        list_item = xbmcgui.ListItem(label=video['title'])
+        # Set additional info for the list item.
+        # 'mediatype' is needed for skin to display info for this ListItem correctly.
+        list_item.setInfo('video', {'title': video['title'],
+                                    # 'genre': video['genre'],
+                                    'mediatype': 'video'})
+        # Set graphics (thumbnail, fanart, banner, poster, landscape etc.) for the list item.
+        # Here we use the same image for all items for simplicity's sake.
+        # In a real-life plugin you need to set each image accordingly.
+        list_item.setArt({'thumb': video['thumb'], 'icon': video['thumb'], 'fanart': video['thumb']})
+        # Set 'IsPlayable' property to 'true'.
+        # This is mandatory for playable items!
+        list_item.setProperty('IsPlayable', 'true')
+        # Create a URL for a plugin recursive call.
+        # Example: plugin://plugin.video.example/?action=play&video=http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+        url = get_url(action='play', video=video['file'])
+        # Add the list item to a virtual Kodi folder.
+        # is_folder = False means that this item won't open any sub-list.
+        is_folder = False
+        # Add our item to the Kodi virtual folder listing.
+        xbmcplugin.addDirectoryItem(_HANDLE, url, list_item, is_folder)
+    # Add a sort method for the virtual folder items (alphabetically, ignore articles)
+    xbmcplugin.addSortMethod(_HANDLE, xbmcplugin.SORT_METHOD_LABEL_IGNORE_THE)
+    # Finish creating a virtual folder.
+    xbmcplugin.endOfDirectory(_HANDLE)
+
+
+def play_video(path):
+    """
+    Play a video by the provided path.
+
+    :param path: Fully-qualified video URL
+    :type path: str
+    """
+    # Create a playable item with a path to play.
+    play_item = xbmcgui.ListItem(path=path)
+    # Pass the item to the Kodi player.
+    xbmcplugin.setResolvedUrl(_HANDLE, True, listitem=play_item)
+
+
+def router(paramstring):
+    """
+    Router function that calls other functions
+    depending on the provided paramstring
+
+    :param paramstring: URL encoded plugin paramstring
+    :type paramstring: str
+    """
+    # Parse a URL-encoded paramstring to the dictionary of
+    # {<parameter>: <value>} elements
+    params = dict(parse_qsl(paramstring))
+    # Check the parameters passed to the plugin
+    if params:
+        if params['action'] == 'listing':
+            # Display the list of videos in a provided category.
+            list_videos(params['category'])
+        elif params['action'] == 'play':
+            # Play a video from a provided URL.
+            play_video(params['video'])
+        else:
+            # If the provided paramstring does not contain a supported action
+            # we raise an exception. This helps to catch coding errors,
+            # e.g. typos in action names.
+            raise ValueError('Invalid paramstring: {}!'.format(paramstring))
+    else:
+        # If the plugin is called from Kodi UI without any parameters,
+        # display the list of video categories
+        list_categories()
+
+if __name__ == '__main__':
+    # Call the router function and pass the plugin call parameters to it.
+    # We use string slicing to trim the leading '?' from the plugin call paramstring
+    router(sys.argv[2][1:])
+

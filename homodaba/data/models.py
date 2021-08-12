@@ -1,3 +1,5 @@
+from requests.utils import requote_uri
+
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Q
@@ -492,7 +494,8 @@ class MovieStorageType(models.Model):
         if self.is_net_share():
             for key in SMB_SHARE_2_URL.keys():
                 if self.path.startswith(key):
-                    return self.path.replace(key, SMB_SHARE_2_URL[key])
+                    file_part = self.path.replace(key, "")
+                    return SMB_SHARE_2_URL[key] + requote_uri(file_part)
 
         return ''
 
