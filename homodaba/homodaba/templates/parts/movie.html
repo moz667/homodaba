@@ -52,13 +52,15 @@
 
                 {% if is_kodi_supported %}
                     {% for st in movie.get_storage_types %}
-                        <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
-                            data-storage-path="{{ st.path }}" 
-                            data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
-                            data-play-url="{% url 'kodi:json_kodi_play' %}"
-                            data-movie-id="{{ movie.id }}">
-                            <em class="mdi mdi-play"> </em> Reproducir
-                        </button>
+                        {% if not forloop.first %}
+                            <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                data-storage-path="{{ st.path }}" 
+                                data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                data-movie-id="{{ movie.id }}">
+                                <em class="mdi mdi-play"> </em> Reproducir
+                            </button>
+                        {% endif %}
                     {% endfor %}
                 {% endif %}
             </div>
@@ -176,6 +178,7 @@
             {% if movie.get_storage_types %}
                 {% for st in movie.get_storage_types %}
                     <div class="storage-type-item storage-type-{{ st.storage_type }}">
+                        {% comment %}
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <button class="btn-copy btn btn-primary btn-sm{% if st.is_original %} disabled{% endif %}">
@@ -187,9 +190,40 @@
                                 <button class="btn-open-url btn btn-primary btn-sm{% if not st.get_url_to_storage_type %} disabled{% endif %}" data-url="{% if st.get_url_to_storage_type %}{{ st.get_url_to_storage_type }}{% endif %}">
                                     <em class="mdi mdi-link"> </em>
                                 </button>
+                                {% if is_kodi_supported %}
+                                    <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                        data-storage-path="{{ st.path }}" 
+                                        data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                        data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                        data-movie-id="{{ movie.id }}">
+                                        <em class="mdi mdi-play"> </em>
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
+                        {% endcomment %}
+                        <div class="btn-group">
+                            <button class="btn-copy btn btn-primary btn-sm{% if st.is_original %} disabled{% endif %}">
+                                <em class="mdi mdi-content-copy"> </em>
+                            </button>
+                            <button class="btn-open-url btn btn-primary btn-sm{% if not st.get_url_to_storage_type %} disabled{% endif %}" data-url="{% if st.get_url_to_storage_type %}{{ st.get_url_to_storage_type }}{% endif %}">
+                                <em class="mdi mdi-link"> </em>
+                            </button>
+                            {% if is_kodi_supported %}
+                                <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
+                                    data-storage-path="{{ st.path }}" 
+                                    data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
+                                    data-play-url="{% url 'kodi:json_kodi_play' %}"
+                                    data-movie-id="{{ movie.id }}">
+                                    <em class="mdi mdi-play"> </em>
+                                </button>
+                            {% endif %}
+                        </div>
+                        <textarea readonly="readonly" class="form-control storage-type-info">{% if st.is_original %}{{ st.storage_type }}{% endif %}{% if st.is_drive %}{{ st.name }}{% endif %}{% if st.is_net_share or st.is_drive %}{{ st.path }}{% endif %}</textarea>
                     </div>
+                    {% if not forloop.last %}
+                    <hr/>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="alert alert-warning" role="alert">

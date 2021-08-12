@@ -149,5 +149,12 @@ body.base-search-page .search-mini-form, body.home-page .search-mini-form {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap; }
+  .movie-item .storage-type-item {
+    margin-bottom: 0.7rem;
+    margin-top: 0.7rem; }
+    .movie-item .storage-type-item .btn-group {
+      width: 100%; }
+    .movie-item .storage-type-item textarea {
+      resize: none; }
 
 /*# sourceMappingURL=main.css.map */

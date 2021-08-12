@@ -202,4 +202,16 @@ body.base-search-page, body.home-page {
             }
         }
     }
+
+    .storage-type-item {
+        margin-bottom: 0.7rem;
+        margin-top: 0.7rem;
+        .btn-group {
+            width: 100%;
+        }
+
+        textarea {
+            resize: none;
+        }
+    }
 }
