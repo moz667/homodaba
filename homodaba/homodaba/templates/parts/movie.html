@@ -52,7 +52,7 @@
 
                 {% if is_kodi_supported %}
                     {% for st in movie.get_storage_types %}
-                        {% if not forloop.first %}
+                        {% if forloop.first %}
                             <button class="btn-kodi-play btn btn-primary btn-sm{% if st.is_original or not st.is_net_share %} disabled{% endif %}"
                                 data-storage-path="{{ st.path }}" 
                                 data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
