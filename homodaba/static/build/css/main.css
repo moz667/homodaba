@@ -1,4 +1,16 @@
-/* TODO: CSS */
+/* Clases basicas */
+.clear-pt {
+  clear: both;
+  padding-top: 1rem; }
+
+.clear-mt {
+  clear: both;
+  margin-top: 1rem; }
+
+.clear-mb {
+  clear: both;
+  margin-bottom: 1rem; }
+
 /* Sticky footer styles
 -------------------------------------------------- */
 html {
@@ -93,5 +105,49 @@ body.base-search-page .search-mini-form, body.home-page .search-mini-form {
     display: block;
     width: 100%;
     margin-bottom: 1rem; } }
+
+/* Widgets */
+/* Movie item (.movie-item) */
+.movie-item {
+  -webkit-box-flex: 1 !important;
+      -ms-flex: 1 0 30% !important;
+          flex: 1 0 30% !important; }
+  .movie-item .user-tag-switcher-wrap {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    line-height: 1.2; }
+    .movie-item .user-tag-switcher-wrap a.user-tag-switcher {
+      display: block; }
+      .movie-item .user-tag-switcher-wrap a.user-tag-switcher.later-tag em {
+        color: #e79900; }
+      .movie-item .user-tag-switcher-wrap a.user-tag-switcher.seen-tag em {
+        color: #888; }
+      .movie-item .user-tag-switcher-wrap a.user-tag-switcher em {
+        font-size: 1.5rem; }
+  .movie-item .movie-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 1rem; }
+  .movie-item .directors, .movie-item .countries {
+    overflow: hidden;
+    text-overflow: ellipsis; }
+  .movie-item .plot-and-image .img-fluid-wrap {
+    max-width: 50%;
+    margin-right: 1rem;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.125); }
+    .movie-item .plot-and-image .img-fluid-wrap .movie-rating {
+      position: absolute;
+      right: 0.3rem;
+      top: 0.3rem; }
+  .movie-item .writers-wrap .writers, .movie-item .casting-wrap .casting {
+    padding-left: 1.3rem; }
+    .movie-item .writers-wrap .writers li, .movie-item .casting-wrap .casting li {
+      overflow: hidden; }
+      .movie-item .writers-wrap .writers li a, .movie-item .casting-wrap .casting li a {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap; }
 
 /*# sourceMappingURL=main.css.map */

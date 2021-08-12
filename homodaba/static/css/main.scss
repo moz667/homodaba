@@ -1,4 +1,20 @@
-/* TODO: CSS */
+/* Clases basicas */
+
+.clear-pt {
+    clear: both; 
+    padding-top: 1rem;
+}
+
+.clear-mt {
+    clear: both; 
+    margin-top: 1rem;
+}
+
+.clear-mb {
+    clear: both; 
+    margin-bottom: 1rem;
+}
+
 
 /* Sticky footer styles
 -------------------------------------------------- */
@@ -116,6 +132,73 @@ body.base-search-page, body.home-page {
                 display: block;
                 width: 100%;
                 margin-bottom: 1rem;
+            }
+        }
+    }
+}
+
+/* Widgets */
+
+/* Movie item (.movie-item) */
+.movie-item {
+    flex: 1 0 30% !important;
+
+    .user-tag-switcher-wrap {
+        position: absolute;
+        top: 0.4rem; right:
+        0.5rem;
+        line-height: 1.2;
+
+        a.user-tag-switcher {
+            display: block;
+            &.later-tag em {
+                color: #e79900;
+            }
+
+            &.seen-tag em {
+                color: #888;
+            }
+
+            em {
+                font-size: 1.5rem;
+            }
+        }
+    }
+
+    .movie-title {
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        padding-right: 1rem;
+    }
+
+    .directors, .countries {
+        overflow: hidden; 
+        text-overflow: ellipsis;
+    }
+
+    .plot-and-image {
+        .img-fluid-wrap {
+            max-width: 50%;
+            margin-right: 1rem;
+            position: relative;
+            border:1px solid rgba(0, 0, 0, 0.125);
+
+            .movie-rating {
+                position: absolute; 
+                right: 0.3rem;
+                top: 0.3rem;
+            }
+        }
+    }
+
+    .writers-wrap .writers, .casting-wrap .casting {
+        padding-left: 1.3rem;
+        li {
+            overflow: hidden; 
+            a {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
         }
     }

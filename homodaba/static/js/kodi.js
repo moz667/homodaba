@@ -9,22 +9,43 @@ window.kodi_init = function () {
             var url_kodi_hosts = $this.data("kodi-hosts-url");
             var storage_path = $this.data("storage-path");
             var url_play = $this.data("play-url");
+            var movie_id = $this.data("movie-id");
 
             $.ajax({
                 method: "GET",
                 url: url_kodi_hosts
             }).done(function( data ) {
-                console.log( data );
                 if (data && data["kodi_hosts"] && data["kodi_hosts"].length > 0) {
                     var $dialog = $(
                         '<div id="kodiPlayDialog" class="modal fade" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true">' +
-                        '<div class="modal-dialog">' +
+                        '<div class="modal-dialog modal-dialog-centered">' +
                         '<div class="modal-content">' +
                             '<div class="modal-header">' +
-                                '<button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>' +
+                                '<h5 class="modal-title" id="kodiPlayDialogTitle">Reproducir en kodi</h5>' +
+                                '<button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">' +
+                                    '<span aria-hidden="true">&times;</span>' +
+                                '</button>' +
                             '</div>' +
-                            '<div class="modal-body"><div class="list-group"></div></div>' +
-                        '</div></div></div>'
+                            '<div class="modal-body">' + 
+                                '<div class="movie-item m-4"></div>' +
+                                '<div class="kodi-play-list-wrap clear-pt"><div class="card">' + 
+                                    '<div class="card-header">Reproducir en...</div>' + 
+                                    '<div class="list-group"></div>' +
+                                '</div></div>' + 
+                            '</div>' +
+                            // '<div class="modal-footer">' +
+                            //    '<button type="button" class="btn btn-danger" data-dismiss="modal">Cerrar</button>' +
+                            // '</div>' +
+                        '</div>' +
+                        '</div></div>'
+                    );
+                    
+                    $dialog.find(".modal-title").text(
+                        $(".movie-" + movie_id + " .movie-title").text()
+                    );
+
+                    $dialog.find(".movie-item").append(
+                        $(".movie-" + movie_id + " .plot-and-image").clone()
                     );
 
                     var kodi_hosts = data["kodi_hosts"];

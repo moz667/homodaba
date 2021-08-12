@@ -9,6 +9,17 @@ from django.shortcuts import render
 
 from .models import KodiHost
 
+def scraper_search(request):
+    if len(request.GET.keys()):
+        for k in request.GET.keys():
+            print("%s='%s'" % (k, request.GET[k]))
+    return render(request, 'kodi/scraper_search.html', {"foo": "bar"}, content_type="application/xhtml+xml")
+
+def scraper_detail(request):
+    if len(request.GET.keys()):
+        for k in request.GET.keys():
+            print("%s='%s'" % (k, request.GET[k]))
+    return render(request, 'kodi/scraper_detail.html', {"foo": "bar"}, content_type="application/xhtml+xml")
 
 @login_required
 def json_kodi_play(request):
@@ -66,15 +77,3 @@ def json_get_kodi_hosts(request):
         })
 
     return JsonResponse(data)
-
-def scraper_search(request):
-    if len(request.GET.keys()):
-        for k in request.GET.keys():
-            print("%s='%s'" % (k, request.GET[k]))
-    return render(request, 'kodi/scraper_search.html', {"foo": "bar"}, content_type="application/xhtml+xml")
-
-def scraper_detail(request):
-    if len(request.GET.keys()):
-        for k in request.GET.keys():
-            print("%s='%s'" % (k, request.GET[k]))
-    return render(request, 'kodi/scraper_detail.html', {"foo": "bar"}, content_type="application/xhtml+xml")
