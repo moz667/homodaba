@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="repository.homodaba" name="Homodaba Addons" version="1.0.0" provider-name="homodaba-addons">
+	<extension point="xbmc.addon.repository" name="Homodaba Addons">
+		<info compressed="false">https://raw.githubusercontent.com/xbmc-adult/xbmc-adult/ghmaster/addons.xml</info>
+		<checksum>https://raw.githubusercontent.com/xbmc-adult/xbmc-adult/ghmaster/addons.xml.md5</checksum>
+		<datadir zip="true">https://raw.githubusercontent.com/xbmc-adult/xbmc-adult/ghmaster</datadir>
+
+		<dir minversion="1.0.0" maxversion="18.9.999">
+			<info compressed="false">https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/leia/addons.xml</info>
+			<checksum>https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/leia/addons.xml.md5</checksum>
+			<datadir zip="true">https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/leia/</datadir>
+		</dir>
+		<dir minversion="19.0.0">
+			<info compressed="false">https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/matrix/addons.xml</info>
+			<checksum>https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/matrix/addons.xml.md5</checksum>
+			<datadir zip="true">https://raw.githubusercontent.com/moz667/homodaba-kodi-repo/matrix/</datadir>
+		</dir>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary>XBMC Addons para integracion con Homodaba</summary>
+		<description>Repositorio de addons para xbmc/kodi con su integracion con homodaba.</description>
+		<disclaimer>No nos hacemos responsables de que @bpk667 fantasee con Sandra Bullock esposandole en Miss Agente Especial. Que su primer bluray fuera Miss Agente Especial 2 solo puede significar que le gusto mucho la primera parte.</disclaimer>
+		<platform>all</platform>
+	</extension>
+</addon>
