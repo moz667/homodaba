@@ -6,7 +6,9 @@
     "last 2 version",
     "> 2%"
   ],
-  "scripts": {},
+  "scripts": {
+    "build": "gulp"
+  },
   "author": "moz667 <moz667@gmail.com>",
   "license": "ISC",
   "dependencies": {

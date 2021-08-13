@@ -66,11 +66,10 @@ const __COPY_FONT = [
 const __COPY_JS = [
 	'file.js',
 ];
-
-const __COPY_IMG = [
-    'file.png'
-];
 */
+const __COPY_IMG = [
+    'img/**'
+];
 
 // Compile Sass
 function sass_build(callback) {
@@ -143,6 +142,7 @@ function copyjs_copy(callback) {
 		.on('end', callback);
 }
 gulp.task('copy:copyjs', copyjs_copy);
+*/
 
 // IMGS
 function imgs_copy(callback) {
@@ -151,7 +151,6 @@ function imgs_copy(callback) {
 		.on('end', callback);
 }
 gulp.task('copy:imgs', imgs_copy);
-*/
 
 // Watchers
 gulp.task('watch', function (callback) {
@@ -175,7 +174,7 @@ gulp.task( 'default', function (callback) {
 	};
 
 	// Hemos sacado la generacion de thirdparty y la copia de fuentes porque
-	// relentiza esta generacion y no cambia casi nunca... 
+	// relentiza esta generacion y no cambia casi nunca...
 	// hay que tenerlo en cuenta por lo que ponemos un mensaje comentandolo
 	sass_build(reportFinished);
 	// sass_thirdparty_build(reportFinished);
