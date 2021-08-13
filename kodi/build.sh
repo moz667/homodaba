@@ -20,7 +20,7 @@ build_addon_zip() {
 
 	cp $ADDON_NAME/addon.xml $KODI_VERSION/$ADDON_NAME
 
-	cat $ADDON_NAME/addon.xml >> $KODI_VERSION/addons.xml
+	cat $ADDON_NAME/addon.xml|grep -v "<?xml" >> $KODI_VERSION/addons.xml
 
 	zip -qr $OUTPUT_ZIP_FILE $ADDON_NAME/
 }
