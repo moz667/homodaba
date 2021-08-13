@@ -5,10 +5,17 @@ Infinitas gracias a romanvm ya que en este ejemplo es en el que me he basado:
 https://github.com/romanvm/plugin.video.example
 """
 
-import json, urllib
+import json
 import requests
 import sys
-from urllib.parse import urlencode, parse_qsl, quote_plus
+
+# Python3:
+try:
+    from urllib.parse import urlencode, parse_qsl
+# Python2:
+except ImportError:
+    from urllib import urlencode
+    from urlparse import parse_qsl
 
 import xbmcaddon, xbmcgui, xbmcplugin
 
@@ -57,7 +64,7 @@ def get_videos(category):
 
     url = "%s/kodi/json/movie/search?%s" % (
         HDB_URL_BASE, 
-        urlencode(query_get_vars, quote_via=quote_plus)
+        urlencode(query_get_vars)
     )
 
     data = get_hdb_json(url, {"results": []})
