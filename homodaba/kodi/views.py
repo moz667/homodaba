@@ -28,10 +28,16 @@ def json_movie_search(request):
             protocol = request.GET["protocol"]
 
         if tag:
+            i = 0
             for movie in Movie.objects.filter(tags__pk=tag.id).all():
-                alt_titles = movie.get_other_main_titles()
+                if i > 99:
+                    break
 
+                alt_titles = movie.get_other_main_titles()
+                
                 for st in movie.get_storage_types():
+                    if i > 99:
+                        break
                     if st.is_net_share():
                         file_url = st.get_url_to_storage_type() if protocol == 'HTTP' else st.path
 
@@ -43,6 +49,7 @@ def json_movie_search(request):
                                 "file": file_url,
                                 "thumb": movie.clean_poster_thumbnail_url(),
                             })
+                            i = i + 1
 
     return JsonResponse(data)
 
