@@ -31,7 +31,9 @@ En principio eso es todo, pero te pueden pasar distintas cosas:
     - Reiniciar los dos kodi (a ver si el error aparece en el que parecia que funcionaba)
     - Si se trata de un error en un import, revisar que tenga la dependencia definida. (OJO: para que te instale dependencias tienes que instalar desde repositorio o con zip. Alternativamente puedes buscar un plugin que tenga la misma dependencia e instalarlo antes... pero esto puede ser un poco locura)
 
-## Cosillas:
+**Nota: He creado un script "build.sh" que genera los distintos zips para las distintas versiones de kodi (leia y matrix)**
+
+## Compatibilidad entre leia y matrix:
 
 * Por defecto el addon plugin.homodaba.movies, esta hecho para kodi matrix (python3), aunque resulta bastante trivial hacerlo funcionar en leia (python2), tuvimos que hacer los import compatibles:
 
