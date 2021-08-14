@@ -7,7 +7,7 @@ services:
     homodaba-proxy:
       build:
         context: .
-        dockerfile: docker/statics/Dockerfile
+        dockerfile: docker/static/Dockerfile
       ports:
         - "8000:80"
       restart: always

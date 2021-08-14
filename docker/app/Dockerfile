@@ -26,6 +26,6 @@ ADD homodaba /opt/app/homodaba
 
 EXPOSE 8000
 
-COPY homodaba/init-homodaba.sh /opt/app/init-homodaba.sh
+COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
 
 CMD ["/opt/app/init-homodaba.sh"]

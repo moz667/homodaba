@@ -2,7 +2,7 @@
 output
 backups
 homodaba/*.sqlite3
-static/*
+static/build
 docker/.env*
 docker/volumes/import/*
 docker/volumes/sqlite/*

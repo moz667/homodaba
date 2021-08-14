@@ -2,9 +2,9 @@
 FROM node:10 AS gulp
 
 WORKDIR /src
-ADD homodaba/static/package.json /src/
+ADD static/package.json /src/
 RUN npm install
-ADD homodaba/static/ /src
+ADD static/ /src
 RUN npm run build
 
 # build django statics
@@ -21,7 +21,7 @@ RUN mkdir -p "$STATIC_ROOT" && python manage.py collectstatic --no-input
 # final stage
 FROM nginx
 
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY docker/static/nginx.conf /etc/nginx/nginx.conf
 COPY --from=django /tmp/static /www/public
 RUN gzip -6 -k $(find /www/public -name *.html -o -name *.css -o -name *.js -o -name *.svg -o -name *.ico)
 
