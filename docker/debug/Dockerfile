@@ -2,8 +2,8 @@
 FROM node:10 AS gulp
 
 WORKDIR /src
-ADD static/package.json /src/
-RUN npm install
+ADD static/package*.json /src/
+RUN npm clean-install
 ADD static/ /src
 RUN npm run build
 
