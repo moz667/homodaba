@@ -9,10 +9,10 @@ services:
             context: .
             dockerfile: docker/debug/Dockerfile
         ports:
-          - "8000:8000"
+           - "8000:8000"
         restart: always
         env_file:
-          - .env
+            - .env
         volumes:
-          - ${HOST_SQLITE}:/opt/app/sqlite
-          - ${HOST_IMPORT}:/opt/app/import
+            - ${HOST_SQLITE}:/opt/app/sqlite
+            - ${HOST_IMPORT}:/opt/app/import

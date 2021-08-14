@@ -5,19 +5,19 @@ version: '2.0'
 
 services:
     proxy:
-      build:
-        context: .
-        dockerfile: docker/proxy/Dockerfile
-      ports:
-        - "8000:80"
-      restart: always
+        build:
+            context: .
+            dockerfile: docker/proxy/Dockerfile
+        ports:
+            - "8000:80"
+        restart: always
     app:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
         restart: always
         env_file:
-          - .env
+            - .env
         volumes:
-          - ${HOST_SQLITE}:/opt/app/sqlite
-          - ${HOST_IMPORT}:/opt/app/import
+            - ${HOST_SQLITE}:/opt/app/sqlite
+            - ${HOST_IMPORT}:/opt/app/import

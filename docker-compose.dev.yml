@@ -5,21 +5,21 @@ version: '2.0'
 
 services:
     dev-gulp:
-      image: node:10
-      working_dir: /src
-      command: ["/bin/sh", "-c", "npm install && npm run build:watch"]
-      volumes:
-          - ./static:/src
+        image: node:10
+        working_dir: /src
+        command: ["/bin/sh", "-c", "npm install && npm run build:watch"]
+        volumes:
+            - ./static:/src
     dev-app:
         build:
             context: .
             dockerfile: docker/dev/Dockerfile
         ports:
-          - "8000:8000"
+            - "8000:8000"
         env_file:
-          - .env
+            - .env
         volumes:
-          - ./homodaba:/opt/app/homodaba
-          - ./static/build:/opt/app/homodaba/static/build
-          - ${HOST_SQLITE}:/opt/app/sqlite
-          - ${HOST_IMPORT}:/opt/app/import
+            - ./homodaba:/opt/app/homodaba
+            - ./static/build:/opt/app/homodaba/static/build
+            - ${HOST_SQLITE}:/opt/app/sqlite
+            - ${HOST_IMPORT}:/opt/app/import
