@@ -7,7 +7,7 @@
     "> 2%"
   ],
   "scripts": {
-    "build": "gulp default browserify:thirdparty sass:thirdparty copy:fonts"
+    "build": "gulp default browserify:thirdparty sass:thirdparty copy:fonts copy:imgs"
   },
   "author": "moz667 <moz667@gmail.com>",
   "license": "ISC",
