@@ -1,0 +1,27 @@
+version: '2.0'
+
+# homodaba docker
+# Version debug
+
+services:
+    homodaba-gulp:
+      build:
+        context: .
+        dockerfile: docker/debug/gulp.Dockerfile
+      restart: always
+      volumes:
+          - ./static/build:/src/build
+    homodaba-app:
+        build:
+            context: .
+            dockerfile: docker/debug/app.Dockerfile
+        ports:
+          - "8000:8000"
+        restart: always
+        env_file:
+          - .env
+        volumes:
+          - ./homodaba:/opt/app/homodaba
+          - ./static/build:/opt/app/homodaba/static/build
+          - ${HOST_SQLITE}:/opt/app/sqlite
+          - ${HOST_IMPORT}:/opt/app/import

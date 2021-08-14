@@ -12,12 +12,12 @@ FROM python:3.8.3
 
 ARG APP_SRC_PATH=homodaba
 
-ENV PYTHONUNBUFFERED 1 \
-  SECRET_KEY ${SECRET_KEY} \
-  ES_DSL_HOSTS ${ES_DSL_HOSTS} \
-  ALLOWED_HOSTS ${ALLOWED_HOSTS} \
-  SQLITE_ROOT "/opt/app/sqlite" \
-  IMPORT_ROOT "/opt/app/import"
+ENV PYTHONUNBUFFERED=1 \
+  SECRET_KEY=${SECRET_KEY} \
+  ES_DSL_HOSTS=${ES_DSL_HOSTS} \
+  ALLOWED_HOSTS=${ALLOWED_HOSTS} \
+  SQLITE_ROOT="/opt/app/sqlite" \
+  IMPORT_ROOT="/opt/app/import"
 
 WORKDIR /opt/app
 
