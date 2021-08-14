@@ -11,6 +11,10 @@ services:
       restart: always
       volumes:
           - ./static/build:/src/build
+          - ./static/css:/src/css
+          - ./static/img:/src/img
+          - ./static/inc:/src/inc
+          - ./static/js:/src/js
     homodaba-app:
         build:
             context: .
