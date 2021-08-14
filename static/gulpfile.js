@@ -68,7 +68,7 @@ const __COPY_JS = [
 ];
 */
 const __COPY_IMG = [
-    'img/**'
+    './img/**'
 ];
 
 // Compile Sass
@@ -146,7 +146,7 @@ gulp.task('copy:copyjs', copyjs_copy);
 
 // IMGS
 function imgs_copy(callback) {
-	gulp.src(__COPY_IMG, { cwd: 'node_modules/' })
+	gulp.src(__COPY_IMG)
 		.pipe(gulp.dest(__DIST_IMG))
 		.on('end', callback);
 }
