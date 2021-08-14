@@ -4,28 +4,15 @@ version: '2.0'
 # Version debug
 
 services:
-    gulp:
-      build:
-        context: .
-        dockerfile: docker/debug/gulp.Dockerfile
-      restart: always
-      volumes:
-          - ./static/build:/src/build
-          - ./static/css:/src/css
-          - ./static/img:/src/img
-          - ./static/inc:/src/inc
-          - ./static/js:/src/js
-    app:
+    debug-app:
         build:
             context: .
-            dockerfile: docker/debug/app.Dockerfile
+            dockerfile: docker/debug/Dockerfile
         ports:
           - "8000:8000"
         restart: always
         env_file:
           - .env
         volumes:
-          - ./homodaba:/opt/app/homodaba
-          - ./static/build:/opt/app/homodaba/static/build
           - ${HOST_SQLITE}:/opt/app/sqlite
           - ${HOST_IMPORT}:/opt/app/import
