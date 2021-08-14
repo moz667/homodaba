@@ -35,7 +35,6 @@ RUN pip3 install -r homodaba/python-requirements.txt
 ADD homodaba /opt/app/homodaba
 
 COPY --from=gulp /src/build /opt/app/homodaba/static/build
-RUN python homodaba/manage.py collectstatic --no-input
 
 EXPOSE 8000
 
