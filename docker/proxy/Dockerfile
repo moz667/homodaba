@@ -22,7 +22,7 @@ RUN mkdir -p "$STATIC_ROOT" && python manage.py collectstatic --no-input
 # final stage
 FROM nginx
 
-COPY docker/static/nginx.conf /etc/nginx/nginx.conf
+COPY docker/proxy/nginx.conf /etc/nginx/nginx.conf
 COPY --from=django /tmp/static /www/public/static
 RUN gzip -6 -k $(find /www/public -name *.html -o -name *.css -o -name *.js -o -name *.svg -o -name *.ico)
 

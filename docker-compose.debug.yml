@@ -4,7 +4,7 @@ version: '2.0'
 # Version debug
 
 services:
-    homodaba-gulp:
+    gulp:
       build:
         context: .
         dockerfile: docker/debug/gulp.Dockerfile
@@ -15,7 +15,7 @@ services:
           - ./static/img:/src/img
           - ./static/inc:/src/inc
           - ./static/js:/src/js
-    homodaba-app:
+    app:
         build:
             context: .
             dockerfile: docker/debug/app.Dockerfile
