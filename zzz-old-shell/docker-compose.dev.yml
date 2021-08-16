@@ -10,6 +10,14 @@ services:
         command: ["/bin/sh", "-c", "npm install && npm run build:watch"]
         volumes:
             - ./static:/src
+    dev-db:
+        image: mysql:5.7
+        volumes:
+            - ${MYSQL_DATA_VOL}:/var/lib/mysql
+        environment:
+            - MYSQL_DATABASE=homodaba
+        env_file:
+            - .env
     dev-app:
         build:
             context: .
@@ -18,6 +26,10 @@ services:
             - "8000:8000"
         environment:
             - DJANGO_DEBUG=1
+            - DATABASE_ENGINE=mysql
+            - DATABASE_HOST=dev-db
+            - DATABASE_NAME=homodaba
+            - DATABASE_USER=root
         env_file:
             - .env
         volumes:

@@ -26,5 +26,5 @@ urllib3==1.25.10
 django-admin-autocomplete-filter==0.7
 getch==1.0
 requests==2.26.0
-# Opcional para base de datos mysql (si no la usas se puede dejar comentado):
-# mysqlclient==1.4.6
+# Opcional para base de datos mysql (si no la usas se puede comentar):
+mysqlclient==1.4.6
