@@ -2,7 +2,8 @@
 
 ### Limpieza de dockers
 1. [ ] Reorganizar todo el tema de shell scripts (movido por ahora a [zzz-old-shell](./zzz-old-shell))
-1. [ ] Añadir a la version dev un mysql
+1. [X] ~~Añadir a la version dev un mysql~~
+1. [ ] health check de contenedores
 1. [ ] Documentar opciones de despliegue:
     * MySql
     * Telegram Bot (tbot)
