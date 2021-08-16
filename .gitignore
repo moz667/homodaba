@@ -5,6 +5,7 @@ backups
 static/build
 node_modules
 kodi/samples
+.env.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

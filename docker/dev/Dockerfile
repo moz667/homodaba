@@ -22,8 +22,6 @@ ADD homodaba/python-requirements.txt /opt/app/homodaba/python-requirements.txt
 
 RUN pip3 install -r homodaba/python-requirements.txt
 
-ENV DJANGO_DEBUG 1
-
 EXPOSE 8000
 
 COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
