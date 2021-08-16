@@ -217,7 +217,7 @@ USE_TZ = True
 
 # STATIC_URL = '/static/'
 
-STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../static')
+STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../../static')
 
 # Variable para mapear la app dentro de un directorio (para el reverse proxy)
 # Por ejemplo, para publicar detras de un proxy en https://example.com/homodaba
