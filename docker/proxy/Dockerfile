@@ -11,7 +11,9 @@ RUN npm run build
 FROM python:3.8.3 AS django
 
 ENV STATIC_ROOT="/tmp/static" \
-    SECRET_KEY="**NONE**"
+    SECRET_KEY="**NONE**" \
+    STATIC_BUILD="./static/build"
+
 WORKDIR /src
 ADD homodaba/python-requirements.txt /src/python-requirements.txt
 RUN pip3 install -r python-requirements.txt

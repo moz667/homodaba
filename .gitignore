@@ -3,6 +3,7 @@ output
 backups
 *.sqlite3
 static/build
+static/publish
 node_modules
 kodi/samples
 .env.*

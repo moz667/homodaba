@@ -217,7 +217,7 @@ USE_TZ = True
 
 # STATIC_URL = '/static/'
 
-STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../../static')
+STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../static/publish')
 
 # Variable para mapear la app dentro de un directorio (para el reverse proxy)
 # Por ejemplo, para publicar detras de un proxy en https://example.com/homodaba
@@ -229,9 +229,8 @@ HOME_URL_PATH = os.getenv('HOME_URL_PATH', '')
 STATIC_URL = os.getenv('STATIC_URL', '/%sstatic/' % HOME_URL_PATH)
 
 STATICFILES_DIRS = [
-    ('homodaba', BASE_DIR / './static/build'),
+    ('homodaba', BASE_DIR / os.getenv('STATIC_BUILD', '../static/build')),
 ]
-
 
 # Por ahora no usamos uploads, pero en un futuro... who knows!
 # MEDIA_URL = '/%supload/' % HOME_URL_PATH

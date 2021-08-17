@@ -34,7 +34,7 @@ services:
             - .env
         volumes:
             - ./homodaba:/opt/app/homodaba
-            - ./static/build:/opt/app/homodaba/static/build
+            - ./static/build:/opt/app/static/build
             - ${HOST_SQLITE}:/opt/app/sqlite
             - ${HOST_IMPORT}:/opt/app/import
         depends_on:
