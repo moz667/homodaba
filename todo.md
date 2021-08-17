@@ -1,5 +1,15 @@
 ## Pendientes
 
+### Funcionalidades
+1. [ ] Añadir descripcion a las tags... esto nos puede servir por ejemplo para poner order de visionado de sagas que tengan varias pelis
+1. [ ] Aplicar tags desde la web como usuario no staff a las pelis
+1. [ ] En la busqueda de peliculas, buscar el texto en terminos y sacarlo como enlaces de filtro de busqueda:
+    * Tag
+    * GenreTag
+    * ContentRatingTag
+    * UserTag
+    * Person
+
 ### Limpieza de dockers
 1. [ ] Reorganizar todo el tema de shell scripts (movido por ahora a [zzz-oldcode](./zzz-oldcode))
 1. [X] ~~Añadir a la version dev un mysql~~

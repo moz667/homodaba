@@ -183,13 +183,13 @@ class Movie(models.Model):
         return '%s (%s)' % (self.title, str(self.year))
 
     def get_the_main_title(self):
-        return self.title_original if self.title_original else self.title
+        return self.title if self.title else self.title_original
 
     def get_other_main_titles(self):
         main_title = self.get_the_main_title()
         other_titles = []
-        if self.title and main_title != self.title:
-            other_titles.append(self.title)
+        if self.title_original and main_title != self.title_original:
+            other_titles.append(self.title_original)
         if self.title_preferred and main_title != self.title_preferred:
             other_titles.append(self.title_preferred)
 
