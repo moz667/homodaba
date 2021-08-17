@@ -55,16 +55,16 @@ class filesParser:
 
     def fixOriginErrors(self, *args):
         patchedTitles_json = args[0]
-        if (len(args) == 2):
-            auto_csv2imdb_json = args[1]
-        else:
-            auto_csv2imdb_json = None
+        auto_csv2imdb_json = args[1]
 
-        base, ext = os.path.splitext(patchedTitles_json)
-        if ext.lower() != '.json':
-            raise argparse.ArgumentTypeError('File must have a json extension', patchedTitles_json)
-        with open(patchedTitles_json, 'r', newline='') as films_to_correct:
-            moviespatch = json.load(films_to_correct)
+        if patchedTitles_json is not None:
+            base, ext = os.path.splitext(patchedTitles_json)
+            if ext.lower() != '.json':
+                raise argparse.ArgumentTypeError('File must have a json extension', patchedTitles_json)
+            with open(patchedTitles_json, 'r', newline='') as films_to_correct:
+                moviespatch = json.load(films_to_correct)
+        else:
+            moviespatch = {}
 
         if auto_csv2imdb_json is not None:
             base, ext = os.path.splitext(auto_csv2imdb_json)
@@ -394,9 +394,13 @@ def generate_file(movies, fout, csv_quotechar, csv_delimiter):
     writer = csv.DictWriter(fout, fieldnames = output_csv_header, delimiter=csv_delimiter, quotechar=csv_quotechar)
     writer.writeheader()
 
-    for row in movies.movies:
-        movie = movies.movies[row]
-        writer.writerow(movie)
+    # Esto es feo de cojones, pero no he sido capaz de ordenar el diccionario por año de película (Any developer in the room?)
+    for i  in range(2050, 1900,-1):
+        for row in movies.movies:
+            year = int(movies.movies[row]['year'])
+            if i == year:
+                movie = movies.movies[row]
+                writer.writerow(movie)
 
 def main(args):
     '''
