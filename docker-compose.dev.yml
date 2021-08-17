@@ -1,4 +1,4 @@
-version: '2.0'
+version: '2.1'
 
 # homodaba docker
 # Version for development
@@ -13,7 +13,7 @@ services:
     dev-db:
         image: mysql:5.7
         volumes:
-            - ${MYSQL_DATA_VOL}:/var/lib/mysql
+            - ${MYSQL_DATA_VOL?Variable not set}}:/var/lib/mysql
         environment:
             - MYSQL_DATABASE=homodaba
         env_file:
