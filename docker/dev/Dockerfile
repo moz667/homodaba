@@ -26,4 +26,7 @@ EXPOSE 8000
 
 COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
 
+# Añadido cliente MariaDB para comprobar que el servicio está listo.
+RUN apt-get update && apt-get install -y mariadb-client
+
 CMD ["/opt/app/init-homodaba.sh"]

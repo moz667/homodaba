@@ -1,7 +1,7 @@
 version: '2.1'
 
 # homodaba docker
-# Version for development
+# Version MySQL for development 
 
 services:
     dev-gulp:
@@ -14,10 +14,15 @@ services:
         image: mysql:5.7
         volumes:
             - ${MYSQL_DATA_VOL?Variable not set}:/var/lib/mysql
+        expose:
+            - 3306
         environment:
-            - MYSQL_DATABASE=homodaba
+          - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
+          - MYSQL_USER=${DATABASE_USER:-homodaba_user}
+          - MYSQL_PASSWORD=${DATABASE_PASSWORD?Variable not set}
+          - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD?Variable not set}
         env_file:
-            - .env
+          - .env
     dev-app:
         build:
             context: .
@@ -26,16 +31,16 @@ services:
             - "8000:8000"
         environment:
             - DJANGO_DEBUG=1
-            - DATABASE_ENGINE=mysql
-            - DATABASE_HOST=dev-db
-            - DATABASE_NAME=homodaba
-            - DATABASE_USER=root
+            - DATABASE_ENGINE=${DATABASE_ENGINE:-mysql}
+            - DATABASE_HOST=${DATABASE_HOST:-dev-db}
+            - DATABASE_NAME=${DATABASE_NAME:-homodaba}
+            - DATABASE_USER=${DATABASE_USER:-homodaba_user}
+            - DATABASE_PASSWORD=${DATABASE_PASSWORD?Variable not set}
         env_file:
             - .env
         volumes:
             - ./homodaba:/opt/app/homodaba
             - ./static/build:/opt/app/static/build
-            - ${HOST_SQLITE}:/opt/app/sqlite
             - ${HOST_IMPORT}:/opt/app/import
         depends_on:
             - dev-db
