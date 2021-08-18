@@ -23,6 +23,7 @@ services:
           - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD?Variable not set}
         env_file:
           - .env
+        command: ['--character-set-server=utf8']
     dev-app:
         build:
             context: .
@@ -42,5 +43,6 @@ services:
             - ./homodaba:/opt/app/homodaba
             - ./static/build:/opt/app/static/build
             - ${HOST_IMPORT}:/opt/app/import
+            - ${HOST_SQLITE}:/opt/app/sqlite
         depends_on:
             - dev-db

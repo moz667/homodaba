@@ -2,6 +2,9 @@
 Se puede instalar directamente en el sistema operativo (probado en Ubuntu y Debian) o su versión dockerizada.
 
 # Instalación en Linux
+<details>
+  <summary>Ver instrucciones</summary>
+
 ## Preparar el entorno python
 * Instalar pyenv y virtualenv
 ```bash
@@ -38,7 +41,9 @@ Todas las instalaciones de Django requieren una SECRET_KEY única (ref. [Documen
 ```
 
 <details>
+
   <summary>TODO: Documentar cómo habilitar tbot en la solución no dockerizada</summary>
+
 </details>
 
 ## [OPCIONAL] Definimos otros parámetros de configuración en `.venv`.
@@ -73,8 +78,11 @@ export ADMIN_MOVIE_LIST_PER_PAGE=100
 # Descomentar si se quiere usar ElasticSearch:
 # ES_DSL_HOSTS=localhost:9200
 ```
+</details>
 
 # Instalación de versión dockerizada (con docker-compose)
+<details>
+  <summary>Ver instrucciones</summary>
 
 **Nota**: En la versión dockerizada, todos los parámetros de configuración están en el fichero `.env` situado en el directorio `./docker/`.  
 A tener en cuenta sobre el fichero de configuración:
@@ -203,6 +211,7 @@ docker-compose exec homodaba-app python ./homodaba/homodaba/manage.py createsupe
 ## Probar que la aplicación es accesible.
 Para ello, conectarse a la aplicación a través de http://dominio.net:8000/homodaba/
 
+</details>
 
 # Tareas recurrentes
 ## Arrancar la aplicación no dockerizada
@@ -276,6 +285,10 @@ docker exec -ti homodaba-app-container bash
 
 ## Pasar de sqlite3 a mysql
 [source shubhamdipt.com](https://www.shubhamdipt.com/blog/django-transfer-data-from-sqlite-to-another-database/)
+
+<details>
+  <summary>[OUTDATED] Ver instrucciones</summary>
+
 1. En sqlite ejecutar:
    ```bash
    manage.sh dumpdata > db.json
@@ -324,6 +337,116 @@ docker exec -ti homodaba-app-container bash
    ```bash
    manage.sh optimize_db
    ```
+
+</details>
+
+Migrar de la versión dockerizada de SQLite a la versión MySQL.
+<details>
+  <summary>Ver instrucciones</summary>
+
+**Sobre una versión SQLite de docker con información**
+1. Exportamos la información con el siguiente comando:
+
+    ```bash
+    ~ docker exec homodaba_dev-app_1 sh -c 'python homodaba/manage.py dumpdata --database default > /opt/app/homodaba/db-sqlite.json'
+    ```
+
+    Detalles:
+     - `docker exec homodaba_dev-app_1 sh -c ""`. Ejecutar el comando entre comillas en el contenedor `homodaba_dev-app_1`.
+     - `python homodaba/manage.py dumpdata --database default`. Comando de Django para exportar la base de datos `default`.  
+     Si no se indica `--database` exportaríamos todas las bases de datos. De momento no nos interesa y mantendremos la base de datos de cache en SQLite.
+     - `/opt/app/homodaba/db-sqlite.json`.  
+     Fichero en el que guardamos la información. A tener en cuenta que se ha elegido la ruta `/opt/app/homodaba/` debido a que es un volumen docker y será accesible y persistente para el nuevo servicio con MySQL.
+
+2. Paramos el servicio docker-compose
+
+    ```bash
+    ~ docker-compose down
+    ```
+
+**Cambiamos la configuración y levantamos los nuevos servicios**  
+
+1. Editamos el fichero `.env` para utilizar MySQL. Los parámetros obligatorios son los siguientes:
+
+    ```bash
+    # Motor de BBDD. Si la variable no está definida, se utilizará SQLite.
+    DATABASE_ENGINE=mysql
+
+    # Ruta donde estará la base de datos de forma persistente. Indicar una ruta fuera del repositorio.
+    MYSQL_DATA_VOL=
+
+    # Contraseña de la base de datos.
+    DATABASE_PASSWORD=
+    ```
+
+2. Una vez configurado, construimos y levantamos los servicios:
+
+    ```bash
+    ~ docker-compose --project-directory . up
+    ```
+
+3. Comprobamos que el contenedor efectivamente está usando MySQL:
+
+    ```bash
+    ~ docker logs  homodaba_dev-app_1  |grep 'mysqld is alive'
+    mysqld is alive
+    ```
+
+**Importamos la información**
+
+1. Comprobamos que el fichero es accesible desde el nuevo contenedor:
+
+    ```bash
+    ~ $ docker exec homodaba_dev-app_1 sh -c 'ls -ld /opt/app/homodaba/db-sqlite.json'
+    -rw-r--r-- 1 root root 15078505 Aug 18 09:19 /opt/app/homodaba/db-sqlite.json
+    ```
+
+2. Borramos ContentType: 
+
+    ```bash
+    ~ docker exec homodaba_dev-app_1 sh -c 'python homodaba/manage.py shell -c "from django.contrib.contenttypes.models import ContentType ; ContentType.objects.all().delete()"'
+    ```
+
+2. (alt) Si prefieres ejecutarlo en varios pasos:  
+
+    ```python
+    $ docker exec -it homodaba_dev-app_1 sh -c 'python homodaba/manage.py shell'
+    Python 3.8.3 (default, Jun  9 2020, 17:39:39)
+    [GCC 8.3.0] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    (InteractiveConsole)
+    >>> from django.contrib.contenttypes.models import ContentType
+    >>> ContentType.objects.all().delete()
+    (0, {})
+    >>>
+    ```
+
+3. Importamos la información.
+
+    ```bash
+    ~ docker exec homodaba_dev-app_1 sh -c 'python homodaba/manage.py loaddata --database default /opt/app/homodaba/db-sqlite.json'
+    ```
+
+    *Nota:* Si da algún problema del tipo:
+
+    ```bash
+    : Could not load data.TitleAka(pk=XXXX): (1062, "Duplicate entry 'Un titulo cualquiera' for key 'title'")
+    ```
+
+    Podemos excluir de la importacion dicho elemento:
+    1. Lanzamos la importación excluyendo el elemento que da error:
+
+    ```bash
+    ~ docker exec homodaba_dev-app_1 sh -c 'python homodaba/manage.py loaddata --database default /opt/app/homodaba/db-sqlite.json -e "data.TitleAka"'
+    ```
+
+    2. Volvemos a generar todos los AKAs (usará la base de datos sqlite de caché)
+
+    ```bash
+    ~ docker exec homodaba_dev-app_1 sh -c 'python homodaba/manage.py optimize_db --title-and-akas -v3'
+    ```
+    El parámetro `-v3` es opcional, pero indica para comprobar que efectivamente se está utilizando la base de datos de caché.
+</details>
 
 
 ## Base de datos separada para la cache (generico)
