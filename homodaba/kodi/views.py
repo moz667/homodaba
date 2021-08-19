@@ -10,7 +10,104 @@ from django.shortcuts import render
 from .models import KodiHost
 from .decorators import json_basic_auth
 
-from data.models import Tag, Movie
+from data.models import Tag, Movie, MovieStorageType, get_last_items
+from data.search import populate_search_filter
+
+def populate_data(data, movies, request):
+    share_protocol = 'SMB'
+    if 'protocol' in request.GET.keys() and request.GET["protocol"] in ["SMB", "HTTP"]:
+        share_protocol = request.GET["protocol"]
+
+    for movie in movies:
+        alt_titles = movie.get_other_main_titles()
+        
+        for st in movie.get_storage_types():
+            if st.is_net_share():
+                file_url = st.get_url_to_storage_type() if share_protocol == 'HTTP' else st.path
+
+                if file_url:
+                    genre = [g.name for g in movie.genres.all()]
+                    country = [g.name for g in movie.countries.all()]
+                    casting = [g.name for g in movie.actors.all()]
+                    director = [g.name for g in movie.directors.all()]
+                    # OJO: mpaa es string, no list
+                    mpaa = None
+                    for g in movie.content_rating_systems.all():
+                        mpaa = g.name 
+                    
+                    writer = [g.name for g in movie.writers.all()]
+                    tag = [g.name for g in movie.tags.all()]
+                    
+                    data["results"].append({
+                        "genre": genre,
+                        "country": country,
+                        "year": movie.year,
+                        "rating": movie.rating if movie.rating else 0,
+                        "cast": casting,
+                        "director": director,
+                        "mpaa": mpaa,
+                        "plot": movie.get_plot(),
+                        "title": movie.get_the_main_title(),
+                        "originaltitle": alt_titles[0] if len(alt_titles) else '',
+                        "writer": writer,
+                        "tag": tag,
+                        "imdbnumber": movie.get_formated_imdb_id(),
+                        "file": file_url,
+                        "thumb": movie.clean_poster_thumbnail_url(),
+                        "poster": movie.clean_poster_url(),
+                    })
+
+"""
+https://codedocs.xyz/xbmc/xbmc/group__python__xbmcgui__listitem.html#ga0b71166869bda87ad744942888fb5f14
+
+Info label	Description
+
+showlink	string (Battlestar Galactica) or list of strings (["Battlestar Galactica", "Caprica"])
+castandrole	list of tuples ([("Michael C. Hall","Dexter"),("Jennifer Carpenter","Debra")])
+sorttitle	string (Big Fan)
+duration	integer (245) - duration in seconds
+studio	string (Warner Bros.) or list of strings (["Warner Bros.", "Disney", "Paramount"])
+tagline	string (An awesome movie) - short description of movie
+set	string (Batman Collection) - name of the collection
+setoverview	string (All Batman movies) - overview of the collection
+
+code	string (101) - Production code
+aired	string (2008-12-07)
+credits	string (Andy Kaufman) or list of strings (["Dagur Kari", "Quentin Tarantino", "Chrstopher Nolan"]) - writing credits
+lastplayed	string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+album	string (The Joshua Tree)
+artist	list (['U2'])
+votes	string (12345 votes)
+path	string (/home/user/movie.avi)
+trailer	string (/home/user/trailer.avi)
+dateadded	string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+mediatype	string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
+dbid	integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
+
+
+"""
+
+@json_basic_auth
+def json_movie_last(request):
+    data = {
+        "results": [],
+    }
+
+    last_storage_types = get_last_items(MovieStorageType, num_items=100)
+
+    last_movies = []
+    
+    for st in last_storage_types:
+        if not st.movie in last_movies:
+            last_movies.append(st.movie)
+
+    populate_data(
+        data, 
+        last_movies, 
+        request=request
+    )
+    
+    return JsonResponse(data)
 
 @json_basic_auth
 def json_movie_search(request):
@@ -18,38 +115,30 @@ def json_movie_search(request):
         "results": [],
     }
 
+    tag = None
     if 'tag' in request.GET.keys():
-        tag = None
         for t in Tag.objects.filter(name=request.GET['tag']).all():
             tag = t
-        
-        protocol = 'SMB'
-        if 'protocol' in request.GET.keys() and request.GET["protocol"] in ["SMB", "HTTP"]:
-            protocol = request.GET["protocol"]
 
-        if tag:
-            i = 0
-            for movie in Movie.objects.filter(tags__pk=tag.id).all():
-                if i > 99:
-                    break
+    if 'query' in request.GET.keys():
+        search_movies, use_distinct = populate_search_filter(
+            Movie.objects, 
+            search_term=request.GET['query'],
+            tag=tag.id if tag else None,
+            use_use_distinct=True
+        )
 
-                alt_titles = movie.get_other_main_titles()
-                
-                for st in movie.get_storage_types():
-                    if i > 99:
-                        break
-                    if st.is_net_share():
-                        file_url = st.get_url_to_storage_type() if protocol == 'HTTP' else st.path
-
-                        if file_url:
-                            data["results"].append({
-                                "title": movie.get_the_main_title(),
-                                "alt_title": alt_titles[0] if len(alt_titles) else '',
-                                "year": movie.year,
-                                "file": file_url,
-                                "thumb": movie.clean_poster_thumbnail_url(),
-                            })
-                            i = i + 1
+        populate_data(
+            data, 
+            search_movies.all(), 
+            request=request
+        )
+    elif tag:
+        populate_data(
+            data, 
+            Movie.objects.filter(tags__pk=tag.id).all(), 
+            request=request
+        )
 
     return JsonResponse(data)
 
@@ -63,18 +152,6 @@ def json_tags(request):
         data["tags"].append(tag.name)
 
     return JsonResponse(data)
-
-def scraper_search(request):
-    if len(request.GET.keys()):
-        for k in request.GET.keys():
-            print("%s='%s'" % (k, request.GET[k]))
-    return render(request, 'kodi/scraper_search.html', {"foo": "bar"}, content_type="application/xhtml+xml")
-
-def scraper_detail(request):
-    if len(request.GET.keys()):
-        for k in request.GET.keys():
-            print("%s='%s'" % (k, request.GET[k]))
-    return render(request, 'kodi/scraper_detail.html', {"foo": "bar"}, content_type="application/xhtml+xml")
 
 @login_required
 def json_kodi_play(request):
@@ -132,3 +209,18 @@ def json_get_kodi_hosts(request):
         })
 
     return JsonResponse(data)
+
+"""
+TODO: scraper... ya veremos
+def scraper_search(request):
+    if len(request.GET.keys()):
+        for k in request.GET.keys():
+            print("%s='%s'" % (k, request.GET[k]))
+    return render(request, 'kodi/scraper_search.html', {"foo": "bar"}, content_type="application/xhtml+xml")
+
+def scraper_detail(request):
+    if len(request.GET.keys()):
+        for k in request.GET.keys():
+            print("%s='%s'" % (k, request.GET[k]))
+    return render(request, 'kodi/scraper_detail.html', {"foo": "bar"}, content_type="application/xhtml+xml")
+"""

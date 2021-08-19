@@ -237,6 +237,12 @@ class Movie(models.Model):
         
         return ''
 
+    def get_formated_imdb_id(self):
+        if self.imdb_id:
+            return 'tt%s' % self.imdb_id
+        
+        return ''
+
     def get_imdb_url(self):
         if self.imdb_id:
             return 'https://www.imdb.com/title/tt%s/' % self.imdb_id
