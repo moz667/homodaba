@@ -395,7 +395,7 @@ def generate_file(movies, fout, csv_quotechar, csv_delimiter):
     writer.writeheader()
 
     # Esto es feo de cojones, pero no he sido capaz de ordenar el diccionario por año de película (Any developer in the room?)
-    for i  in range(2050, 1900,-1):
+    for i  in range(1900, 2050,1):
         for row in movies.movies:
             year = int(movies.movies[row]['year'])
             if i == year:
