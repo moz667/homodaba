@@ -28,6 +28,8 @@ services:
         build:
             context: .
             dockerfile: docker/dev/Dockerfile
+            args:
+                db_engine: mysql
         ports:
             - "8000:8000"
         environment:

@@ -10,6 +10,11 @@ urlpatterns = [
     path('json/play', views.json_kodi_play, name='json_kodi_play'),
     path('json/tags', views.json_tags, name='json_tags'),
     path('json/movie/search', views.json_movie_search, name='json_movie_search'),
-    path('scraper/search', views.scraper_search, name='scraper_search'),
-    path('scraper/detail', views.scraper_detail, name='scraper_detail'),
+    path('json/movie/last', views.json_movie_last, name='json_movie_last'),
 ]
+
+""" 
+TODO: scraper... ya veremos
+path('scraper/search', views.scraper_search, name='scraper_search'),
+path('scraper/detail', views.scraper_detail, name='scraper_detail'),
+"""
