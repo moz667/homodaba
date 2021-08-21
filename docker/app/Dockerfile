@@ -23,6 +23,14 @@ ADD homodaba/requirements.txt /opt/app/homodaba/requirements.txt
 RUN apk add build-base libxml2-dev libxslt-dev
 RUN pip3 install -r homodaba/requirements.txt
 
+# Mysql:
+ADD homodaba/requirements-mysql.txt /opt/app/homodaba/requirements-mysql.txt
+ARG db_engine
+RUN if [ "$db_engine" = "mysql" ]; then \
+      apk add mariadb-client mariadb-dev && \
+      pip3 install -r homodaba/requirements-mysql.txt; \
+    fi
+
 # TODO: Todo esto esta sin probar... VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 # Seguramente tendremos que meter algun apk add mas :P
 
@@ -31,14 +39,6 @@ ADD homodaba/requirements-elasticsearch.txt /opt/app/homodaba/requirements-elast
 ARG elasticsearch
 RUN if [ "$elasticsearch" != "" -a "$elasticsearch" != "false" ]; then \
       pip3 install -r homodaba/requirements-elasticsearch.txt; \
-    fi
-
-# Mysql:
-ADD homodaba/requirements-mysql.txt /opt/app/homodaba/requirements-mysql.txt
-ARG db_engine
-RUN if [ "$db_engine" = "mysql" ]; then \
-      apk add mariadb-client && \
-      pip3 install -r homodaba/requirements-mysql.txt; \
     fi
 
 # Telegram:
