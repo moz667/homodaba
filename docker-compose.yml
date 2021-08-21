@@ -15,6 +15,11 @@ services:
         build:
             context: .
             dockerfile: docker/app/Dockerfile
+            args:
+                # ver docker/app/Dockerfile para mas info de estas variables
+                db_engine: sqlite
+                elasticsearch: 'false'
+                telegram: 'false'
         restart: always
         env_file:
             - .env

@@ -1,4 +1,4 @@
-FROM python:3.8.3
+FROM python:3.8.3-alpine3.12
 
 ARG APP_SRC_PATH=homodaba
 
@@ -18,9 +18,37 @@ VOLUME ${SQLITE_ROOT}
 # (csvs con la info de los medios, puntos de montaje de red para scanear...)
 VOLUME ${IMPORT_ROOT}
 
-ADD homodaba/python-requirements.txt /opt/app/homodaba/python-requirements.txt
+# Instalacion basica (django + sqlite):
+ADD homodaba/requirements.txt /opt/app/homodaba/requirements.txt
+RUN apk add build-base libxml2-dev libxslt-dev
+RUN pip3 install -r homodaba/requirements.txt
 
-RUN pip3 install -r homodaba/python-requirements.txt
+# TODO: Todo esto esta sin probar... VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+# Seguramente tendremos que meter algun apk add mas :P
+
+# Elastic search:
+ADD homodaba/requirements-elasticsearch.txt /opt/app/homodaba/requirements-elasticsearch.txt
+ARG elasticsearch
+RUN if [ "$elasticsearch" != "" -a "$elasticsearch" != "false" ]; then \
+      pip3 install -r homodaba/requirements-elasticsearch.txt; \
+    fi
+
+# Mysql:
+ADD homodaba/requirements-mysql.txt /opt/app/homodaba/requirements-mysql.txt
+ARG db_engine
+RUN if [ "$db_engine" = "mysql" ]; then \
+      apk add mariadb-client && \
+      pip3 install -r homodaba/requirements-mysql.txt; \
+    fi
+
+# Telegram:
+ADD homodaba/requirements-telegram.txt /opt/app/homodaba/requirements-telegram.txt
+ARG telegram
+RUN if [ "$telegram" != "" -a "$telegram" != "false" ]; then \
+      pip3 install -r homodaba/requirements-telegram.txt; \
+    fi
+
+# TODO: Todo esto esta sin probar... ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ADD homodaba /opt/app/homodaba
 
