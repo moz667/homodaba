@@ -12,7 +12,7 @@
         {% csrf_token %}
 
         <img class="mb-4" src="{% static "homodaba/img/logo.png" %}?v={% homodaba_version %}" alt="" width="72" height="72">
-        {% include "form/errors.html" %}
+        {% include "forms/inc/errors.html" %}
 
         {% for field in form.visible_fields %}
             <label for="{{ field.id_for_label }}" class="sr-only">

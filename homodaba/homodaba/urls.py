@@ -27,6 +27,7 @@ urlpatterns = [
         '%sjson/user-tag/<str:tag_type>/<int:movie_id>' % HOME_URL_PATH, 
         views.json_switch_user_tag, name='json_switch_user_tag'
     ),
+    path('%sforms/add-tag' % HOME_URL_PATH, views.add_tag_form, name='add_tag_form'),
     path('%sadmin/' % HOME_URL_PATH, admin.site.urls),
     path('%sauth/' % HOME_URL_PATH, include('django.contrib.auth.urls')),
     path('%si18n/' % HOME_URL_PATH, include('django.conf.urls.i18n')),

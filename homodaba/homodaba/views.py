@@ -4,12 +4,48 @@ import re
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 
 from data.models import Movie, MovieStorageType, Person, get_last_items
 from data.models import UserTag, get_or_create_user_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
+
+from .forms import AddTagForm
+
+@login_required
+def add_tag_form(request):
+    title = 'Añadir etiqueta nueva'
+
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = AddTagForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # TODO: procesar el form
+            #   1) Buscar la tag si ya existe en cualquiera de las tags
+            #   2) Si no existe darla de alta como Tag
+            #   3) Si tiene movie_id, insertar la tag a la pelicula
+            # redirect to a new URL:
+            return redirect('home')
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = AddTagForm()
+        if 'movie_id' in request.GET.keys():
+            movie_id = int(request.GET['movie_id'])
+            if movie_id:
+                movie = get_object_or_404(Movie, pk=movie_id)
+                form = UserQueueForm(initial={'movie_id': movie_id})
+                title = 'Añadir etiqueta nueva o existente a %s' % movie.title
+
+
+    return render(request, 'forms/add_tag_form.html', {
+        'title': title,
+        'form': form
+    })
 
 @login_required
 def home(request):

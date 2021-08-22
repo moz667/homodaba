@@ -11,7 +11,7 @@
             
             <div class="card-deck">
                 {% for movie in last_movies %}
-                    {% include "parts/movie.html" with movie=movie %}
+                    {% include "inc/movie.html" with movie=movie %}
                 {% endfor %}
             </div>
 
@@ -27,7 +27,7 @@
             
             <div class="card-deck">
                 {% for storage_type in last_storage_types %}
-                    {% include "parts/storage-type.html" with storage_type=storage_type %}
+                    {% include "inc/storage-type.html" with storage_type=storage_type %}
                 {% endfor %}
             </div>
         </div>
