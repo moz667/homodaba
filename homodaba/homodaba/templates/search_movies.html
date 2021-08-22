@@ -45,7 +45,7 @@
         {% if next_page %}
             <div style="padding-bottom: 2rem;" class="pagination">
                 <a class="pagination__next btn btn-primary btn-block" 
-                    href="?search_term={{ search_term }}{% search_filters_as_url_args filters '' %}&page={{ next_page }}&order_by={{ order_by }}">
+                    href="?search_term={{ search_term }}&only_imdb={% if filters.only_imdb %}1{% endif %}{% search_filters_as_url_args filters '' %}&page={{ next_page }}&order_by={{ order_by }}">
                     Siguiente página
                 </a>
             </div>

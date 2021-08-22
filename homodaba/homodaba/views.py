@@ -78,6 +78,10 @@ def search_movies(request):
 
     search_term = request.GET['search_term'] if 'search_term' in request.GET.keys() else ''
 
+    only_imdb = True if 'only_imdb' in request.GET.keys() and request.GET['only_imdb'] == "1" else None
+
+    print(only_imdb)
+
     search_movies, use_distinct = populate_search_filter(
         Movie.objects, 
         search_term=search_term,
@@ -90,7 +94,8 @@ def search_movies(request):
         user_tag=user_tag.id if user_tag else None,
         unseen=unseen,
         seen_tag=seen_tag.id,
-        use_use_distinct=True
+        use_use_distinct=True,
+        only_imdb=only_imdb,
     )
 
     order_by = ['-id']
@@ -128,6 +133,7 @@ def search_movies(request):
             'cr_system': cr_system.name if cr_system else '',
             'user_tag': user_tag.name if user_tag else '',
             'unseen': unseen or '',
+            'only_imdb': only_imdb or '',
         }
     })
 

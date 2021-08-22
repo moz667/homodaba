@@ -54,6 +54,20 @@
                     <option value="title_original"{% if order_by == 'title_original' %} selected="selected"{% endif %}>... por titulo original</option>
                     <option value="title_preferred"{% if order_by == 'title_preferred' %} selected="selected"{% endif %}>... por titulo en español</option>
                 </select>
+                <div class="input-group-text">
+                    <input name="only_imdb" id="only_imdb" type="checkbox" 
+                        aria-label="Solo IMDb" title="Solo IMDb" value="1"
+                        {% if filters.only_imdb %}checked="checked"{% endif %}
+                    >
+                    <label class="form-check-label" for="only_imdb">
+                        <span class="show-mobile">
+                            &nbsp;Solo IMDb
+                        </span>
+                        <span class="hide-mobile">
+                            &nbsp;IMDb
+                        </span>
+                    </label>
+                </div>
             </div>
             
             <input name="search_term" value="{{ search_term }}" type="text" class="form-control" placeholder="Términos a buscar..." aria-label="Términos a buscar" aria-describedby="basic-addon2">
