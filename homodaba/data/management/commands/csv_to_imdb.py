@@ -77,12 +77,12 @@ class Command(BaseCommand):
         
         cd = clean_csv_data(r)
 
-        not_a_imdb_movie = False
+        not_an_imdb_movie = False
         if 'not_an_imdb_movie' in cd:
             if isinstance(cd['not_an_imdb_movie'], str) and cd['not_an_imdb_movie']:
-                not_a_imdb_movie = strtobool(cd['not_an_imdb_movie'])
+                not_an_imdb_movie = strtobool(cd['not_an_imdb_movie'])
             elif cd['not_an_imdb_movie']:
-                not_a_imdb_movie = True
+                not_an_imdb_movie = True
 
 
         facade_result = facade_search(
@@ -93,7 +93,7 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
-            not_an_imdb_movie=not_a_imdb_movie
+            not_an_imdb_movie=not_an_imdb_movie
         )
 
         if not facade_result:
