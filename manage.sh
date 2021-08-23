@@ -8,6 +8,12 @@ if [ -z "$CONTAINER_NAME" ]; then
     CONTAINER_NAME=`docker ps -a|grep homodaba-app|grep "Up "|sed -e "s/.* //g"`
 fi
 
+# Si todavia no hemos encontrado ninguno... probamos con regexp 
+# es posible que tengamos alguno con otro sobrenombre
+if [ -z "$CONTAINER_NAME" ]; then
+    CONTAINER_NAME=`docker ps -a|grep "homodaba.*-app"|grep "Up "|sed -e "s/.* //g"`
+fi
+
 if [ -z "$CONTAINER_NAME" ]; then
     echo "No encuentro el contenedor de homodaba-app arrancado..."
     echo "Puedes arrancarlo de forma sencilla a traves de compose con:"
