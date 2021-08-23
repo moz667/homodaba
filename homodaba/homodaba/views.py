@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 
-from data.models import Movie, MovieStorageType, Person, get_last_items
+from data.models import Movie, MovieStorageType, Person, get_last_movies
 from data.models import UserTag, get_or_create_user_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
@@ -38,7 +38,7 @@ def add_tag_form(request):
             movie_id = int(request.GET['movie_id'])
             if movie_id:
                 movie = get_object_or_404(Movie, pk=movie_id)
-                form = UserQueueForm(initial={'movie_id': movie_id})
+                form = AddTagForm(initial={'movie_id': movie_id})
                 title = 'Añadir etiqueta nueva o existente a %s' % movie.title
 
 
@@ -49,15 +49,8 @@ def add_tag_form(request):
 
 @login_required
 def home(request):
-    last_movies = get_last_items(Movie)
-    last_storage_types = get_last_items(MovieStorageType)
-
-    # Hacemos una mezcla con las ultimas pelis y 
-    # las ultimas pelis de los ultimos medios
-    for st in last_storage_types:
-        if not st.movie in last_movies:
-            last_movies.append(st.movie)
-
+    last_movies = get_last_movies(request.user)
+    
     return render(request, 'home.html', context={
         'last_movies': last_movies
     })

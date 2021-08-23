@@ -541,6 +541,39 @@ def get_last_items(model_class, num_items=6):
 
     return last_items
 
+def get_last_movies(user):
+    last_movies = []
+    
+    seen_tag = get_or_create_user_tag(user, UserTag.SEEN_TAG)
+
+    exclude_query = Q(movie__imdb_id__isnull=True)
+    exclude_query.add(Q(movie__imdb_id__exact=''), Q.OR)
+    exclude_query.add(Q(movie__user_tags=seen_tag), Q.OR)
+
+    all_movie_sts = MovieStorageType.objects.exclude(exclude_query).all().order_by("-id")
+
+    if all_movie_sts.count() > 0:
+        movies_st_page =  Paginator(all_movie_sts, 12).get_page(1).object_list
+
+        for st in movies_st_page:
+            if not st.movie in last_movies:
+                last_movies.append(st.movie)
+
+    exclude_query = Q(imdb_id__isnull=True)
+    exclude_query.add(Q(imdb_id__exact=''), Q.OR)
+    exclude_query.add(Q(user_tags=seen_tag), Q.OR)
+
+    all_movies = Movie.objects.exclude(exclude_query).all().order_by("-id")
+
+    if all_movies.count() > 0:
+        movies_page =  Paginator(all_movies, 12).get_page(1).object_list
+
+        for m in movies_page:
+            if not m in last_movies:
+                last_movies.append(m)
+    
+    return last_movies
+
 def get_or_create_user_tag(current_user, tag_type):
     tag_name = '%s-%s' % (current_user.username, tag_type)
     tags = UserTag.objects.filter(name=tag_name).all()
