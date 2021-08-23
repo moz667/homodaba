@@ -241,12 +241,7 @@ def clean_title_and_akas(movie):
 
     if movie.imdb_id:
         imdb_movie = get_imdb_movie(movie.imdb_id)
-
-        # Completando paises de la peli
-        if movie.countries.count() == 0:
-            populate_countries(movie, imdb_movie)
-            movie.save()
-
+        
         new_titles, title_akas = get_imdb_titles(imdb_movie)
 
         if len(title_akas.keys()) > 0:
@@ -315,7 +310,3 @@ def clean_title_and_akas(movie):
                     trace.debug("    - %s: '%s'" % ('title_original', new_titles['title_original']))
                 if 'title_preferred' in new_titles:
                     trace.debug("    - %s: '%s'" % ('title_preferred', new_titles['title_preferred']))
-    elif movie.countries.count() == 0:
-        # Completando paises de la peli para los que no son imdb
-        populate_countries(movie)
-        movie.save()
