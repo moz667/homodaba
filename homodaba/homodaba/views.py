@@ -86,8 +86,6 @@ def search_movies(request):
 
     only_imdb = True if 'only_imdb' in request.GET.keys() and request.GET['only_imdb'] == "1" else None
 
-    print(only_imdb)
-
     search_movies, use_distinct = populate_search_filter(
         Movie.objects, 
         search_term=search_term,
