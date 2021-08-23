@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% load homotags %}
+
+{% block body_class %}add-tag-form{% endblock %}
+
+{% block main_block %}
+    <form class="form-add-tag-form" method="post">
+        <div class="card" style="max-width: 400px; margin-left: auto; margin-right: auto;">
+            <div class="card-header">
+                {{ title }}
+            </div>
+            <div class="card-body">
+                {% csrf_token %}
+                {% for field in form.hidden_fields %}
+                    {{ field }}
+                {% endfor %}
+
+                {% include "forms/inc/errors.html" %}
+
+                {% for field in form.visible_fields %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}
+                        </label>
+                        {{ field|set_css_class:'form-control'|placeholder:field.label }}
+                    </div>
+                {% endfor %}
+
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-primary" type="submit">Enviar</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}

@@ -28,6 +28,6 @@ COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
 
 # Añadido cliente MariaDB para comprobar que el servicio está listo.
 ARG db_engine
-RUN if [ "x$db_engine" = "xmysql" ]; then apt-get update && apt-get install -y mariadb-client; fi
+RUN if [ "$db_engine" = "mysql" ]; then apt-get update && apt-get install -y mariadb-client; fi
 
 CMD ["/opt/app/init-homodaba.sh"]

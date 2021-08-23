@@ -4,11 +4,13 @@ from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
 
-from data.models import Movie, TitleAka, MoviePerson, Tag
+from data.models import Movie, TitleAka, MoviePerson, Tag, Country
 from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import trace
 from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles
+
+from .import_data import populate_countries
 
 import csv
 import re
@@ -69,6 +71,11 @@ class Command(BaseCommand):
             help='Optimiza y limpia los titulos principales y borra innecesarios TitleAka.',
         )
         parser.add_argument(
+            '--countries',
+            action='store_true',
+            help='Completa la info de paises con las pelis que no tengan ningun pais.',
+        )
+        parser.add_argument(
             '--populate-casting',
             action='store_true',
             help='Completa la lista de directores/escritores/actores para cada pelicula.',
@@ -120,6 +127,8 @@ class Command(BaseCommand):
                 movie.title, movie.get_countries_as_text(), movie.id,
                 current_movie_index, total_movies
             ))
+            if 'countries' in options and options['countries'] and movie.countries.count() == 0:
+                populate_countries(movie)
             if 'title_and_akas' in options and options['title_and_akas']:
                 clean_title_and_akas(movie)
             if 'populate_casting' in options and options['populate_casting']:
@@ -232,15 +241,7 @@ def clean_title_and_akas(movie):
 
     if movie.imdb_id:
         imdb_movie = get_imdb_movie(movie.imdb_id)
-
-        # Completando paises de la peli
-        if movie.countries.count() == 0 and 'countries' in imdb_movie.keys():
-            for c in imdb_movie['countries']:
-                movie.countries.add(get_or_create_country(
-                    country=c
-                ))
-            movie.save()
-
+        
         new_titles, title_akas = get_imdb_titles(imdb_movie)
 
         if len(title_akas.keys()) > 0:
@@ -309,4 +310,3 @@ def clean_title_and_akas(movie):
                     trace.debug("    - %s: '%s'" % ('title_original', new_titles['title_original']))
                 if 'title_preferred' in new_titles:
                     trace.debug("    - %s: '%s'" % ('title_preferred', new_titles['title_preferred']))
-

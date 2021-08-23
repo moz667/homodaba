@@ -19,7 +19,7 @@
     {% endif %}
     <script type="text/javascript" src="{% static "homodaba/js/main.js" %}?v={% homodaba_version %}"></script>
 
-    <title>{% block title %}Homodaba{% endblock %}</title>
+    <title>{% block title %}Homodaba{% if title %} - {{ title }}{% endif %}{% endblock %}</title>
 </head>
 
 <body class="{% block body_class %}home-page{% endblock %}">

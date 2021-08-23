@@ -118,12 +118,32 @@ body.login-page {
     background-color: magenta;
 }
 
+/* Responsive: */
+
+.show-mobile {
+    display: none;
+}
+
+@media (max-width: 800px) {
+    .show-mobile {
+        display: block;
+    }
+    .hide-mobile {
+        display: none;
+    }
+}
+
 /* Pages */
 
 /* Busqueda de paginas y home */
 body.base-search-page, body.home-page {
     .search-mini-form {
         display: none;
+    }
+
+    .input-group-text {
+        background: #cce5ff;
+        border: 0;
     }
     
     @media (max-width: 800px) {
@@ -132,6 +152,10 @@ body.base-search-page, body.home-page {
                 display: block;
                 width: 100%;
                 margin-bottom: 1rem;
+
+                .input-group-text {
+                    margin-top: 1rem;
+                }
             }
         }
     }

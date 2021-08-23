@@ -14,12 +14,13 @@ if ELASTICSEARCH_DSL:
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
         genre=None, content_rating_system=None, tag=None, year=None, 
         director=None, writer=None, actor=None, user_tag=None, 
-        unseen=None, seen_tag=None):
+        unseen=None, seen_tag=None, only_imdb=None):
 
         order_by_fields = queryset.query.order_by if queryset and queryset.query and queryset.query.order_by else None
         # TODO: stats de la busqueda (total encontrados para la paginacion)
         # TODO: paginacion
         # TODO: Analizadores de terminos para permitir busquedas por texto parcial
+        # TODO: only_imdb
 
         query = DSL_Q('bool')
 
@@ -141,7 +142,7 @@ if ELASTICSEARCH_DSL:
 def populate_search_filter_model(queryset, search_term, use_use_distinct=False, 
     year=None, director=None, writer=None, actor=None, 
     genre=None, content_rating_system=None, tag=None, user_tag=None, 
-    unseen=None, seen_tag=None):
+    unseen=None, seen_tag=None, only_imdb=None):
 
     # TODO: por ahora solo para un termino... pero en un futuro deberiamos hacerlo
     # para varios
@@ -247,8 +248,14 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
             
             search_query = search_query_new
 
+
     if search_query:
         queryset = queryset.filter(search_query)
+
+    if only_imdb:
+        not_imdb_query = Q(imdb_id__isnull=True)
+        not_imdb_query.add(Q(imdb_id__exact=''), Q.OR)
+        queryset = queryset.exclude(not_imdb_query)
 
     return queryset.distinct() if use_use_distinct else queryset, use_use_distinct
 
@@ -275,7 +282,7 @@ def extract_year(search_term):
 def populate_search_filter(queryset, search_term, use_use_distinct=False, 
     genre=None, content_rating_system=None, tag=None, 
     director=None, writer=None, actor=None, 
-    user_tag=None, unseen=None, seen_tag=None):
+    user_tag=None, unseen=None, seen_tag=None, only_imdb=None):
     year, search_term = extract_year(search_term)
 
     if ELASTICSEARCH_DSL:
@@ -289,7 +296,7 @@ def populate_search_filter(queryset, search_term, use_use_distinct=False,
     return populate_search_filter_model(queryset, search_term, use_use_distinct, 
         year=year, director=director, writer=writer, actor=actor, genre=genre, 
         content_rating_system=content_rating_system, tag=tag, 
-        user_tag=user_tag, unseen=unseen, seen_tag=seen_tag
+        user_tag=user_tag, unseen=unseen, seen_tag=seen_tag, only_imdb=only_imdb
     )
 
 def movie_search_filter(search_term):

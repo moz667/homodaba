@@ -1,4 +1,3 @@
-from distutils.util import strtobool
 import json
 import re
 import requests

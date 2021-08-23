@@ -102,6 +102,7 @@ class TitleAka(models.Model):
         verbose_name_plural = "títulos conocidos (akas)"
 
 class Country(models.Model):
+    NO_COUNTRY = 'Sin País'
     name = models.CharField(max_length=255, unique=True)
 
     class Meta:

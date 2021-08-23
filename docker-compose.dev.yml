@@ -27,7 +27,7 @@ services:
     dev-app:
         build:
             context: .
-            dockerfile: docker/dev/Dockerfile
+            dockerfile: docker/app/Dockerfile
             args:
                 db_engine: mysql
         ports:

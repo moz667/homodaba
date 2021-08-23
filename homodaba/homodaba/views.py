@@ -4,12 +4,48 @@ import re
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 
 from data.models import Movie, MovieStorageType, Person, get_last_items
 from data.models import UserTag, get_or_create_user_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
+
+from .forms import AddTagForm
+
+@login_required
+def add_tag_form(request):
+    title = 'Añadir etiqueta nueva'
+
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = AddTagForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # TODO: procesar el form
+            #   1) Buscar la tag si ya existe en cualquiera de las tags
+            #   2) Si no existe darla de alta como Tag
+            #   3) Si tiene movie_id, insertar la tag a la pelicula
+            # redirect to a new URL:
+            return redirect('home')
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = AddTagForm()
+        if 'movie_id' in request.GET.keys():
+            movie_id = int(request.GET['movie_id'])
+            if movie_id:
+                movie = get_object_or_404(Movie, pk=movie_id)
+                form = UserQueueForm(initial={'movie_id': movie_id})
+                title = 'Añadir etiqueta nueva o existente a %s' % movie.title
+
+
+    return render(request, 'forms/add_tag_form.html', {
+        'title': title,
+        'form': form
+    })
 
 @login_required
 def home(request):
@@ -32,7 +68,13 @@ def search_movies(request):
     writer = get_person_filter(request, 'writer', is_writer=True)
     actor = get_person_filter(request, 'actor', is_actor=True)
 
-    unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
+    unseen = None
+    if 'unseen' in request.GET.keys():
+        if isinstance(request.GET['unseen'], str):
+            unseen = strtobool(request.GET['unseen'])
+        elif request.GET['unseen']:
+            unseen = True
+
     seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
 
     tag = get_tag_filter(request, 'tag', Tag)
@@ -41,6 +83,10 @@ def search_movies(request):
     user_tag = get_tag_filter(request, 'user_tag', UserTag)
 
     search_term = request.GET['search_term'] if 'search_term' in request.GET.keys() else ''
+
+    only_imdb = True if 'only_imdb' in request.GET.keys() and request.GET['only_imdb'] == "1" else None
+
+    print(only_imdb)
 
     search_movies, use_distinct = populate_search_filter(
         Movie.objects, 
@@ -54,7 +100,8 @@ def search_movies(request):
         user_tag=user_tag.id if user_tag else None,
         unseen=unseen,
         seen_tag=seen_tag.id,
-        use_use_distinct=True
+        use_use_distinct=True,
+        only_imdb=only_imdb,
     )
 
     order_by = ['-id']
@@ -92,6 +139,7 @@ def search_movies(request):
             'cr_system': cr_system.name if cr_system else '',
             'user_tag': user_tag.name if user_tag else '',
             'unseen': unseen or '',
+            'only_imdb': only_imdb or '',
         }
     })
 

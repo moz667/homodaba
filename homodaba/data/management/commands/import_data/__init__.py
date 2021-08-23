@@ -1,10 +1,10 @@
 from homodaba.settings import CASTING_LIMIT
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag, populate_movie_auto_tags
+from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, Country
+from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import get_imdb_titles
+from data.utils.imdbpy_facade import get_imdb_titles, get_imdb_movie
 
 from data.management.commands.utils import normalize_age_certificate
 
@@ -180,7 +180,10 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
                 db_title_aka.save()
             
             local_movie.title_akas.add(db_title_aka)
-        
+    
+    # Completando paises de la peli
+    populate_countries(local_movie, ia_movie)
+
     if 'genres' in ia_movie.keys():
         for tag in ia_movie['genres']:
             local_movie.genres.add(
@@ -223,6 +226,23 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
 
     return local_movie
 
+def populate_countries(local_movie, imdb_movie=None):
+    if imdb_movie is None and local_movie.imdb_id:
+        imdb_movie = get_imdb_movie(local_movie.imdb_id)
+    
+    if imdb_movie and 'countries' in imdb_movie.keys() and len(imdb_movie['countries']) > 0:
+        trace.debug(" * Añadiendo paises para la peli:")
+        for c in imdb_movie['countries']:
+            trace.debug("    - %s" % c)
+            local_movie.countries.add(get_or_create_country(
+                country=c
+            ))
+    else:
+        trace.debug(" * Añadiendo '%s' a la peli" % Country.NO_COUNTRY)
+        local_movie.countries.add(get_or_create_country(
+            country=Country.NO_COUNTRY
+        ))
+
 def insert_movie_from_a_not_an_imdb_movie(title, year, directors=[], tags=[], title_original=None, title_preferred=None):
     db_directors = []
 
@@ -258,6 +278,9 @@ def insert_movie_from_a_not_an_imdb_movie(title, year, directors=[], tags=[], ti
     )
 
     populate_local_movie_tags(local_movie, tags)
+
+    # Completando paises de la peli (sin imdb)
+    populate_countries(local_movie)
 
     local_movie.save()
 
