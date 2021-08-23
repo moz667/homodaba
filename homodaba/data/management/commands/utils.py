@@ -93,7 +93,7 @@ def clean_csv_data(r):
 
     not_a_imdb_movie = False
     if 'not_an_imdb_movie' in r:
-        if isinstance(r['not_an_imdb_movie'], str):
+        if isinstance(r['not_an_imdb_movie'], str) and r['not_an_imdb_movie']:
             not_a_imdb_movie = strtobool(r['not_an_imdb_movie'])
         elif r['not_an_imdb_movie']:
             not_a_imdb_movie = True
