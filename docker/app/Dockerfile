@@ -25,8 +25,8 @@ RUN pip3 install -r homodaba/requirements.txt
 
 # Mysql:
 ADD homodaba/requirements-mysql.txt /opt/app/homodaba/requirements-mysql.txt
-ARG db_engine
-RUN if [ "$db_engine" = "mysql" ]; then \
+ARG DATABASE_ENGINE
+RUN if [ "$DATABASE_ENGINE" = "mysql" ]; then \
       apk add mariadb-client mariadb-dev && \
       pip3 install -r homodaba/requirements-mysql.txt; \
     fi
@@ -36,19 +36,20 @@ RUN if [ "$db_engine" = "mysql" ]; then \
 
 # Elastic search:
 ADD homodaba/requirements-elasticsearch.txt /opt/app/homodaba/requirements-elasticsearch.txt
-ARG elasticsearch
-RUN if [ "$elasticsearch" != "" -a "$elasticsearch" != "false" ]; then \
+ARG ELASTICSEARCH
+RUN if [ "$ELASTICSEARCH" != "" -a "$ELASTICSEARCH" != "false" ]; then \
       pip3 install -r homodaba/requirements-elasticsearch.txt; \
     fi
 
 # Telegram:
 ADD homodaba/requirements-telegram.txt /opt/app/homodaba/requirements-telegram.txt
-ARG telegram
-RUN if [ "$telegram" != "" -a "$telegram" != "false" ]; then \
+ARG TELEGRAM
+RUN if [ "$TELEGRAM" != "" -a "$TELEGRAM" != "false" ]; then \
       pip3 install -r homodaba/requirements-telegram.txt; \
     fi
 
 # TODO: Todo esto esta sin probar... ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 ADD homodaba /opt/app/homodaba
 
