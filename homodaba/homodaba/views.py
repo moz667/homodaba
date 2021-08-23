@@ -68,7 +68,13 @@ def search_movies(request):
     writer = get_person_filter(request, 'writer', is_writer=True)
     actor = get_person_filter(request, 'actor', is_actor=True)
 
-    unseen = strtobool(request.GET['unseen']) if 'unseen' in request.GET.keys() and request.GET['unseen'] else None
+    unseen = None
+    if 'unseen' in request.GET.keys():
+        if isinstance(request.GET['unseen'], str):
+            unseen = strtobool(request.GET['unseen'])
+        elif request.GET['unseen']:
+            unseen = True
+
     seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
 
     tag = get_tag_filter(request, 'tag', Tag)
