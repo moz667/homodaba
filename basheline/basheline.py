@@ -385,7 +385,7 @@ class csvCleaner(filesParser):
             match = True
             for field in csv_info:
                 search_content = csv_info[field]
-                if search_content.lower() != self.row[field].lower():
+                if str(search_content).lower() != self.row[field].lower():
                     match = False
             if match and not 'imdb_id' in self.row:
                 self.row['imdb_id'] = db_info['imdb_id']
@@ -395,7 +395,7 @@ def generate_file(movies, fout, csv_quotechar, csv_delimiter):
     writer.writeheader()
 
     # Esto es feo de cojones, pero no he sido capaz de ordenar el diccionario por año de película (Any developer in the room?)
-    for i  in range(2050, 1900,-1):
+    for i  in range(1900, 2050,1):
         for row in movies.movies:
             year = int(movies.movies[row]['year'])
             if i == year:
