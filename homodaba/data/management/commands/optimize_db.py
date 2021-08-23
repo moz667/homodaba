@@ -71,6 +71,11 @@ class Command(BaseCommand):
             help='Optimiza y limpia los titulos principales y borra innecesarios TitleAka.',
         )
         parser.add_argument(
+            '--countries',
+            action='store_true',
+            help='Completa la info de paises con las pelis que no tengan ningun pais.',
+        )
+        parser.add_argument(
             '--populate-casting',
             action='store_true',
             help='Completa la lista de directores/escritores/actores para cada pelicula.',
@@ -122,6 +127,8 @@ class Command(BaseCommand):
                 movie.title, movie.get_countries_as_text(), movie.id,
                 current_movie_index, total_movies
             ))
+            if 'countries' in options and options['countries'] and movie.countries.count() == 0:
+                populate_countries(movie)
             if 'title_and_akas' in options and options['title_and_akas']:
                 clean_title_and_akas(movie)
             if 'populate_casting' in options and options['populate_casting']:
