@@ -4,11 +4,13 @@ from django.utils.translation import gettext as _
 from django.utils.text import slugify
 
 
-from data.models import Movie, TitleAka, MoviePerson, Tag
+from data.models import Movie, TitleAka, MoviePerson, Tag, Country
 from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import trace
 from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles
+
+from .import_data import populate_countries
 
 import csv
 import re
@@ -234,11 +236,8 @@ def clean_title_and_akas(movie):
         imdb_movie = get_imdb_movie(movie.imdb_id)
 
         # Completando paises de la peli
-        if movie.countries.count() == 0 and 'countries' in imdb_movie.keys():
-            for c in imdb_movie['countries']:
-                movie.countries.add(get_or_create_country(
-                    country=c
-                ))
+        if movie.countries.count() == 0:
+            populate_countries(movie, imdb_movie)
             movie.save()
 
         new_titles, title_akas = get_imdb_titles(imdb_movie)
@@ -309,4 +308,7 @@ def clean_title_and_akas(movie):
                     trace.debug("    - %s: '%s'" % ('title_original', new_titles['title_original']))
                 if 'title_preferred' in new_titles:
                     trace.debug("    - %s: '%s'" % ('title_preferred', new_titles['title_preferred']))
-
+    elif movie.countries.count() == 0:
+        # Completando paises de la peli para los que no son imdb
+        populate_countries(movie)
+        movie.save()
