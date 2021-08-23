@@ -385,7 +385,7 @@ class csvCleaner(filesParser):
             match = True
             for field in csv_info:
                 search_content = csv_info[field]
-                if search_content.lower() != self.row[field].lower():
+                if str(search_content).lower() != self.row[field].lower():
                     match = False
             if match and not 'imdb_id' in self.row:
                 self.row['imdb_id'] = db_info['imdb_id']
