@@ -70,7 +70,7 @@ def search_movies(request):
 
     unseen = None
     if 'unseen' in request.GET.keys():
-        if isinstance(request.GET['unseen'], str):
+        if isinstance(request.GET['unseen'], str) and request.GET['unseen']:
             unseen = strtobool(request.GET['unseen'])
         elif request.GET['unseen']:
             unseen = True

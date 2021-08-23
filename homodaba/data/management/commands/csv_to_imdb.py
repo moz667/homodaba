@@ -79,7 +79,7 @@ class Command(BaseCommand):
 
         not_a_imdb_movie = False
         if 'not_an_imdb_movie' in cd:
-            if isinstance(cd['not_an_imdb_movie'], str):
+            if isinstance(cd['not_an_imdb_movie'], str) and cd['not_an_imdb_movie']:
                 not_a_imdb_movie = strtobool(cd['not_an_imdb_movie'])
             elif cd['not_an_imdb_movie']:
                 not_a_imdb_movie = True
