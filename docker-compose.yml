@@ -13,7 +13,7 @@ services:
     db:
         image: mysql:5.7
         volumes:
-            - ${MYSQL_DATA_VOL}:/var/lib/mysql
+            - ${MYSQL_DATA_VOL:-DEFAULT_SQL_PATH}:/var/lib/mysql
         environment:
             - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
             - MYSQL_USER=${DATABASE_USER:-homodaba_user}
