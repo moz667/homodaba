@@ -1,11 +1,15 @@
 FROM python:3.8.3-alpine3.12
 
 ARG APP_SRC_PATH=homodaba
+ARG DATABASE_ENGINE
+ARG ELASTICSEARCH
+ARG TELEGRAM
 
 ENV PYTHONUNBUFFERED=1 \
   SECRET_KEY=${SECRET_KEY} \
   ES_DSL_HOSTS=${ES_DSL_HOSTS} \
   ALLOWED_HOSTS=${ALLOWED_HOSTS} \
+  DATABASE_ENGINE=${DATABASE_ENGINE} \
   SQLITE_ROOT="/opt/app/sqlite" \
   IMPORT_ROOT="/opt/app/import"
 
@@ -25,7 +29,6 @@ RUN pip3 install -r homodaba/requirements.txt
 
 # Mysql:
 ADD homodaba/requirements-mysql.txt /opt/app/homodaba/requirements-mysql.txt
-ARG DATABASE_ENGINE
 RUN if [ "$DATABASE_ENGINE" = "mysql" ]; then \
       apk add mariadb-client mariadb-dev && \
       pip3 install -r homodaba/requirements-mysql.txt; \
@@ -36,14 +39,12 @@ RUN if [ "$DATABASE_ENGINE" = "mysql" ]; then \
 
 # Elastic search:
 ADD homodaba/requirements-elasticsearch.txt /opt/app/homodaba/requirements-elasticsearch.txt
-ARG ELASTICSEARCH
 RUN if [ "$ELASTICSEARCH" != "" -a "$ELASTICSEARCH" != "false" ]; then \
       pip3 install -r homodaba/requirements-elasticsearch.txt; \
     fi
 
 # Telegram:
 ADD homodaba/requirements-telegram.txt /opt/app/homodaba/requirements-telegram.txt
-ARG TELEGRAM
 RUN if [ "$TELEGRAM" != "" -a "$TELEGRAM" != "false" ]; then \
       pip3 install -r homodaba/requirements-telegram.txt; \
     fi

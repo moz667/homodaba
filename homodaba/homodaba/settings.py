@@ -161,7 +161,7 @@ if os.getenv('DATABASE_ENGINE', '') == 'mysql':
     }
 
 # cache en base de datos separada
-if os.getenv('CACHE_DATABASE', ''):
+if os.getenv('CACHE_DATABASE', 1):
     DATABASES['cache'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': SQLITE_ROOT / 'db-cache.sqlite3',

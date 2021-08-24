@@ -205,7 +205,7 @@ Una vez tengamos el fichero de configuración listo, leanzamos docker-compose pa
 ## Crear usuario admin de la aplicación
 Para ello, ejecutar el siguiente comando
 ```bash
-docker-compose exec homodaba-app python ./homodaba/homodaba/manage.py createsuperuser
+docker-compose exec app python homodaba/manage.py createsuperuser
 ```
 
 ## Probar que la aplicación es accesible.
