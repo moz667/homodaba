@@ -10,19 +10,17 @@ services:
         ports:
             - "8000:80"
         restart: always
-    mysql-db:
+    db:
         image: mysql:5.7
         volumes:
-          - ${MYSQL_DATA_VOL:-DEFAULT_SQL_PATH}:/var/lib/mysql
-        expose:
-            - 3306
+            - ${MYSQL_DATA_VOL}:/var/lib/mysql
         environment:
-          - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
-          - MYSQL_USER=${DATABASE_USER:-homodaba_user}
-          - MYSQL_PASSWORD=${DATABASE_PASSWORD}
-          - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD}
+            - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
+            - MYSQL_USER=${DATABASE_USER:-homodaba_user}
+            - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+            - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD}
         env_file:
-          - .env
+            - .env
         command: ['--character-set-server=utf8']
     app:
         build:
