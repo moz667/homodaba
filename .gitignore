@@ -7,6 +7,7 @@ static/publish
 node_modules
 kodi/samples
 .env.*
+docker-compose.dev.yml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
