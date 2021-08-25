@@ -39,7 +39,7 @@ services:
             DATABASE_HOST: ${DATABASE_HOST:-db}
             DATABASE_NAME: ${DATABASE_NAME:-homodaba}
             DATABASE_USER: ${DATABASE_USER:-homodaba_user}
-            DATABASE_PASSWORD: ${DATABASE_PASSWORD?Variable not set}
+            DATABASE_PASSWORD: ${DATABASE_PASSWORD}
         restart: always
         env_file:
             - .env
