@@ -26,5 +26,8 @@ FROM nginx
 
 COPY docker/proxy/nginx.conf /etc/nginx/nginx.conf
 COPY --from=django /tmp/static /www/public/static
+
+HEALTHCHECK CMD curl --fail http://localhost:80/ || exit 1
+
 RUN gzip -6 -k $(find /www/public -name *.html -o -name *.css -o -name *.js -o -name *.svg -o -name *.ico)
 

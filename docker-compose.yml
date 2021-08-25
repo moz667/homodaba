@@ -19,6 +19,10 @@ services:
             - MYSQL_USER=${DATABASE_USER:-homodaba_user}
             - MYSQL_PASSWORD=${DATABASE_PASSWORD?Variable not set}
             - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD?Variable not set}
+        healthcheck:
+            test: "mysqladmin -u$$MYSQL_USER -p$$MYSQL_PASSWORD -hlocalhost ping --silent"
+            timeout: 30s
+            retries: 10
         env_file:
             - .env
         command: ['--character-set-server=utf8']
@@ -42,4 +46,6 @@ services:
         volumes:
             - ${HOST_SQLITE:-./volumes/sqlite}:/opt/app/sqlite
             - ${HOST_IMPORT:-./volumes/import}:/opt/app/import
-
+        depends_on:
+            db:
+                condition: service_healthy
