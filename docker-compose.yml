@@ -11,5 +11,3 @@ services:
         extends:
             service: app
             file: docker-compose.base.yml
-        env_file:
-            - .env
