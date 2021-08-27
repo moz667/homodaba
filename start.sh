@@ -1,121 +1,58 @@
 #!/bin/bash -e
 
-# Configuration file
 ENVFILE='.env'
 
-# Mandatory VARS
-# You can define custom values here or in $ENVFILE. Otherwise, we'll generate random values for you :)
-declare -A vars
-vars[SECRET_KEY]=''
-vars[ALLOWED_HOSTS]='127.0.0.1 localhost'
-vars[DATABASE_PASSWORD]=''
-
-# Default docker-compose file
-dcfile='docker-compose.yml'
-
-print_help() {
-  NAME="$(basename "$0")"
-  cat <<EOF
-
-Usage: $NAME [-h|--help] [-f file] [services]
-
-  [Optional] -h, --help:      Print this help
-  [Optional] -f file:         Define docker-compose file to execute.
-  [Optional] services:        Define a list of docker-compose services to run.
-                              Available services: ${services[*]}
-EOF
-  exit
-}
-
 generate_secret() {
-  echo "Creating a new random $varkey"
-  rndSecret="$(python3 -c "import secrets; print(secrets.token_urlsafe(37))")"
-  addVarToEnvFile "$varkey" "$rndSecret"
+    size=$1
+    return "$(python3 -c "import secrets; print(secrets.token_urlsafe($size))")"
 }
 
-addVarToEnvFile() {
-  var="$1"
-  value="$2"
-  echo "Adding $var to '$ENVFILE' file:"
-  echo -e "    $var=${value}\n"
-  echo "$var=${value}" >> $ENVFILE
+wait_until_healthy() {
+	service="app"
+	
+    # FIXME: Ojo, esto es lo que fallaba el otro dia, si hay varios contenedores
+    # que se asemejen (app es demasiado comun...) entonces container_id seria un MAP
+    container_id="$(docker-compose ps -q "$service")"
+    health_status="$(docker inspect -f "{{.State.Health.Status}}" "$container_id")"
+
+    while [[ "$health_status" != "healthy" ]] ; do 
+        echo 'Waiting for application to be ready'
+        health_status="$(docker inspect -f "{{.State.Health.Status}}" "$container_id")"
+        sleep 5
+    done
 }
 
-checkVars() {
-  for varkey in "${!vars[@]}"; do
-    if ! grep -q "^ *$varkey" $ENVFILE ; then
-      echo "WARNING: Required variable '$varkey' missing."
-      case $varkey in
-        "SECRET_KEY" )
-          if [ -z "${vars[$varkey]}" ]; then
-            generate_secret
-          else
-            addVarToEnvFile "$varkey" "${vars[$varkey]}"
-          fi
-          ;;
-        "DATABASE_PASSWORD" )
-          if [ -z "${vars[$varkey]}" ]; then
-            generate_secret
-          else
-            addVarToEnvFile "$varkey" "${vars[$varkey]}"
-          fi
-          ;;
-        "ALLOWED_HOSTS" )
-          addVarToEnvFile "$varkey" "${vars[$varkey]}"
-          ;;
-        * )
-          echo "Variable ${varkey} is mandatory. Please read documentation"
-          ;;
-      esac
-    fi
-  done
-}
+COMPOSE_ARGS="--env-file $ENVFILE"
 
-processArgs(){
-  while (( "$#" )); do
-    if [[ "$1" == "-f" ]] ; then
-      if [[ -a "$2" ]] ; then
-        dcfile="$2"
-        shift 2
-        continue
-      else
-        echo "ERROR: docker-compose file '$2' not found"
-        print_help
-      fi
-    elif ( [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]] ) ; then
-        print_help
-    elif [[ ! " ${availServs[*]} " =~ " ${1} " ]]; then
-      echo "ERROR: Service $1 not available"
-      print_help
-    else
-      selectedServs+=("$1")
-      shift
-    fi
-  done
-}
-
-checkVars
-
-selectedServs=()
-availServs=( $(docker-compose config --services) )
-processArgs $@
-
-if ((${#selectedServs[@]})); then
-  docker-compose -f $dcfile up -d ${selectedServs[*]}
-else
-  # IF no services have been specified, we will build and run all
-  docker-compose -f $dcfile up -d
+if [ ! -f $ENVFILE ]; then
+    SECRET_KEY=generate_secret(37)
+    COMPOSE_ARGS="-e SECRET_KEY"
 fi
 
+docker-compose $COMPOSE_ARGS up -d --build
 
-  cat <<EOF
+# 1) Esperar hasta que termine de arrancar el tema
+wait_until_healthy
 
-Services status:
-$(docker-compose ps)
-
-If this is the first time you build the application, you should create a user executing the following command:
-
-  docker-compose exec app python homodaba/manage.py createsuperuser
-
-You can check de application at http://127.0.0.1:8000/admin/
+# 2) Si no existe superuser en la bbdd pedimos para crearlo
+check_superusers=$(cat <<EOF
+from django.contrib.auth import get_user_model
+print(len(get_user_model().objects.filter(is_superuser=True).all()))
 EOF
+)
+
+# FIXME: idem que con el tema del map... (ver mas arriba)
+django_manage="docker-compose exec -T app python homodaba/manage.py shell -c"
+
+RETURN_CHECK_SUPERUSERS=`$django_manage $check_superusers`
+
+if [ "$RETURN_CHECK_SUPERUSERS" == "0" ]; then
+    echo 'No users. Created a new one:'
+    $django_manage createsuperuser
+fi
+
+# 3) TODO: Si no tiene datos damos opcion a importar demo-data ??? por ahora TODO
+
+# 4) Chequeamos:
+#   - Si no tiene volumes (import sqlite) lo notificamos, import no es importante
+#   - Si no tiene .env, notificamos SECRET_KEY
