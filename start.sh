@@ -22,6 +22,8 @@ wait_until_healthy() {
     done
 }
 
+# FIXME: Ojo, acabo de ver que docker-compose usa por defecto .env... esto hace
+# que toda esta mierda sea innecesaria
 COMPOSE_ARGS="--env-file $ENVFILE"
 
 if [ ! -f $ENVFILE ]; then
@@ -44,9 +46,9 @@ EOF
 # FIXME: idem que con el tema del map... (ver mas arriba)
 django_manage="docker-compose exec -T app python homodaba/manage.py shell -c"
 
-RETURN_CHECK_SUPERUSERS=`$django_manage $check_superusers`
+superusers_count=`$django_manage $check_superusers`
 
-if [ "$RETURN_CHECK_SUPERUSERS" == "0" ]; then
+if [ "$superusers_count" == "0" ]; then
     echo 'No users. Created a new one:'
     $django_manage createsuperuser
 fi
