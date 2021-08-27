@@ -37,4 +37,11 @@ services:
                 TELEGRAM: ${TELEGRAM:-false}
         environment:
             ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1 localhost}
-            SECRET_KEY: ${SECRET_KEY}
+            SECRET_KEY: ${SECRET_KEY?Variable not set}
+        volumes:
+            # Estos dos son de dev y no lo tengo muy claro...
+            - /opt/app/homodaba
+            - /opt/app/static/build
+            # Estos dos son los importantes aunque ninguno de los dos es indispensable
+            - /opt/app/import
+            - /opt/app/sqlite
