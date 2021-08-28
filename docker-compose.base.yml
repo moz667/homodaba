@@ -9,6 +9,12 @@ services:
         command: ["/bin/sh", "-c", "npm install && npm run build:watch"]
         volumes:
             - ./static:/src
+    static-build:
+        image: node:10
+        working_dir: /src
+        command: ["/bin/sh", "-c", "npm install && npm run build"]
+        volumes:
+            - ./static:/src
     proxy:
         build:
             context: .

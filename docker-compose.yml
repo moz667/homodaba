@@ -3,11 +3,15 @@ version: '2.1'
 # homodaba docker
 
 services:
-    proxy:
+    static-build:
         extends:
-            service: proxy
+            service: static-build
             file: docker-compose.base.yml
     app:
         extends:
             service: app
             file: docker-compose.base.yml
+        environment:
+            DJANGO_DEBUG: 1
+        ports:
+            - "127.0.0.1:8000:8000"

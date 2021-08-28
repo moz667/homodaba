@@ -51,8 +51,8 @@ RUN if [ "$TELEGRAM" != "" -a "$TELEGRAM" != "false" ]; then \
 
 # TODO: Todo esto esta sin probar... ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 ADD homodaba /opt/app/homodaba
+ADD static /opt/app/static
 
 EXPOSE 8000
 
