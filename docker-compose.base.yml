@@ -26,8 +26,6 @@ services:
         environment:
             - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
             - MYSQL_USER=${DATABASE_USER:-root}
-            - MYSQL_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD}
-            - MYSQL_PASSWORD=${DATABASE_PASSWORD}
         healthcheck:
             test: "mysqladmin -u$$MYSQL_USER -p$$MYSQL_PASSWORD -hlocalhost ping --silent"
             timeout: 30s

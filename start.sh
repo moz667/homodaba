@@ -7,15 +7,11 @@
 #   - python3
 
 ENVFILE=".env"
-# TODO: Revisar... Esto no me acaba de convencer... para no mostrar el 
-# WARNING de la contraseña de mysql solo he visto esta forma... Lo cual
-# nos desactiva todos los mensajes que no sean ERROR del compose, por lo
-# que tendremos que contar que esta haciendo en cada momento...
-COMPOSE="docker-compose --log-level ERROR"
+
 # manage.py interactive (attach tty)
-MANAGE="$COMPOSE exec app python homodaba/manage.py"
+MANAGE="docker-compose exec app python homodaba/manage.py"
 # manage.py NOT INTERACTIVE (Disable pseudo-tty allocation)
-MANAGE_NOT_INT="$COMPOSE exec -T app python homodaba/manage.py"
+MANAGE_NOT_INT="docker-compose exec -T app python homodaba/manage.py"
 
 generate_secret() {
     size=$1
@@ -25,7 +21,7 @@ generate_secret() {
 wait_until_healthy() {
 	service="$1"
 	
-    container_id="$($COMPOSE ps -q "$service")"
+    container_id="$(docker-compose ps -q "$service")"
 
     while true ; do 
         health_status="$(docker inspect -f "{{.State.Health.Status}}" "$container_id")"
@@ -41,7 +37,7 @@ wait_until_healthy() {
 wait_until_finish() {
 	service="$1"
 	
-    container_id="$($COMPOSE ps -q "$service")"
+    container_id="$(docker-compose ps -q "$service")"
 
     while true ; do 
         status="$(docker inspect -f "{{.State.Status}}" "$container_id")"
@@ -65,7 +61,7 @@ fi
 # en el Dockerfile del padre, por ello, para asegurarnos
 # que detecta cambios en ello tendriamos que hacer algo asi:
 # echo "Building app..."
-# $COMPOSE -f docker-compose.base.yml build "app"
+# docker-compose -f docker-compose.base.yml build "app"
 # Esta comentado ya que queremos mantenerlo lo mas simple posible :P
 
 echo "Starting homodaba..."
@@ -74,12 +70,12 @@ echo "Starting homodaba..."
 # cada vez que se ejecute 
 if [ ! -f static/build/css/main.thirdparty.css ]; then
     echo "  - building statics..."
-    $COMPOSE up -d "static-build"
+    docker-compose up -d "static-build"
     wait_until_finish "static-build"
 fi
 
 echo "  - starting app..."
-$COMPOSE up -d "app"
+docker-compose up -d "app"
 
 # 1) Esperar hasta que termine de arrancar el tema
 wait_until_healthy "app"
