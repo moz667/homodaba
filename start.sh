@@ -14,8 +14,8 @@ ENVFILE=".env"
 COMPOSE="docker-compose --log-level ERROR"
 # manage.py interactive (attach tty)
 MANAGE="$COMPOSE exec app python homodaba/manage.py"
-# manage.py shell -c NOT INTERACTIVE (Disable pseudo-tty allocation)
-MANAGE_SHELL="$COMPOSE exec -T app python homodaba/manage.py shell -c"
+# manage.py NOT INTERACTIVE (Disable pseudo-tty allocation)
+MANAGE_NOT_INT="$COMPOSE exec -T app python homodaba/manage.py"
 
 generate_secret() {
     size=$1
@@ -85,7 +85,7 @@ $COMPOSE up -d "app"
 wait_until_healthy "app"
 
 # 2) Si no existe superuser en la bbdd pedimos para crearlo
-superusers_count=`$MANAGE_SHELL "\
+superusers_count=`$MANAGE_NOT_INT shell -c "\
 from django.contrib.auth import get_user_model;\
 print(len(get_user_model().objects.filter(is_superuser=True).all()));\
 "`
@@ -100,7 +100,7 @@ if [ "$superusers_count" == "0" ]; then
 fi
 
 # 3) Si no tiene datos damos opcion a importar demo-data
-movies_count=`$MANAGE_SHELL "\
+movies_count=`$MANAGE_NOT_INT shell -c "\
 from data.models import Movie;\
 print(len(Movie.objects.all()));\
 "`
@@ -109,8 +109,7 @@ if [ "$movies_count" == "0" ]; then
     echo "No Movies. Do you want some sample data? [Y/n]: "
     read create_movies
     if [[ "$create_movies" == "y" || "$create_movies" == "Y" || "$create_movies" == "" ]]; then
-        # TODO: Crear un csv con datos de prueba
-        echo "Just kidding!! Its not implemented yet ^_^"
+        $MANAGE_NOT_INT import_csv --csv-file /opt/app/import/sample-data.csv -v 2
     fi
 fi
 

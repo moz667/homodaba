@@ -57,6 +57,7 @@ ADD static /opt/app/static
 EXPOSE 8000
 
 COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
+COPY docker/app/sample/sample-data.csv ${IMPORT_ROOT}/sample-data.csv
 
 HEALTHCHECK --start-period=90s CMD wget -q -O /dev/null http://localhost:8000/admin/login/?next=/admin/ || exit 1
 
