@@ -1,0 +1,51 @@
+version: '2.1'
+
+# homodaba docker
+
+services:
+    static-watch:
+        image: node:10
+        working_dir: /src
+        command: ["/bin/sh", "-c", "npm install && npm run build:watch"]
+        volumes:
+            - ./static:/src
+    static-build:
+        image: node:10
+        working_dir: /src
+        command: ["/bin/sh", "-c", "npm install && npm run build"]
+        volumes:
+            - ./static:/src
+    proxy:
+        build:
+            context: .
+            dockerfile: docker/proxy/Dockerfile
+        ports:
+            - "8000:80"
+    db:
+        image: mysql:5.7
+        environment:
+            - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
+            - MYSQL_USER=${DATABASE_USER:-root}
+        healthcheck:
+            test: "mysqladmin -u$$MYSQL_USER -p$$MYSQL_PASSWORD -hlocalhost ping --silent"
+            timeout: 30s
+            retries: 10
+        command: ['--character-set-server=utf8']
+    app:
+        build:
+            context: .
+            dockerfile: docker/app/Dockerfile
+            args:
+                DATABASE_ENGINE: ${DATABASE_ENGINE:-sqlite}
+                ELASTICSEARCH: ${ELASTICSEARCH:-false}
+                TELEGRAM: ${TELEGRAM:-false}
+        environment:
+            ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1 localhost}
+            SECRET_KEY: ${SECRET_KEY?Variable not set}
+        volumes:
+            # Estos dos son de dev y no lo tengo muy claro...
+            - /opt/app/homodaba
+            - /opt/app/static/build
+            # Estos dos son los importantes aunque ninguno de los dos es indispensable
+            - /opt/app/import
+            - /opt/app/sqlite

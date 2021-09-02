@@ -17,4 +17,9 @@ if [ "$DATABASE_ENGINE" = "mysql" ] ; then
 fi
 
 python manage.py migrate
+
+if [ "$CACHE_DATABASE" != '0' ]; then
+  python manage.py migrate --database cache
+fi
+
 exec python manage.py runserver 0.0.0.0:8000

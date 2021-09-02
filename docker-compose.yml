@@ -3,49 +3,15 @@ version: '2.1'
 # homodaba docker
 
 services:
-    proxy:
-        build:
-            context: .
-            dockerfile: docker/proxy/Dockerfile
-        ports:
-            - "8000:80"
-        restart: always
-    db:
-        image: mysql:5.7
-        volumes:
-            - ${MYSQL_DATA_VOL:-/opt/mysql/homodaba}:/var/lib/mysql
-        environment:
-            - MYSQL_DATABASE=${DATABASE_NAME:-homodaba}
-            - MYSQL_USER=${DATABASE_USER:-homodaba_user}
-            - MYSQL_PASSWORD=${DATABASE_PASSWORD?Variable not set}
-            - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD?Variable not set}
-        healthcheck:
-            test: "mysqladmin -u$$MYSQL_USER -p$$MYSQL_PASSWORD -hlocalhost ping --silent"
-            timeout: 30s
-            retries: 10
-        env_file:
-            - .env
-        command: ['--character-set-server=utf8']
+    static-build:
+        extends:
+            service: static-build
+            file: docker-compose.base.yml
     app:
-        build:
-            context: .
-            dockerfile: docker/app/Dockerfile
-            args:
-                DATABASE_ENGINE: ${DATABASE_ENGINE:-mysql}
-                ELASTICSEARCH: ${ELASTICSEARCH:-false}
-                TELEGRAM: ${TELEGRAM:-false}
+        extends:
+            service: app
+            file: docker-compose.base.yml
         environment:
-            ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1 localhost}
-            DATABASE_HOST: ${DATABASE_HOST:-db}
-            DATABASE_NAME: ${DATABASE_NAME:-homodaba}
-            DATABASE_USER: ${DATABASE_USER:-homodaba_user}
-            DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-        restart: always
-        env_file:
-            - .env
-        volumes:
-            - ${HOST_SQLITE:-./volumes/sqlite}:/opt/app/sqlite
-            - ${HOST_IMPORT:-./volumes/import}:/opt/app/import
-        depends_on:
-            db:
-                condition: service_healthy
+            DJANGO_DEBUG: 1
+        ports:
+            - "127.0.0.1:8000:8000"
