@@ -34,44 +34,42 @@ wait_until_healthy() {
     done
 }
 
-wait_until_finish() {
-	service="$1"
-	
-    container_id="$(docker-compose ps -q "$service")"
-
-    while true ; do 
-        status="$(docker inspect -f "{{.State.Status}}" "$container_id")"
-        if [ "$status" == "exited" ]; then
-            echo "  - $service is finished"
-            break
-        fi
-        echo "      * Waiting for $service to be finished..."
-        sleep 5
-    done
-}
-
-if [ ! -f $ENVFILE ]; then
-    SECRET_KEY=`python3 -c "import secrets;print(secrets.token_urlsafe(37))"`
-    echo "SECRET_KEY=$SECRET_KEY" > $ENVFILE
+if ! command -v docker &> /dev/null; then
+    echo "docker could not be found."
+    echo "Read the manual and install it from https://docs.docker.com/desktop/"
+    exit
 fi
 
-# TODO: Borrar todo este comentario una vez lo hable con @bpk667
-# Esto es un comportamiento curiosos de compose...
-# Cuando extiendes de otro compose, no detecta cambios
-# en el Dockerfile del padre, por ello, para asegurarnos
-# que detecta cambios en ello tendriamos que hacer algo asi:
-# echo "Building app..."
-# docker-compose -f docker-compose.base.yml build "app"
-# Esta comentado ya que queremos mantenerlo lo mas simple posible :P
+if ! command -v docker-compose &> /dev/null; then
+    echo "docker-compose could not be found."
+    echo "Read the manual and install it from https://docs.docker.com/compose/install/"
+    exit
+fi
+
+if [ ! -f $ENVFILE ]; then
+    echo " - $ENVFILE not found, creating a new one."
+    touch $ENVFILE
+fi
+
+if ! grep -q "^SECRET_KEY=\| *SECRET_KEY=" $ENVFILE; then 
+    if ! command -v python3 &> /dev/null; then
+        echo "python3 could not be found."
+        echo "Read the manual and install it from https://www.python.org/downloads/"
+        exit
+    fi
+
+    echo " - SECRET_KEY not found in $ENVFILE, creating a new one."
+    SECRET_KEY=`python3 -c "import secrets;print(secrets.token_urlsafe(37))"`
+    echo "SECRET_KEY=$SECRET_KEY" >> $ENVFILE
+fi
 
 echo "Starting homodaba..."
 
-# TODO: Esta comprobacion chusca. La he puesto para que evite arrancar static-build
+# Esta comprobacion chusca. La he puesto para que evite arrancar static-build
 # cada vez que se ejecute 
 if [ ! -f static/build/css/main.thirdparty.css ]; then
     echo "  - building statics..."
-    docker-compose up -d "static-build"
-    wait_until_finish "static-build"
+    docker-compose run "static-build"
 fi
 
 echo "  - starting app..."
@@ -113,13 +111,22 @@ fi
 echo ""
 echo " **************************************************************************"
 echo " * Note that:                                                             *"
+echo " *                                                                        *"
 echo " *   - This is a test version, the stored data will be destroyed if it    *"
 echo " *     remove the app container                                           *"
+echo " *                                                                        *"
 echo " *   - The script could have created a secret key for you and save it on  *"
 echo " *     a .env file.                                                       *"
 echo " *     This key is very important for the user authentication             *"
 echo " *     If you delete and / or recreate it, this authentication will not   *"
 echo " *     work.                                                              *"
+echo " *                                                                        *"
+echo " *   - To stop the app, execute:                                          *"
+echo " *     # docker-compose stop                                              *"
+echo " *                                                                        *"
+echo " *   - To remove the app data, execute:                                   *"
+echo " *     # docker-compose down                                              *"
+echo " *                                                                        *"
 echo " **************************************************************************"
 echo ""
 echo " - That's all!!!"
