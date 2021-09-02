@@ -108,7 +108,7 @@ class Command(BaseCommand):
         )
 
     def process_movie(self, r):
-        trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        trace.info('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
 

@@ -109,7 +109,7 @@ if [ "$movies_count" == "0" ]; then
     echo "No Movies. Do you want some sample data? [Y/n]: "
     read create_movies
     if [[ "$create_movies" == "y" || "$create_movies" == "Y" || "$create_movies" == "" ]]; then
-        $MANAGE_NOT_INT import_csv --csv-file /opt/app/import/sample-data.csv -v 2
+        $MANAGE_NOT_INT import_csv --csv-file /opt/app/import/sample-data.csv -v 1
     fi
 fi
 

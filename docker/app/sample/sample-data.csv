@@ -1,7 +1,9 @@
-storage_name;media_format;title;year;imdb_id;tags
-Original;DVD;Miss Congeniality;2000;0212346;favourite bpk movies,sandra bullock
-Original;DVD;Miss Congeniality 2. Armed & Fabulous;2005;0385307;favourite bpk movies,sandra bullock
-Original;BLURAY;Miss Congeniality;2000;0212346;
-Original;BLURAY;Miss Congeniality 2. Armed & Fabulous;2005;0385307;bpk's first bluray
-Original;BLURAY;Miss Congeniality. Behind the Crown;2001;6112098;extras,documentary,sandra bullock
-Original;BLURAY;Miss Congeniality. Behind the Beauty;2001;6112088;extras,documentary,sandra bullock
+storage_name;storage_type;media_format;title;year;imdb_id;tags
+Original;dvd;DVD;Citizen Kane;1941;0033467;not bad but I prefer miss congeniality
+Original;bluray;BLURAY;Gravity;2013;1454468;not bad but I prefer miss congeniality,3d
+Original;bluray;BLURAY;Miss Congeniality. Behind the Crown;2001;6112098;extras,documentary,sandra bullock
+Original;bluray;BLURAY;Miss Congeniality. Behind the Beauty;2001;6112088;extras,documentary,sandra bullock
+Original;bluray;BLURAY;Miss Congeniality;2000;0212346;
+Original;dvd;DVD;Miss Congeniality;2000;0212346;favourite bpk movies,sandra bullock
+Original;bluray;BLURAY;Miss Congeniality 2. Armed & Fabulous;2005;0385307;bpk's first bluray
+Original;dvd;DVD;Miss Congeniality 2. Armed & Fabulous;2005;0385307;favourite bpk movies,sandra bullock
