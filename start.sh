@@ -1,11 +1,5 @@
 #!/bin/bash -e
 
-# TODO: Chequear dependencias...
-# Requisitos:
-#   - docker
-#   - docker-compose
-#   - python3
-
 ENVFILE=".env"
 
 # manage.py interactive (attach tty)
@@ -34,12 +28,14 @@ wait_until_healthy() {
     done
 }
 
+# Comprobamos que tiene docker
 if ! command -v docker &> /dev/null; then
     echo "docker could not be found."
     echo "Read the manual and install it from https://docs.docker.com/desktop/"
     exit
 fi
 
+# Comprobamos que tiene docker-compose
 if ! command -v docker-compose &> /dev/null; then
     echo "docker-compose could not be found."
     echo "Read the manual and install it from https://docs.docker.com/compose/install/"
@@ -52,9 +48,12 @@ if [ ! -f $ENVFILE ]; then
 fi
 
 if ! grep -q "^SECRET_KEY=\| *SECRET_KEY=" $ENVFILE; then 
+    # Comprobamos que tiene python3 (solo es necesario si no tiene SECRET_KEY)
     if ! command -v python3 &> /dev/null; then
         echo "python3 could not be found."
         echo "Read the manual and install it from https://www.python.org/downloads/"
+        echo "or alternatively generate a SECRET_KEY and store in $ENVFILE as:"
+        echo "SECRET_KEY=<RANDOM LONG STRING>"
         exit
     fi
 
