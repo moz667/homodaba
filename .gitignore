@@ -8,6 +8,10 @@ node_modules
 kodi/samples
 .env.*
 docker-compose.dev.yml
+# Probando unas cosillas
+.*.env
+docker-compose.test.yml
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
