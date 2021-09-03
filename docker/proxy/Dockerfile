@@ -8,15 +8,18 @@ ADD static/ /src
 RUN npm run build
 
 # build django statics
-FROM python:3.8.3 AS django
+FROM python:3.8.3-alpine3.12 AS django
 
 ENV STATIC_ROOT="/tmp/static" \
     SECRET_KEY="**NONE**" \
     STATIC_BUILD="./static/build"
 
 WORKDIR /src
-ADD homodaba/python-requirements.txt /src/python-requirements.txt
-RUN pip3 install -r python-requirements.txt
+
+ADD homodaba/requirements.txt /src/homodaba/requirements.txt
+RUN apk add build-base libxml2-dev libxslt-dev
+RUN pip3 install -r homodaba/requirements.txt
+
 ADD homodaba/ /src/
 COPY --from=gulp /src/build /src/static/build
 RUN mkdir -p "$STATIC_ROOT" && python manage.py collectstatic --no-input
