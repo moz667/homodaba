@@ -1,21 +1,5 @@
 # Homodaba docker implementation
 
-@bpk667 A ver que piensas acerca de esto:
-
-Despues de toda la chapa que os he dado con las variables de entorno con docker y docker compose he llegado a la siguiente conclusion: 
-
-**Los secretos no se deben definir nunca como environment en `docker-compose.base`.**
-
-Esto se debe a que si los defines ahí, aunque sea solamente definiendo los como `SECRET_KEY: ${SECRET_KEY?Variable not set}`, te vas ver obligado a poner los secretos en `.env` o a pasarle a docker-compose el argumento `--env-file .app.secrets.env` en cualquiera de los dos casos, vas a estar compartiendo los secretos con todos los servicios que arranques en compose, lo cual no mola nada.
-
-O al menos es a la conclusion que he llegado despues de estar pegandome con ello.
-
-Comentame como lo ves y esta vez voy a librar a p4u con mis molestos mensajes de telegram reiniciando el dia de la marmota ^_^
-
-Este mensaje lo he metido en el docu (porque queria probar a ver si te hace mention github) aunque lo voy a poner como comentario despues :P
-
-> BTW: A partir de ahora, voy a intentar documentar y comentar en el code en mi moz-english for dummies, y, como tu la tienes infinitamente mas larga que yo en ese aspecto, mi culito espera que me fustigues con correcciones ;). Los comentarios que te haga directos, por el bien de los dos, van a seguir siendo en castellano.
-
 ## Service app
 
 ### Environment variables
