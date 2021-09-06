@@ -27,12 +27,6 @@ app:
 
 ### Environment variables
 
-#### **Compose pre-build vars:**
-
-- **HOST_SQLITE**,
-
-- **HOST_IMPORT**,
-
 #### **Secrets:**
 
 > *This are special type of Vars as they hide information of an encrypted format or passwords, **that you would keep secure and store safely and never share**.*
