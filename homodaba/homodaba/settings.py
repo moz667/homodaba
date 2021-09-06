@@ -16,6 +16,8 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
+# TODO: Quitar todo el tema este de variables para compartir por http
+# e incluirlo en la importacion como un tipo de storage_type mas
 SMB_SHARE_2_URL = {}
 
 i = 1
@@ -54,8 +56,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Default value set to False
 DEBUG = False if os.getenv("DJANGO_DEBUG", '0') == '0' else True
 
-LOCALNETIP = os.getenv("LOCALNETIP", '127.0.0.1')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', LOCALNETIP).split()
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1 localhost').split()
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'

@@ -39,8 +39,6 @@ services:
                 DATABASE_ENGINE: ${DATABASE_ENGINE:-sqlite}
                 ELASTICSEARCH: ${ELASTICSEARCH:-false}
                 TELEGRAM: ${TELEGRAM:-false}
-        environment:
-            ALLOWED_HOSTS: "${ALLOWED_HOSTS:-127.0.0.1 localhost}"
         volumes:
             # Estos dos son de dev y no lo tengo muy claro...
             - /opt/app/homodaba
