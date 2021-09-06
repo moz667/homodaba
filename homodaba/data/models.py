@@ -499,6 +499,9 @@ class MovieStorageType(models.Model):
 
     def get_url_to_storage_type(self):
         if self.is_net_share():
+            # TODO: Quitar todo el tema este de variables para compartir por http
+            # e incluirlo en la importacion como un tipo de storage_type mas
+            
             for key in SMB_SHARE_2_URL.keys():
                 if self.path.startswith(key):
                     file_part = self.path.replace(key, "")
