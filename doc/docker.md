@@ -12,8 +12,6 @@ app:
             DATABASE_ENGINE: ${DATABASE_ENGINE:-sqlite}
             ELASTICSEARCH: ${ELASTICSEARCH:-false}
             TELEGRAM: ${TELEGRAM:-false}
-    environment:
-        ALLOWED_HOSTS: "${ALLOWED_HOSTS:-127.0.0.1 localhost}"
     volumes:
         - /opt/app/import
         - /opt/app/sqlite
@@ -41,6 +39,8 @@ app:
 
 
 #### **Homodaba config vars:**
+
+> *Variables for config the main application or that affect the behavior of it self.*
 
 - **DJANGO_DEBUG**, a boolean that turns on/off debug mode. Never deploy a site into production with DJANGO_DEBUG turned on. The value would be `1` that enables debug mode or `0` thats not (default). [More info](https://docs.djangoproject.com/en/3.2/ref/settings/#debug)
 
@@ -80,23 +80,15 @@ app:
 
 - **CACHE_DATABASE_PORT**, the port to use when connecting to the intermediate cache database. An empty string means the default port. Not used with SQLite. Default: '' (Empty string). [More info](https://docs.djangoproject.com/en/3.2/ref/settings/#port)
 
-- **HOME_URL_PATH**,
+- **HOME_URL_PATH**, string to define the relative path to deploy the app. Usefull for sharing domain between various apps. Default: '' (Empty string). 
 
-- **SMB_SHARE_2_URL_KEY_X**,
+- **HDB_KODI_SUPPORT**, boolean with values `0` or `1`, to enable kodi supports. Default: `0` that’s mean there is NO kodi support.
 
-- **SMB_SHARE_2_URL_VALUE_X**,
+- **TBOT_LIMIT_MOVIES**, integer to limit the results of telegram bot queries. Default: limited to `10` results. **`(Testing)`**
 
-- **HDB_KODI_SUPPORT**, 
+- **IMDB_VALID_MOVIE_KINDS**, string with the kind of movies that we are looking for more frequently. This is usefull for a fastest and easy matches with the imdb queries. It can contain several types separated by `,`. Default: `movie`. [More info](https://imdbpy.readthedocs.io/en/latest/usage/movie.html?highlight=kind#movies)
 
-- **TBOT_LIMIT_MOVIES**,
-
-- **IMDB_VALID_MOVIE_KINDS**,
-
-- **LOCALNETIP**,
-
-- **ES_DSL_HOSTS**,
-
-- **HOME_URL_PATH**,
+- **ES_DSL_HOSTS**, . **`(Testing)`**
 
 - **STATIC_ROOT**,
 
