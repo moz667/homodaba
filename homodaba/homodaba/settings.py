@@ -139,7 +139,7 @@ WSGI_APPLICATION = 'homodaba.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 # Por defecto sqlite3
-SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "")) if os.getenv("SQLITE_ROOT", "") else BASE_DIR
+SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "../sqlite"))
 
 DATABASES = {
     'default': {
