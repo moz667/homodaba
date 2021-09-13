@@ -7,11 +7,12 @@ cd /opt/app/homodaba
 # Checking if MySQL DB is ready.
 if [ "$DATABASE_ENGINE" = "mysql" ] ; then
   if [ -n "$DATABASE_PASSWORD" ]; then
-    PWD_PARAM="-p${DATABASE_PASSWORD}"
+    PWD_PARAM="-p\"${DATABASE_PASSWORD}\""
   fi
   until \
     echo 'Waiting for SQL to be ready' && \
-    mysqladmin -u"$DATABASE_USER" "${PWD_PARAM}" -h"$DATABASE_HOST" ping --silent; do
+    mysqladmin -u"$DATABASE_USER" ${PWD_PARAM} -h"$DATABASE_HOST" ping --silent; do
+      echo "mysqladmin -u$DATABASE_USER ${PWD_PARAM} -h$DATABASE_HOST ping --silent"
       sleep 1
     done
 fi
