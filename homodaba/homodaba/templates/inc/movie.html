@@ -45,8 +45,12 @@
         {% if request.user.is_staff or is_kodi_supported %}
             <div class="top-links-wrap clear-pt">
                 {% if request.user.is_staff %}
-                    <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}">
-                        <em class="mdi mdi-database"> </em> Editar
+                    <a class="btn btn-primary btn-sm" href="{% url 'admin:data_movie_change' object_id=movie.id %}" title="Editar">
+                        <em class="mdi mdi-database"> </em>
+                    </a>
+
+                    <a class="btn btn-primary btn-sm modal-ajax-form" href="{% url 'add_tag_form' %}?movie_id={{ movie.id }}" title="Añadir etiqueta">
+                        <em class="mdi mdi-label-outline"> </em>
                     </a>
                 {% endif %}
 
@@ -57,8 +61,9 @@
                                 data-storage-path="{{ st.path }}" 
                                 data-kodi-hosts-url="{% url 'kodi:json_get_kodi_hosts' %}"
                                 data-play-url="{% url 'kodi:json_kodi_play' %}"
-                                data-movie-id="{{ movie.id }}">
-                                <em class="mdi mdi-play"> </em> Reproducir
+                                data-movie-id="{{ movie.id }}" 
+                                title="Reproducir">
+                                <em class="mdi mdi-play"> </em>
                             </button>
                         {% endif %}
                     {% endfor %}

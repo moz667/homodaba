@@ -579,11 +579,14 @@ def get_last_movies(user):
 
 def get_or_create_user_tag(current_user, tag_type):
     tag_name = '%s-%s' % (current_user.username, tag_type)
-    tags = UserTag.objects.filter(name=tag_name).all()
+    return get_or_create_tag(tag_name, model_class=UserTag)
+
+def get_or_create_tag(tag_name, model_class=Tag):
+    tags = model_class.objects.filter(name__iexact=tag_name).all()
     if tags.count() > 0:
         return tags[0]
     
-    return UserTag.objects.create(
+    return model_class.objects.create(
         name=tag_name
     )
 

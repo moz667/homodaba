@@ -1,3 +1,5 @@
+require("./inc/modal-ajax-form");
+
 $(document).ready(function () {
     var $body = $("body");
     var body_classes = $body.attr("class").split(" ")
@@ -13,6 +15,7 @@ $(document).ready(function () {
     user_tag_switcher_init();
     copy_storage_types_init();
     show_more_init();
+    modal_ajax_form_init();
 
     window.setTimeout(resize_storage_types_info_init, 500);
 
@@ -46,6 +49,7 @@ $(document).ready(function () {
                     window.kodi_init();
                 }
                 show_more_init();
+                modal_ajax_form_init();
             });
         }
     }

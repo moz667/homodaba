@@ -5,9 +5,9 @@
 {% block body_class %}add-tag-form{% endblock %}
 
 {% block main_block %}
-    <form class="form-add-tag-form" method="post">
-        <div class="card" style="max-width: 400px; margin-left: auto; margin-right: auto;">
-            <div class="card-header">
+    <form class="form-add-tag-form ajax-content" method="post">
+        <div class="card" style="">
+            <div class="card-header form-title no-modal">
                 {{ title }}
             </div>
             <div class="card-body">
@@ -28,7 +28,7 @@
                 {% endfor %}
 
             </div>
-            <div class="card-footer">
+            <div class="card-footer no-modal">
                 <button class="btn btn-primary" type="submit">Enviar</button>
             </div>
         </div>

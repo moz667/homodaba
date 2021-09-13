@@ -8,6 +8,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 
 from data.models import Movie, MovieStorageType, Person, get_last_movies
 from data.models import UserTag, get_or_create_user_tag
+from data.models import get_or_create_tag
 from data.models import Tag, GenreTag, ContentRatingTag
 from data.search import populate_search_filter
 
@@ -16,6 +17,13 @@ from .forms import AddTagForm
 @login_required
 def add_tag_form(request):
     title = 'Añadir etiqueta nueva'
+    movie = None
+
+    if 'movie_id' in request.GET.keys():
+        movie_id = int(request.GET['movie_id'])
+        if movie_id:
+            movie = get_object_or_404(Movie, pk=movie_id)
+            title = 'Añadir etiqueta nueva o existente a %s' % movie.title
 
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
@@ -24,11 +32,11 @@ def add_tag_form(request):
         # check whether it's valid:
         if form.is_valid():
             # process the data in form.cleaned_data as required
-            # TODO: procesar el form
-            #   1) Buscar la tag si ya existe en cualquiera de las tags
-            #   2) Si no existe darla de alta como Tag
-            #   3) Si tiene movie_id, insertar la tag a la pelicula
-            # redirect to a new URL:
+            tag = get_or_create_tag(form.cleaned_data["tag"])
+            if movie and not tag in movie.tags.all():
+                movie.tags.add(tag)
+                movie.save()
+            
             return redirect('home')
 
     # if a GET (or any other method) we'll create a blank form
@@ -36,11 +44,7 @@ def add_tag_form(request):
         form = AddTagForm()
         if 'movie_id' in request.GET.keys():
             movie_id = int(request.GET['movie_id'])
-            if movie_id:
-                movie = get_object_or_404(Movie, pk=movie_id)
-                form = AddTagForm(initial={'movie_id': movie_id})
-                title = 'Añadir etiqueta nueva o existente a %s' % movie.title
-
+            form = AddTagForm(initial={'movie_id': movie_id})
 
     return render(request, 'forms/add_tag_form.html', {
         'title': title,

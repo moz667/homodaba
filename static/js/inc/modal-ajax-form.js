@@ -1,6 +1,3 @@
-// FIXME: Es posible que no sea necesario... revisar
-var $ = jQuery;
-
 var $dialog = $(
     '<div id="modalForm" class="modal fade" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-hidden="true" style="padding-top:15%; overflow-y:visible;">' +
     '<div class="modal-dialog">' +
@@ -17,31 +14,24 @@ var $dialog = $(
             '<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>' +
         '</div>' +
     '</div></div></div>');
+var $modal;
 
-$(".modal-ajax-form").each(function (e) {
-    var $data = $(this);
-
-    $data.on("click", function (data_click) {
-        data_click.preventDefault();
-
-        load_ajax_form($data.attr("href"), $data.data("target"), $data.text(), $data.data("url-finish"));
-    });
-});
-
-window.load_ajax_form = function(url_form, target, modal_title, url_finish) {
+function load_ajax_form(url_form, target, modal_title, url_finish) {
     $(".modal").modal("hide");
 
     var custom_modal = target;
 
-    var $modal = custom_modal ? $(custom_modal) : $dialog;
+    $modal = custom_modal ? $(custom_modal) : $dialog;
     var $modal_body_form = $modal.find('.modal-body-form');
     var $ok_button = $modal.find('button.btn-primary');
 
     if (!custom_modal) {
         $modal.find(".modal-title").html(modal_title);
+    } else {
+        $modal.find(".modal-title").html("");
     }
 
-    $modal.on('show.bs.modal', function (modal_show_event) {
+    $modal.one('show.bs.modal', function (modal_show_event) {
         $( document ).ajaxError(function( event, jqxhr, settings, thrownError ) {
             // TODO: Quitar estas trazas una vez este estable el tema
             console.log(event);
@@ -53,6 +43,8 @@ window.load_ajax_form = function(url_form, target, modal_title, url_finish) {
 
         $modal_body_form.load(url_form + " .ajax-content", function(html) {
             var $ajax_content = $(html);
+            var page_title = $(html).find(".form-title").text();
+            $modal.find(".modal-title").text(page_title);
 
             if ($ajax_content.find(".modal-body-message").length > 0) {
                 load_modal_message($modal, $ajax_content.find(".modal-body-message"));
@@ -72,12 +64,6 @@ window.load_ajax_form = function(url_form, target, modal_title, url_finish) {
                 });
             }
         });
-
-        // No se muy bien porque pero el click anyade funciones
-        // no quita las anteriores... para quitar las anteriores
-        // de posible ediciones o altas canceladas quitamos lo que
-        // tuviera antes el click
-        $ok_button.off("click");
 
         $ok_button.off("click").on("click", function (e) {
 
@@ -124,7 +110,7 @@ window.load_ajax_form = function(url_form, target, modal_title, url_finish) {
                 }
             });
         });
-    }).on("hide.bs.modal", function (modal_hide_event) {
+    }).one("hide.bs.modal", function (modal_hide_event) {
         $modal.find('.modal-body-form').html("");
         $modal.find('.modal-footer').show();
         $ok_button.off("click").attr("disabled", false);
@@ -150,12 +136,11 @@ function on_success_submit(html, $modal, $ok_button, url_finish) {
         $ok_button.attr("disabled", false);
     } else if ($content.find(".modal-body-message").length > 0) {
         load_modal_message($modal, $content.find(".modal-body-message"));
+    } else if (url_finish) {
+        window.location = url_finish;
     } else {
-        if (url_finish) {
-            window.location = url_finish;
-        } else {
-            window.location.reload();
-        }
+        // No hacemos reload ya que en infinite se complica la cosa
+        $modal.modal("hide");
     }
 }
 
@@ -165,5 +150,21 @@ function load_modal_message($modal, $body_message) {
 }
 
 function init_on_load_html(html) {
-    // Cosas para hacer cuando cargue el contenido en el modal...
+    // TODO: Cosas para hacer cuando cargue el contenido en el modal...
+}
+
+window.modal_ajax_form_init = function() {
+    $(".modal-ajax-form").each(function (e) {
+        var $data = $(this);
+    
+        $data.off("click").on("click", function (data_click) {
+            data_click.preventDefault();
+            
+            load_ajax_form(
+                $data.attr("href"), 
+                $data.data("target"), 
+                $data.text() ? $data.text() : $data.attr("title"), 
+                $data.data("url-finish"));
+        });
+    });
 }
