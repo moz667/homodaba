@@ -1,3 +1,7 @@
+2021-12-30:
+  * Añadiendo gunicorn para los despliegues en entornos reales
+  * Actualizando algunos paquetes vulnerables
+
 2021-03-31:
   * Añadiendo comando para optimizar y limpiar la bbdd (optimize_db)
     - Limpiando titulos y akas
