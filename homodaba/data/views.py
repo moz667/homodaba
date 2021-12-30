@@ -5,6 +5,8 @@ from django.shortcuts import render
 from .models import Person
 
 class PersonDirectorJsonView(AutocompleteJsonView):
+    model_admin = None
+    
     def get_queryset(self):
         return Person.objects.filter(
             name__icontains=self.term, is_director=True

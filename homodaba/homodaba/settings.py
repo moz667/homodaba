@@ -58,6 +58,9 @@ DEBUG = False if os.getenv("DJANGO_DEBUG", '0') == '0' else True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1 localhost').split()
 
+# Upgrading to django-3.2.10
+DEFAULT_AUTO_FIELD='django.db.models.AutoField'
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
