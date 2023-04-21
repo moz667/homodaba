@@ -398,6 +398,12 @@ def search_imdb_movies(search_query):
     
     imdb_results = IMDB_API.search_movie(search_query)
 
+    for sr in imdb_results:
+        if not 'year' in sr or not sr['year']:
+            # year_matches.append(sr)
+            movie = get_imdb_movie(sr.movieID)
+            sr['year'] = movie['year']
+    
     if not NO_CACHE or UPDATE_CACHE:
         IMDB_CACHE_OBJS.create(
             search_query=search_query,
