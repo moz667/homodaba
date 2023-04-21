@@ -9,7 +9,7 @@ from data.models import get_first_or_create_tag
 from data.utils.imdbpy_facade import clean_string, match_director
 from data.utils import Trace as trace
 
-from imdb import IMDb
+from imdb import Cinemagoer
 
 import csv
 from datetime import datetime
@@ -180,7 +180,7 @@ Busqueda interactiva.
 TODO: No se esta usando pero lo dejamos por aqui por si queremos retomarlo
 TODO: Si lo volvemos a usar, utilizar la cache
 def interactive_imdb_search(title, year, title_alt=None):
-    ia = IMDb(reraiseExceptions=True)
+    ia = Cinemagoer(reraiseExceptions=True)
     search_results = ia.search_movie('%s (%s)' % (title, year))
             
     if len(search_results) == 0:

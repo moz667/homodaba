@@ -3,12 +3,12 @@ from django.utils.text import slugify
 
 from data.models import Movie, MovieStorageType, get_imdb_cache_objects
 
-from imdb import IMDb
+from imdb import Cinemagoer
 
 import pickle
 import re
 
-IMDB_API = IMDb(reraiseExceptions=True)
+IMDB_API = Cinemagoer(reraiseExceptions=True)
 
 import codecs
 from enum import Enum
@@ -55,7 +55,7 @@ def match_imdb_id(imdb_id, search_results):
 Busca resultados exactos o prometedores en imdb
 
 @return:
-    imdb_movie, un resultado de tipo IMDb.Movie o None si no consigue encontrar uno exacto
+    imdb_movie, un resultado de tipo Cinemagoer.Movie o None si no consigue encontrar uno exacto
     promisings, lista con search results prometedores (ver search_imdb_movies)
 """
 def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kinds=IMDB_VALID_MOVIE_KINDS, precission_level=None):
