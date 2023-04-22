@@ -1,4 +1,4 @@
-FROM python:3.8.3-alpine3.12
+FROM python:3.11.3-alpine3.17
 
 ARG APP_SRC_PATH=homodaba
 ARG DATABASE_ENGINE
@@ -14,7 +14,7 @@ WORKDIR /opt/app
 
 # Instalacion basica (django + sqlite):
 ADD homodaba/requirements.txt /opt/app/homodaba/requirements.txt
-RUN apk add build-base libxml2-dev libxslt-dev
+RUN apk add build-base libxml2-dev libxslt-dev sqlite
 RUN pip3 install -r homodaba/requirements.txt
 
 # Mysql:
