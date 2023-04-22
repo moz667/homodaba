@@ -13,5 +13,7 @@ services:
             file: docker-compose.base.yml
         environment:
             DJANGO_DEBUG: 1
+            SECRET_KEY: ${SECRET_KEY}
+            SQLITE_ROOT: /opt/app/sqlite
         ports:
             - "127.0.0.1:8000:8000"

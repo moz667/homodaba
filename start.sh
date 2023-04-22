@@ -2,10 +2,17 @@
 
 ENVFILE=".env"
 
+DOCKER_COMPOSE="docker-compose"
+
+if ! command -v $DOCKER_COMPOSE &> /dev/null
+then
+    DOCKER_COMPOSE="docker compose"
+fi
+
 # manage.py interactive (attach tty)
-MANAGE="docker-compose exec app python homodaba/manage.py"
+MANAGE="$DOCKER_COMPOSE exec app python homodaba/manage.py"
 # manage.py NOT INTERACTIVE (Disable pseudo-tty allocation)
-MANAGE_NOT_INT="docker-compose exec -T app python homodaba/manage.py"
+MANAGE_NOT_INT="$DOCKER_COMPOSE exec -T app python homodaba/manage.py"
 
 generate_secret() {
     size=$1
@@ -15,7 +22,7 @@ generate_secret() {
 wait_until_healthy() {
 	service="$1"
 	
-    container_id="$(docker-compose ps -q "$service")"
+    container_id="$($DOCKER_COMPOSE ps -q "$service")"
 
     while true ; do 
         health_status="$(docker inspect -f "{{.State.Health.Status}}" "$container_id")"
@@ -35,9 +42,9 @@ if ! command -v docker &> /dev/null; then
     exit
 fi
 
-# Comprobamos que tiene docker-compose
-if ! command -v docker-compose &> /dev/null; then
-    echo "docker-compose could not be found."
+# Comprobamos que tiene $DOCKER_COMPOSE
+if ! command -v $DOCKER_COMPOSE &> /dev/null; then
+    echo "$DOCKER_COMPOSE could not be found."
     echo "Read the manual and install it from https://docs.docker.com/compose/install/"
     exit
 fi
@@ -68,11 +75,11 @@ echo "Starting homodaba..."
 # cada vez que se ejecute 
 if [ ! -f static/build/css/main.thirdparty.css ]; then
     echo "  - building statics..."
-    docker-compose run "static-build"
+    $DOCKER_COMPOSE run "static-build"
 fi
 
 echo "  - starting app..."
-docker-compose up -d "app"
+$DOCKER_COMPOSE up -d "app"
 
 # 1) Esperar hasta que termine de arrancar el tema
 wait_until_healthy "app"
@@ -121,10 +128,10 @@ echo " *     If you delete and / or recreate it, this authentication will not   
 echo " *     work.                                                              *"
 echo " *                                                                        *"
 echo " *   - To stop the app, execute:                                          *"
-echo " *     # docker-compose stop                                              *"
+echo " *     # $DOCKER_COMPOSE stop                                              *"
 echo " *                                                                        *"
 echo " *   - To remove the app data, execute:                                   *"
-echo " *     # docker-compose down                                              *"
+echo " *     # $DOCKER_COMPOSE down                                              *"
 echo " *                                                                        *"
 echo " **************************************************************************"
 echo ""
