@@ -69,7 +69,7 @@ def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kind
     trace.debug("match_imdb_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s', valid_kinds=[%s], 'precission_level=%s')" % (
         title, year, title_alt, director, ','.join(valid_kinds), precission_level)
     )
-    trace_results(search_results)
+    trace_results(search_results, mini_info=True)
     # OJO: sigue despues de los 'def match_*'
 
     def get_year_matches():
@@ -386,7 +386,7 @@ def get_imdb_movie(imdb_id):
 
     return imdb_movie
 
-def search_imdb_movies(search_query):
+def search_imdb_movies(search_query, title=None, year=None):
     if not NO_CACHE:
         cache_data = IMDB_CACHE_OBJS.filter(search_query=search_query).all()
 
@@ -396,13 +396,16 @@ def search_imdb_movies(search_query):
             else:
                 IMDB_CACHE_OBJS.filter(search_query=search_query).delete()
     
-    imdb_results = IMDB_API.search_movie(search_query)
+    imdb_results = IMDB_API.search_movie(search_query, results=5)
 
     for sr in imdb_results:
         if not 'year' in sr or not sr['year']:
-            # year_matches.append(sr)
-            movie = get_imdb_movie(sr.movieID)
-            sr['year'] = movie['year']
+            trace.debug('\t\t\t\t* Año no existente en los resultados. Obteniendo detalle de %s' % sr.movieID)
+            imdb_movie = get_imdb_movie(sr.movieID)
+            if not imdb_movie is None and 'year' in imdb_movie.keys():
+                sr['year'] = imdb_movie['year']
+                if not year is None and str(year) == str(imdb_movie['year']) and not title is None and title == imdb_movie['title']:
+                    break
     
     if not NO_CACHE or UPDATE_CACHE:
         IMDB_CACHE_OBJS.create(
@@ -461,11 +464,13 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     # Buscamos por imdb_id primero (easy)
     if imdb_id:
+        trace.debug('\t\t- Buscando por imdb_id "%s"...' % imdb_id)
         return facade_get(imdb_id)
     
     # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
     # si se trata de una peli almacenada en el disco
     if storage_type and storage_name and path:
+        trace.debug('\t\t- Buscando por storage "storage_type=%s storage_name=%s path=%s"...' % (storage_type, storage_name, path))
         storages = MovieStorageType.objects.filter(
             storage_type=storage_type, 
             name=storage_name,
@@ -477,6 +482,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     # Las que no podemos buscar por la ubicacion del archivo, la buscamos por 
     # los campos tipicos de titulo y año
+    trace.debug('\t\t- Buscando datos locales "title=%s year=%s title_alt=%s)"...' % (title, year, title_alt))
     movies_local_data = search_movie_local_data(title, year, title_alt)
 
     if movies_local_data.count() == 1:
@@ -489,6 +495,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
         trace.debug(" * La pelicula '%s (%s)' se trata de una pelicula que no se encuentra en el imdb y que todavia no hemos dado de alta." % (title, year))
         return None
     
+    trace.debug('\t\t- Buscando en imdb "title=%s year=%s title_alt=%s director=%s"...' % (title, year, title_alt, director))
     imdb_movie, search_results = match_imdb_movie(
         title, year, title_alt=title_alt, 
         director=director
@@ -598,19 +605,24 @@ def trace_results(search_results, mini_info=False):
 
 def search_movie_imdb(title, year=None, title_alt=None, director=None):
     search_results = None
+    clean_title = clean_string(title)
 
     if title and year:
         # Buscamos por titulo y año en IMDB
-        search_results = search_imdb_movies('%s (%s)' % (title, year))
+        trace.debug('\t\t\t- Buscando en imdb por titulo y año "title=%s year=%s"...' % (title, year))
+        search_results = search_imdb_movies('%s (%s)' % (title, year), title=title, year=year)
 
         if search_results is None or len(search_results) == 0:
-            search_results = search_imdb_movies('%s (%s)' % (clean_string(title), year))
+            trace.debug('\t\t\t- Buscando en imdb por titulo limpio y año "clean_title=%s year=%s"...' % (clean_title, year))
+            search_results = search_imdb_movies('%s (%s)' % (clean_title, year), title=clean_title, year=year)
     
     if search_results is None or len(search_results) == 0:
-        search_results = search_imdb_movies(title)
+        trace.debug('\t\t\t- Buscando en imdb por titulo "title=%s"...' % title)
+        search_results = search_imdb_movies(title, title=title)
     
     if search_results is None or len(search_results) == 0:
-        search_results = search_imdb_movies(clean_string(title))
+        trace.debug('\t\t\t- Buscando en imdb por titulo limpio "clean_string(title)=%s"...' % clean_string(title))
+        search_results = search_imdb_movies(clean_title, title=clean_title)
     
     # Si aun no lo encontramos por el titulo principal, 
     # buscamos por el alt (si lo tiene)
@@ -618,6 +630,7 @@ def search_movie_imdb(title, year=None, title_alt=None, director=None):
     # title_alt si le habiamos pasado director:
     # if (search_results is None or len(search_results) == 0) and title_alt and not director is None:
     if (search_results is None or len(search_results) == 0) and title_alt:
+        trace.debug('\t\t\t- Buscando en imdb por titulo alt, año y director "title_alt=%s year=%s director=%s)"...' % (title_alt, year, director))
         return search_movie_imdb(title_alt, year=year, director=director)
     
     if search_results is None or len(search_results) == 0:

@@ -114,6 +114,7 @@ class Command(BaseCommand):
 
         not_an_imdb_movie = cd['not_an_imdb_movie']
 
+        trace.debug('\tBuscando "%s (%s)"...' % (r['title'], r['year']))
         facade_result = facade_search(
             title=cd['title'], year=r['year'], 
             title_alt=cd['title_alt'],

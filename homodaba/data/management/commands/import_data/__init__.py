@@ -80,10 +80,16 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     directors = []
 
     if 'director' in ia_movie.keys():
+        warning_no_imd_count = 0
+
         for imdb_person in ia_movie['director']:
             # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
             # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
             # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
+            if imdb_person.myID is None:
+                warning_no_imd_count = warning_no_imd_count + 1
+                continue
+
             lp = get_or_create_person_from_imdb(imdb_person)
 
             if not lp.is_director:
@@ -91,6 +97,9 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
                 lp.save()
             
             directors.append(lp)
+        
+        if warning_no_imd_count > 0:
+            trace.warning('\t\t- Director sin imdb id (%s)' % warning_no_imd_count)
     else:
         trace.warning('\tinsert_movie_from_imdb: No encontramos directores para la pelicula "%s"' % title)
     
@@ -98,7 +107,13 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     writers = []
 
     if 'writer' in ia_movie.keys():
+        warning_no_imd_count = 0
+
         for imdb_person in ia_movie['writer']:
+            if imdb_person.myID is None:
+                warning_no_imd_count = warning_no_imd_count + 1
+                continue
+
             lp = get_or_create_person_from_imdb(imdb_person)
 
             if not lp.is_writer:
@@ -106,6 +121,9 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
                 lp.save()
             
             writers.append(lp)
+
+        if warning_no_imd_count > 0:
+            trace.warning('\t\t- Escritor sin imdb id (%s)' % warning_no_imd_count)
     else:
         trace.warning('\tNo encontramos escritores para la pelicula "%s"' % title)
     
@@ -113,12 +131,19 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     casting = []
 
     if 'cast' in ia_movie.keys():
+        warning_no_imd_count = 0
         i = 0
         for imdb_person in ia_movie['cast']:
             # La alta de personas en la base de datos la hemos limitado para 
             # intentar optimizar un poco el rendimiento. (ver settings para mas 
             # info)
             if not CASTING_LIMIT or i < CASTING_LIMIT:
+                if imdb_person.myID is None:
+                    warning_no_imd_count = warning_no_imd_count + 1
+                    continue
+
+                i = i + 1
+
                 lp = get_or_create_person_from_imdb(imdb_person)
 
                 if not lp.is_actor:
@@ -128,7 +153,9 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
                 casting.append(lp)
             else:
                 break
-            i = i + 1
+
+        if warning_no_imd_count > 0:
+            trace.warning('\t\t- Casting sin imdb id (%s)' % warning_no_imd_count)
     else:
         trace.warning('\tNo encontramos casting para la pelicula "%s"' % title)
 
