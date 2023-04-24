@@ -4,7 +4,7 @@ from data.models import Tag
 from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import facade_search, get_imdb_titles
+from data.utils.imdbpy_facade import facade_search
 
 import csv
 from datetime import datetime
