@@ -28,20 +28,22 @@ IMDB_CACHE_OBJS = get_imdb_cache_objects()
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
 """
 
-# Niveles de precision para el matcheo de resultados de busqueda con el imdb
-class MatchPrecision(Enum): 
-    NONE = 0
-    MID = 1
-    HIGH = 2
-
-match_precision_level = MatchPrecision.NONE
-
 def match_imdb_id(imdb_id, search_results):
     for sr in search_results:
         if sr.movieID == imdb_id:
             return True
     
     return False
+
+def match_imdb_year(year, search_results):
+    year_matches = []
+
+    for sr in search_results:
+        if 'year' in sr and sr['year'] and int(sr['year']) == int(year):
+            year_matches.append(sr)
+        
+    return year_matches
+
 
 # kitty console:
 # def show_imdb_movie_image(imdb_movie):
@@ -58,215 +60,159 @@ Busca resultados exactos o prometedores en imdb
     imdb_movie, un resultado de tipo Cinemagoer.Movie o None si no consigue encontrar uno exacto
     promisings, lista con search results prometedores (ver search_imdb_movies)
 """
-def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kinds=IMDB_VALID_MOVIE_KINDS, precission_level=None):
-    precission_level = match_precision_level if precission_level is None else precission_level
+def match_imdb_movie(title, year=None, title_alt=None, director=None, valid_kinds=IMDB_VALID_MOVIE_KINDS):
     search_results = search_movie_imdb(title, year=year, title_alt=title_alt, director=director)
 
     # TODO: si no encuentra nada con esta busqueda... que podemos hacer?
     if not search_results or len(search_results) == 0:
         return None, []
 
-    trace.debug("match_imdb_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s', valid_kinds=[%s], 'precission_level=%s')" % (
-        title, year, title_alt, director, ','.join(valid_kinds), precission_level)
+    trace.debug("match_imdb_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s', valid_kinds=[%s])" % (
+        title, year, title_alt, director, ','.join(valid_kinds))
     )
+
     trace_results(search_results, mini_info=True)
-    # OJO: sigue despues de los 'def match_*'
 
-    def get_year_matches():
-        year_matches = []
+    # Matches por year:
+    year_matches = match_imdb_year(year=year, search_results=search_results) if year else []
+    is_match_by_year = len(year_matches) > 0
 
-        for sr in search_results:
-            if 'year' in sr and sr['year'] and int(sr['year']) == int(year):
-                year_matches.append(sr)
-            
-        return year_matches
-
-    def match_high_precision():
-        # TODO: Pensando...
-        # todos los campos que se le pasen tiene que coincidir
-        # ademas requerir year?
-        # 
-        # - no se tocan los titulos (solo se convierten a minusculas y se 
-        # quitan los caracteres prohibidos para samba)
-        # - no busca en akas
-        return None, []
+    # Lista temporal donde vamos poniendo los mas prometedores
+    # Si tenemos year_matches, pues ya hemos reducido... si no por defecto 
+    # los resultados de la busqueda de imdb
+    clean_matches = year_matches if is_match_by_year else search_results
     
-    def match_mid_precision():
-        # TODO: Pensando...
-        # todos los campos que se le pasen tiene que coincidir
-        # ya no es obligatorio year?
-        # 
-        # - los titulos se limpian de morralla (tags y otras mierdas)
-        # - no busca en akas
-        return None, []
+    # Matches por director:
+    # Esta logica es un poco raruna pero funciona bien:
+    # Es mas facil encontrar una peli por año y director que por titulo y año
+    # Si el director coincide y el año tambien, es muy probable que sea match
+    # sobre todo si es solo un resultado, ya que un director es raro que 
+    # trabaje en mas de una peli que nos haya sido devuelta por la busqueda
+    # de imdb y filtrado por año
+    director_matches = []
 
-    def match_none_precision():
-        # TODO: Pensando...
-        # con que coincidan 2 campos vale, pero hay que tener en cuenta que title
-        # es obligatorio asi que las combinaciones posibles son:
-        # (year, title) (title, director) (title, year, director)
-        #
-        # - los titulos se limpian de morralla (tags y otras ms)
-        # - busca en akas
+    if not director is None and is_match_by_year:
+        director_matches = match_imdb_movie_by_director(year_matches, director)
+        director_movie_matches = []
 
-        # Matches por year:
-        year_matches = get_year_matches() if year else []
-        is_match_by_year = len(year_matches) > 0
-
-        # Lista temporal donde vamos poniendo los mas prometedores
-        # Si tenemos year_matches, pues ya hemos reducido... si no por defecto 
-        # los resultados de la busqueda de imdb
-        clean_matches = year_matches if is_match_by_year else search_results
+        for sr in director_matches:
+            imdb_movie = get_imdb_movie(sr.movieID)
+            if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
+                director_movie_matches.append(imdb_movie)
         
-        # Matches por director:
-        # Esta logica es un poco raruna pero funciona bien:
-        # Es mas facil encontrar una peli por año y director que por titulo y año
-        # Si el director coincide y el año tambien, es muy probable que sea match
-        # sobre todo si es solo un resultado, ya que un director es raro que 
-        # trabaje en mas de una peli que nos haya sido devuelta por la busqueda
-        # de imdb y filtrado por año
-        director_matches = []
+        # Si encuentra solo uno, lo damos por bueno (ver comentario de arriba)
+        if len(director_movie_matches) == 1:
+            return director_movie_matches[0], search_results
 
-        if not director is None and is_match_by_year:
-            director_matches = match_imdb_movie_by_director(year_matches, director)
-            director_movie_matches = []
+    # Matches por titulo
+    title_matches = []
+    slugify_title = clean_string(title)
 
-            for sr in director_matches:
-                imdb_movie = get_imdb_movie(sr.movieID)
-                if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
-                    director_movie_matches.append(imdb_movie)
-            
-            # Si encuentra solo uno, lo damos por bueno (ver comentario de arriba)
-            if len(director_movie_matches) == 1:
-                return director_movie_matches[0], search_results
+    title_movie_matches = []
 
-        # Matches por titulo
-        title_matches = []
-        slugify_title = clean_string(title)
+    for sr in clean_matches:
+        if clean_string(sr['title']) == slugify_title:
+            if 'kind' in sr and sr['kind'] in valid_kinds:
+                # Solo si hemos encontrado con año
+                if is_match_by_year:
+                    imdb_movie = get_imdb_movie(sr.movieID)
 
-        title_movie_matches = []
+                    if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
+                        title_movie_matches.append(imdb_movie)
+            title_matches.append(sr)
+
+    # Si tenemos solo un match con year, titulo y es una peli valida lo damos
+    # por bueno
+    if len(title_movie_matches) == 1:
+        return title_movie_matches[0], search_results
+
+    # Si no hemos encontrado ningun match por titulo, buscamos en los akas
+    # de los mas prometedores (esto puede tardar un wevete dependiendo
+    # del numero de elementos)
+    if len(title_matches) == 0 or title_alt:
+        clean_titles = [slugify_title]
+        if title_alt:
+            clean_titles.append(clean_string(title_alt))
 
         for sr in clean_matches:
-            if clean_string(sr['title']) == slugify_title:
-                if 'kind' in sr and sr['kind'] in valid_kinds:
-                    # Solo si hemos encontrado con año
-                    if is_match_by_year:
-                        imdb_movie = get_imdb_movie(sr.movieID)
+            # Si el titulo ya esta en title_matches pasamos al siguiente
+            if match_imdb_id(sr.movieID, title_matches):
+                continue
+            
+            for clean_title in clean_titles:
+                imdb_movie = get_imdb_movie(sr.movieID)
+                is_aka_match = False
 
-                        if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
-                            title_movie_matches.append(imdb_movie)
-                title_matches.append(sr)
+                if imdb_movie and 'akas' in imdb_movie.keys():
+                    for aka in imdb_movie['akas']:
+                        # Quitamos el locale del aka y lo limpiamos
+                        clean_aka_title = clean_string(re.sub(r'\(.*\)', '', aka))
+                        if clean_aka_title == clean_title:
+                            title_matches.append(sr)
 
-        # Si tenemos solo un match con year, titulo y es una peli valida lo damos
-        # por bueno
-        if len(title_movie_matches) == 1:
-            return title_movie_matches[0], search_results
-
-        # Si no hemos encontrado ningun match por titulo, buscamos en los akas
-        # de los mas prometedores (esto puede tardar un wevete dependiendo
-        # del numero de elementos)
-        if len(title_matches) == 0 or title_alt:
-            clean_titles = [slugify_title]
-            if title_alt:
-                clean_titles.append(clean_string(title_alt))
-
-            for sr in clean_matches:
-                # Si el titulo ya esta en title_matches pasamos al siguiente
-                if match_imdb_id(sr.movieID, title_matches):
-                    continue
+                            if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
+                                title_movie_matches.append(imdb_movie)
+                            is_aka_match = True
+                            break
                 
-                for clean_title in clean_titles:
-                    imdb_movie = get_imdb_movie(sr.movieID)
-                    is_aka_match = False
+                if is_aka_match:
+                    break
 
-                    if imdb_movie and 'akas' in imdb_movie.keys():
-                        for aka in imdb_movie['akas']:
-                            # Quitamos el locale del aka y lo limpiamos
-                            clean_aka_title = clean_string(re.sub(r'\(.*\)', '', aka))
-                            if clean_aka_title == clean_title:
-                                title_matches.append(sr)
+    # Si tenemos solo un match con year, titulo (ahora por los akas) y 
+    # es una peli valida lo damos por bueno
+    if is_match_by_year and len(title_movie_matches) == 1:
+        return title_movie_matches[0], search_results
 
-                                if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
-                                    title_movie_matches.append(imdb_movie)
-                                is_aka_match = True
-                                break
-                    
-                    if is_aka_match:
-                        break
+    if len(title_matches) > 0:
+        clean_matches = title_matches
 
-        # Si tenemos solo un match con year, titulo (ahora por los akas) y 
-        # es una peli valida lo damos por bueno
-        if is_match_by_year and len(title_movie_matches) == 1:
-            return title_movie_matches[0], search_results
+    # Buscamos matches que sean solo de los tipos que nos interesen
+    movie_matches = []
+    other_matches = []
 
-        if len(title_matches) > 0:
-            clean_matches = title_matches
+    if len(valid_kinds) > 0:
+        for sr in clean_matches:
+            if 'kind' in sr and sr['kind'] in valid_kinds:
+                movie_matches.append(sr)
+            else:
+                other_matches.append(sr)
+    else:
+        movie_matches = clean_matches
 
-        # Buscamos matches que sean solo de los tipos que nos interesen
-        movie_matches = []
-        other_matches = []
+    # Si solo hemos encontrado un movie_matches asumimos que es el bueno 
+    # (si pusimos year)
+    if is_match_by_year and len(movie_matches) == 1:
+        imdb_movie = get_imdb_movie(movie_matches[0].movieID)
 
-        if len(valid_kinds) > 0:
-            for sr in clean_matches:
-                if 'kind' in sr and sr['kind'] in valid_kinds:
-                    movie_matches.append(sr)
-                else:
-                    other_matches.append(sr)
-        else:
-            movie_matches = clean_matches
+        if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
+            return imdb_movie, search_results
+    
+    # llegados a este punto, pueden haber ocurrido varias cosas:
+    #   - El titulo es muy generico y devuelve demasiados matches
+    #   - Algun dato de los introducidos esta mal
+    #   - La busqueda de imdb deja mucho que desear (try google.com)
+    # En resumen, no sabemos como continuar asi que devolvemos
+    # una lista completando con las listas que hemos sacado
+    # intentando ordenar por los mas prometedores
+    promisings = []
 
-        # Si solo hemos encontrado un movie_matches asumimos que es el bueno 
-        # (si pusimos year)
-        if is_match_by_year and len(movie_matches) == 1:
-            imdb_movie = get_imdb_movie(movie_matches[0].movieID)
+    # Ordenamos primero por los ultimos matches (movie_matches)
+    for sr in movie_matches:
+        promisings.append(sr)
+    
+    # Como segunda opcion tenemos los de director
+    for sr in director_matches:
+        promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
 
-            if is_valid_imdb_movie(imdb_movie, valid_kinds=valid_kinds):
-                return imdb_movie, search_results
-        
-        # llegados a este punto, pueden haber ocurrido varias cosas:
-        #   - El titulo es muy generico y devuelve demasiados matches
-        #   - Algun dato de los introducidos esta mal
-        #   - La busqueda de imdb deja mucho que desear (try google.com)
-        # En resumen, no sabemos como continuar asi que devolvemos
-        # una lista completando con las listas que hemos sacado
-        # intentando ordenar por los mas prometedores
-        promisings = []
+    # Como tercera opcion other_matches
+    for sr in other_matches:
+        promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
 
-        # Ordenamos primero por los ultimos matches (movie_matches)
-        for sr in movie_matches:
-            promisings.append(sr)
-        
-        # Como segunda opcion tenemos los de director
-        for sr in director_matches:
-            promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
+    # Por ultimo cogemos el resto de matches
+    for sr in search_results:
+        promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
 
-        # Como tercera opcion other_matches
-        for sr in other_matches:
-            promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
-
-        # Por ultimo cogemos el resto de matches
-        for sr in search_results:
-            promisings.append(sr) if not match_imdb_id(sr.movieID, promisings) else None
-
-        return None, promisings
-
-    # TODO: Ya veremos...
-    # Para cada precision de matcheo, buscamos peli y comprobamos si es la 
-    # precision que queremos, sino encotramos o tenemos una precision menor
-    # pasamos a la siguiente
-    imdb_movie, promisings = match_high_precision()
-
-    if precission_level == MatchPrecision.HIGH or not imdb_movie is None:
-        return imdb_movie, promisings
-
-    imdb_movie, promisings = match_mid_precision()
-
-    if precission_level == MatchPrecision.MID or not imdb_movie is None:
-        return imdb_movie, promisings
-
-    imdb_movie, promisings = match_none_precision()
-
-    return imdb_movie, promisings
+    return None, promisings
 
 def serialize(obj):
     return codecs.encode(pickle.dumps(obj), "base64").decode()
