@@ -220,95 +220,121 @@ def serialize(obj):
 def unserialize(str_obj):
     return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
 
+def get_aka_type_and_value(title_aka_raw):
+    # World-wide (English title)
+    matches = re.search('( World-wide \(.*\))$', title_aka_raw)
+
+    # (original title)
+    if not matches:
+        matches = re.search('( \(.*\))$', title_aka_raw)
+
+    if matches:
+        title_type_match = matches.group(0)
+        title_type_clean = title_type_match.replace('(', '').replace(')', '')
+        title_aka_clean = title_aka_raw.replace(title_type_match, '')
+
+        return title_type_clean, title_aka_clean
+    
+    return None, title_aka_raw
+
+def is_spanish_country(country):
+    spanish_language_countries = [
+        'Mexico', 'Colombia', 'Spain', 'Argentina',
+        'Peru', 'Venezuela', 'Chile', 'Guatemala',
+        'Ecuador', 'Bolivia', 'Cuba',
+        'Dominican Republic', 'Honduras', 'Paraguay',
+        'El Salvador', 'Nicaragua', 'Costa Rica',
+        'Panama', 'Uruguay', 'Equatorial Guinea',
+    ]
+
+    return country in spanish_language_countries
+
 def get_imdb_titles(imdb_movie):
     title_akas = {}
     new_titles = {}
-
+    movie_countries = []
+    is_spanish_movie = False
+    
     if 'countries' in imdb_movie.keys():
         movie_countries = imdb_movie['countries']
 
-        trace.debug(" * Los paises de la pelicula son:")
-        for c in movie_countries:
-            trace.debug("      - %s" % c)
 
-        if 'akas' in imdb_movie.keys():
-            trace.debug(" * Los akas encontrados son:")
-            for full_title_aka in imdb_movie['akas']:
-                trace.debug("      - %s" % full_title_aka)
+    trace.debug(" * Los paises de la pelicula son:")
+    for c in movie_countries:
+        trace.debug("      - %s" % c)
+        if not is_spanish_movie:
+            is_spanish_movie = is_spanish_country(c)
 
-                # (original title)
-                # World-wide (English title)
-                aka_country = None
-                clean_aka_title = None
+    trace.debug(" * Hay algun pais de habla hispana en los paises de la pelicula: %s" % is_spanish_movie)
 
-                if not 'Spain' in movie_countries:
-                    if full_title_aka.endswith(' Spain'):
-                        aka_country = 'Spain'
-                        clean_aka_title = re.sub(r' Spain$', '', full_title_aka)
+    if 'akas' in imdb_movie.keys():
+        trace.debug(" * Los akas encontrados son:")
+        for full_title_aka in imdb_movie['akas']:
+            aka_title_type, clean_aka_title = get_aka_type_and_value(full_title_aka)
+            trace.debug("      - %s [%s]" % (clean_aka_title,  aka_title_type))
 
-                if aka_country is None:
-                    for mc in movie_countries:
-                        if full_title_aka.endswith(' %s' % mc):
-                            aka_country = mc
-                            clean_aka_title = re.sub(r' %s$' % mc, '', full_title_aka)
-
-                if aka_country is None:
-                    if full_title_aka.endswith(' (original title)'):
-                        if not 'title_original' in new_titles:
-                            new_titles['title_original'] = re.sub(r' \(original title\)$', '', full_title_aka)
-                    elif full_title_aka.endswith(' World-wide (English title)'):
-                        if not 'title' in new_titles:
-                            new_titles['title'] = re.sub(r' World-wide \(English title\)$', '', full_title_aka)
-                elif aka_country == 'Spain':
-                    if not 'title_preferred' in new_titles:
-                        new_titles['title_preferred'] = clean_aka_title
-
-                if aka_country:
-                    if not aka_country in title_akas:
-                        title_akas[aka_country] = clean_aka_title
-        
-        if len(new_titles.keys()) == 0:
-            trace.error("No conseguimos encontrar los titulos de la pelicula '%s'. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
-        else:
-            if not 'title' in new_titles:
-                # Que la pelicula no tenga titulo internacional no tiene porque ser un error... 
-                trace.debug("La pelicula '%s' no tiene titulo internacional. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
-                new_titles['title'] = imdb_movie['title']
-                """
-                if 'title_original' in new_titles:
-                    new_titles['title'] = new_titles['title_original']
-                else:
-                    new_titles['title'] = new_titles['title_preferred']
-                """
-
-            if not 'title_original' in new_titles:
-                trace.error("La pelicula '%s' no tiene titulo original. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
-                if 'title' in new_titles:
-                    new_titles['title_original'] = new_titles['title']
-                else:
-                    new_titles['title_original'] = new_titles['title_preferred']
+            if aka_title_type == 'original title':
+                title_akas[aka_title_type] = clean_aka_title
+            else:
+                mc_match = False
+                for mc in movie_countries:
+                    if aka_title_type == mc:
+                        title_akas[aka_title_type] = clean_aka_title
+                        mc_match = True
+                    elif mc in aka_title_type:
+                        title_akas[aka_title_type] = clean_aka_title
+                        mc_match = True
                 
-            if not 'title_preferred' in new_titles:
-                # Puede que se trate de una peli que el titulo original ya esta en 
-                # spanish, por eso no te aparece en el aka
-                is_spanish_movie = False
-                for c in imdb_movie['countries']:
-                    if c == 'Spain' or c == 'Argentina':
-                        is_spanish_movie = True
+                # Idioma preferido:
+                if not mc_match and aka_title_type == 'Spain':
+                    title_akas[aka_title_type] = clean_aka_title
+    
+    new_titles['title'] = imdb_movie['title']
 
-                if not is_spanish_movie:
-                    # Que la peli no tenga titulo en español no tiene porque ser un error
-                    # muchas no lo tienen, aunque es un buen indicativo de que la peli
-                    # puede estar mal capturada... (sobre todo si se trata de una peli
-                    # popular)
-                    trace.debug("La pelicula '%s' no tiene titulo en español. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
-                
-                if 'title' in new_titles:
-                    new_titles['title_preferred'] = new_titles['title']
-                else:
-                    new_titles['title_preferred'] = new_titles['title_original']
+    if 'original title' in title_akas:
+        new_titles['title_original'] = title_akas['original title']
     else:
-        trace.error("La pelicula '%s' no tiene pais. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
+        new_titles['title_original'] = imdb_movie['original title']
+    
+    if 'Spain' in title_akas:
+        new_titles['title_preferred'] = title_akas['Spain']
+    else:
+        for mc in movie_countries:
+            if is_spanish_country(mc) and mc in title_akas:
+                new_titles['title_preferred'] = title_akas[mc]
+
+    if not 'title' in new_titles:
+        # Que la pelicula no tenga titulo internacional no tiene porque ser un error... 
+        trace.debug("La pelicula '%s' no tiene titulo internacional. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
+        new_titles['title'] = imdb_movie['title']
+        """
+        if 'title_original' in new_titles:
+            new_titles['title'] = new_titles['title_original']
+        else:
+            new_titles['title'] = new_titles['title_preferred']
+        """
+
+    if not 'title_original' in new_titles:
+        trace.error("La pelicula '%s' no tiene titulo original. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
+        if 'title' in new_titles:
+            new_titles['title_original'] = new_titles['title']
+        else:
+            new_titles['title_original'] = new_titles['title_preferred']
+        
+    if not 'title_preferred' in new_titles:
+        # Puede que se trate de una peli que el titulo original ya esta en 
+        # spanish, por eso no te aparece en el aka
+        if not is_spanish_movie:
+            # Que la peli no tenga titulo en español no tiene porque ser un error
+            # muchas no lo tienen, aunque es un buen indicativo de que la peli
+            # puede estar mal capturada... (sobre todo si se trata de una peli
+            # popular)
+            trace.debug("La pelicula '%s' no tiene titulo en español. [imdb_id='%s']" % (imdb_movie['title'], imdb_movie.getID()))
+        
+        if 'title' in new_titles:
+            new_titles['title_preferred'] = new_titles['title']
+        else:
+            new_titles['title_preferred'] = new_titles['title_original']
 
     return new_titles, title_akas
 
