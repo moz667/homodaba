@@ -1,4 +1,5 @@
 ## Pendientes
+1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
 1. [ ] Favicon
 1. [ ] Cambiar la nomenclatura de las variables de entorno que se usan en la app para que empiecen todas con HDB_. Esto nos daria pistas para a simple vista ver si se trata de una variable de nuestra app o por el contrario es una variable de algun otro servicio.
 1. [ ] Quitar todo el tema este de variables para compartir por http e incluirlo en la importacion como un tipo de storage_type mas
