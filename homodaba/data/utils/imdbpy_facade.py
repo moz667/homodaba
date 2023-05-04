@@ -275,18 +275,15 @@ def get_imdb_titles(imdb_movie):
 
             if aka_title_type == 'original title':
                 title_akas[aka_title_type] = clean_aka_title
-            else:
+            elif not aka_title_type is None:
                 mc_match = False
                 for mc in movie_countries:
-                    if aka_title_type == mc:
-                        title_akas[aka_title_type] = clean_aka_title
-                        mc_match = True
-                    elif mc in aka_title_type:
+                    if aka_title_type.lower() == mc.lower():
                         title_akas[aka_title_type] = clean_aka_title
                         mc_match = True
                 
                 # Idioma preferido:
-                if not mc_match and aka_title_type == 'Spain':
+                if not mc_match and aka_title_type.lower() == 'spain':
                     title_akas[aka_title_type] = clean_aka_title
     
     new_titles['title'] = imdb_movie['title']
