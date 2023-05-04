@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
+BASE_DIR = Path(os.getenv('BASE_DIR', '/opt/app'))
 
 # TODO: Quitar todo el tema este de variables para compartir por http
 # e incluirlo en la importacion como un tipo de storage_type mas
@@ -119,7 +119,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-             os.path.join(BASE_DIR, 'homodaba/templates'),
+             os.path.join(BASE_DIR, 'homodaba/homodaba/templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -142,7 +142,7 @@ WSGI_APPLICATION = 'homodaba.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 # Por defecto sqlite3
-SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "../sqlite"))
+SQLITE_ROOT = Path(os.getenv("SQLITE_ROOT", "/opt/app/sqlite"))
 
 DATABASES = {
     'default': {
@@ -221,7 +221,7 @@ USE_TZ = True
 
 # STATIC_URL = '/static/'
 
-STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / '../static/publish')
+STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / 'static/publish')
 
 # Variable para mapear la app dentro de un directorio (para el reverse proxy)
 # Por ejemplo, para publicar detras de un proxy en https://example.com/homodaba
@@ -233,7 +233,7 @@ HOME_URL_PATH = os.getenv('HOME_URL_PATH', '')
 STATIC_URL = os.getenv('STATIC_URL', '/%sstatic/' % HOME_URL_PATH)
 
 STATICFILES_DIRS = [
-    ('homodaba', BASE_DIR / os.getenv('STATIC_BUILD', '../static/build')),
+    ('homodaba', BASE_DIR / os.getenv('STATIC_BUILD', 'static/build')),
 ]
 
 # Por ahora no usamos uploads, pero en un futuro... who knows!
