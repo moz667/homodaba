@@ -21,7 +21,7 @@ RUN apk add build-base libxml2-dev libxslt-dev
 RUN pip3 install -r homodaba/requirements.txt
 
 ADD homodaba/ /src/
-COPY --from=gulp /src/build /src/static/build
+COPY --from=gulp /src/build /opt/app/static/build
 RUN mkdir -p "$STATIC_ROOT" && python manage.py collectstatic --no-input
 
 # final stage
@@ -30,7 +30,7 @@ FROM nginx
 COPY docker/proxy/nginx.conf /etc/nginx/nginx.conf
 COPY --from=django /tmp/static /www/public/static
 
-HEALTHCHECK CMD curl --fail http://localhost:80/ || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:80/static/homodaba || exit 1
 
 RUN gzip -6 -k $(find /www/public -name *.html -o -name *.css -o -name *.js -o -name *.svg -o -name *.ico)
 
