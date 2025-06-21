@@ -29,6 +29,19 @@ El nombre viene de la afficción de @bpk667 a dar por saco... (es coña ^ _ ^ vi
     python homodaba/manage.py import_csv --csv-file /opt/app/import/library.csv -v 3
     ```
 
+## Docker registry
+
+Ejemplo de registro de imagen: https://hub.docker.com/r/moz667/homodaba
+
+```bash
+# Construccion basica, sqlite sin florituras
+docker build -t moz667/homodaba:latest-mini \
+    -f docker/app/Dockerfile .
+
+# Push
+docker push moz667/homodaba:latest-mini
+```
+
 
 ## Tareas pendientes
 [Lista de tareas pendientes](./todo.md)
