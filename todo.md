@@ -1,3 +1,23 @@
+
+## Update de cinemagoer a 2025.5.19 (git)
+
+**In progress**
+
+Con la ultima importacion he visto que no se estaba añadiendo portadas ni directores ni actores, revisando distintas opciones, vi que [imdbapi.dev](https://imdbapi.dev/) podría ser una mejora considerable, pero requiere que cambiemos bastante codigo.
+
+Revisando tambien la actual libreria que estamos usando de [cinemagoer](https://github.com/cinemagoer/cinemagoer), tiene actualizaciones pero no esta generando relases y te recomienda que uses el repo directamente.
+
+Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas por arreglar:
+
+* [ ] No aparece ya el campo `original title` en el detalle de la pelicula. *Lo he corregido parcialmente haciendo que sea un campo opcional*
+* [ ] Problemas al recuperar el casting (No encuentra directores, escritores, ni actores)
+* [ ] No encuentra el pais
+* [ ] No encuentra los campos de tageo:
+  * [ ] `genre`
+  * [ ] `cr_system`
+* [ ] Las dimensiones del poster son diferentes a los que teniamos antes (forzar ancho a `180px`)
+* [ ] Al olvidar de poner el año en una pelicula, no recupera los datos de imdb incluso teniendo el id del imdb *Esto seguramente ocurriera ya antes, pero me he dado cuenta haciendo esta prueba*
+
 ## Pendientes
 1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
 1. [ ] Favicon
