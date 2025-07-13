@@ -14,7 +14,7 @@ WORKDIR /opt/app
 
 # Instalacion basica (django + sqlite):
 ADD homodaba/requirements.txt /opt/app/homodaba/requirements.txt
-RUN apk add build-base libxml2-dev libxslt-dev sqlite
+RUN apk add build-base libxml2-dev libxslt-dev sqlite git
 RUN pip3 install -r homodaba/requirements.txt
 
 # Mysql:
