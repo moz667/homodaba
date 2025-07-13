@@ -290,8 +290,10 @@ def get_imdb_titles(imdb_movie):
 
     if 'original title' in title_akas:
         new_titles['title_original'] = title_akas['original title']
-    else:
+    elif 'original title' in imdb_movie:
         new_titles['title_original'] = imdb_movie['original title']
+    else:
+        new_titles['title_original'] = imdb_movie['title']
     
     if 'Spain' in title_akas:
         new_titles['title_preferred'] = title_akas['Spain']
