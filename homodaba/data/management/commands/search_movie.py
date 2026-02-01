@@ -53,8 +53,9 @@ class Command(BaseCommand):
         print(m.summary)
         print('')
 
+        print('* title="%s"' % m.title)
         print('* title_original="%s"' % m.title_original)
-        print('* title_preferred="%s"' % m.title_original)
+        print('* title_preferred="%s"' % m.title_preferred)
         print('* kind="%s"' % m.kind)
         
         print('* poster_url="%s"' % m.poster_url)

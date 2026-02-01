@@ -89,14 +89,17 @@ class FacadeMovie:
             # {'iso_3166_1': 'TH', 'title': 'X', 'type': ''}
             # type npi de para que se usa
             for at in alternative_titles['titles']:
-                if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 and SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1[at['iso_3166_1']] == 'Spain':
+                if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 and at['iso_3166_1'] == 'ES' and (at['type'] == 'Castilian title' or at['type'] == ''):
                     self.title_preferred = at['title']
 
             if self.title_preferred is None:
-                for at in alternative_titles:
+                for at in alternative_titles['titles']:
                     if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
                         self.title_preferred = at['title']
             
+            if self.title_preferred is None:
+                self.title_preferred = self.title_original
+
             for at in alternative_titles['titles']:
                 if not at['iso_3166_1'] in self.title_akas.keys():
                     self.title_akas[at['iso_3166_1']] = at['title']
