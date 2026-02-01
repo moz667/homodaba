@@ -51,6 +51,31 @@ class FacadeMovie:
     # tmdb_fields
     release_date = None
 
+    def __init__(self):
+        self.title = None
+        self.title_original = None
+        self.title_preferred = None
+        self.imdb_id = None
+        self.tmdb_id = None
+        self.kind = Movie.MK_MOVIE
+        self.summary = None
+        self.poster_url = None
+        self.poster_thumbnail_url = None
+        self.year = None
+        self.rating = None
+        self.title_akas = {}
+        self.tags = []
+        self.genres = []
+        self.content_rating_systems = []
+        self.directors = []
+        self.writers = []
+        self.actors = []
+        self.countries = []
+
+        # tmdb_fields
+        self.release_date = None
+
+
     def populate_from_tmdb_movie(self, m):
         self.tmdb_id = m.id
 
@@ -107,7 +132,7 @@ class FacadeMovie:
             for p in m_credits['crew']:
                 if p['job'] == 'Director':
                     self.directors.append(dictionary_to_facade_credit(p))
-                elif p['job'] == 'Writer':
+                elif p['job'] == 'Writer' or p['job'] == 'Novel' or p['job'] == 'Screenplay':
                     self.writers.append(dictionary_to_facade_credit(p))
         
         if m_credits and 'cast' in m_credits:

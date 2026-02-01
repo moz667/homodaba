@@ -75,7 +75,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
         title, year, title_alt, director)
     )
 
-    trace_results(facade_movie_results, mini_info=True)
+    trace_results(facade_movie_results)
 
     # Matches por year:
     facade_result_year_matches = facade_result_match_imdb_year(year=year, facade_search_results=facade_movie_results) if year else []
@@ -99,8 +99,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
         facade_director_matches = match_imdb_movie_by_director(facade_result_year_matches, director)
         director_movie_matches = []
 
-        for sr in facade_director_matches:
-            facade_movie = get_facade_movie(tmdb_id=sr.tmdb_id)
+        for facade_movie in facade_director_matches:
             if is_valid_imdb_movie(facade_movie):
                 director_movie_matches.append(facade_movie)
         
@@ -114,16 +113,14 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
 
     title_movie_matches = []
 
-    for sr in facade_clean_matches:
-        if clean_string(sr.title) == slugify_title:
-            if sr.kind == Movie.MK_MOVIE:
+    for facade_movie in facade_clean_matches:
+        if clean_string(facade_movie.title) == slugify_title:
+            if facade_movie.kind == Movie.MK_MOVIE:
                 # Solo si hemos encontrado con año
                 if is_match_by_year:
-                    facade_movie = get_facade_movie(tmdb_id=sr.tmdb_id)
-
                     if is_valid_imdb_movie(facade_movie):
                         title_movie_matches.append(facade_movie)
-            facade_title_matches.append(sr)
+            facade_title_matches.append(facade_movie)
 
     # Si tenemos solo un match con year, titulo y es una peli valida lo damos
     # por bueno
@@ -138,13 +135,12 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
         if title_alt:
             clean_titles.append(clean_string(title_alt))
 
-        for sr in facade_clean_matches:
+        for facade_movie in facade_clean_matches:
             # Si el titulo ya esta en title_matches pasamos al siguiente
-            if match_imdb_id(sr.imdb_id, facade_title_matches):
+            if match_imdb_id(facade_movie.imdb_id, facade_title_matches):
                 continue
             
             for clean_title in clean_titles:
-                facade_movie = get_facade_movie(tmdb_id=sr.tmdb_id)
                 is_aka_match = False
 
                 if len(facade_movie.title_akas) > 0:
@@ -152,7 +148,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
                         # Quitamos el locale del aka y lo limpiamos
                         clean_aka_title = clean_string(re.sub(r'\(.*\)', '', aka))
                         if clean_aka_title == clean_title:
-                            facade_title_matches.append(sr)
+                            facade_title_matches.append(facade_movie)
 
                             if is_valid_imdb_movie(facade_movie):
                                 title_movie_matches.append(facade_movie)
@@ -171,15 +167,15 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
         facade_clean_matches = facade_title_matches
 
     # Buscamos matches que sean solo de los tipos que nos interesen
-    movie_matches = []
+    facade_movie_matches = []
     other_matches = []
 
-    movie_matches = facade_clean_matches
+    facade_movie_matches = facade_clean_matches
 
-    # Si solo hemos encontrado un movie_matches asumimos que es el bueno 
+    # Si solo hemos encontrado un facade_movie_matches asumimos que es el bueno 
     # (si pusimos year)
-    if is_match_by_year and len(movie_matches) == 1:
-        facade_movie = get_facade_movie(movie_matches[0].tmdb_id)
+    if is_match_by_year and len(facade_movie_matches) == 1:
+        facade_movie = facade_movie_matches[0]
 
         if is_valid_imdb_movie(facade_movie):
             return facade_movie, facade_movie_results
@@ -193,8 +189,8 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # intentando ordenar por los mas prometedores
     promisings = []
 
-    # Ordenamos primero por los ultimos matches (movie_matches)
-    for sr in movie_matches:
+    # Ordenamos primero por los ultimos matches (facade_movie_matches)
+    for sr in facade_movie_matches:
         promisings.append(sr)
     
     # Como segunda opcion tenemos los de director
@@ -400,7 +396,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
         return None
     
     trace.debug('\t\t- Buscando en imdb "title=%s year=%s title_alt=%s director=%s"...' % (title, year, title_alt, director))
-    facade_movie, search_results = match_facade_movie(
+    facade_movie, facade_search_results = match_facade_movie(
         title, year, title_alt=title_alt, 
         director=director
     )
@@ -414,7 +410,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
         return FacadeResult.local_data(local_movies[0])
     
-    if search_results is None or len(search_results) == 0:
+    if facade_search_results is None or len(facade_search_results) == 0:
         return None
     
 
@@ -422,7 +418,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     # sacamos un mensaje y devolvemos None
     trace.debug(" * No encontramos coincidencia clara para la peli '%s (%s)' *" % (title, year))
     trace.debug(" * Aunque hemos encontrado las siguientes: *")
-    trace_results(search_results, mini_info=True)
+    trace_results(facade_search_results)
 
     return None
 
@@ -446,12 +442,11 @@ def slugify_directors(director_field):
 def match_imdb_movie_by_director(facade_search_results, director):
     matches = []
 
-    for sr in facade_search_results:
-        facade_movie = get_facade_movie(tmdb_id=sr.tmdb_id)
+    for facade_movie in facade_search_results:
         if len(facade_movie.directors) > 0:
             # Con que coincida un director damos la pelicula como buena
             if match_director(director, facade_movie.directors):
-                matches.append(sr)
+                matches.append(facade_movie)
     
     # Llegados a este punto no hemos encontrado ninguna coincidencia decente
     # asi que lo damos por perdido
@@ -488,20 +483,10 @@ def is_valid_imdb_movie(facade_movie: FacadeMovie):
     
     return True
 
-def trace_results(search_results, mini_info=False):
+def trace_results(facade_search_results):
     if trace.is_debug():
-        for sr in search_results:
-            trace.debug("  - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'] if 'year' in sr and sr['year'] else 'None', sr.imdb_id, sr.imdb_id))
-            if not mini_info:
-                movie = get_facade_movie(tmdb_id=sr.tmdb_id)
-                if 'director' in movie.keys():
-                    trace.debug("      DIRECTORES:")
-                    movie_directors = [clean_string(p['name']) for p in movie['director']]
-                    for director in movie_directors:
-                        trace.debug("        * '%s'" % director)
-                trace.debug("      TIPO DE PELICULA: '%s'" % sr.kind if sr.kind else '')
-                trace.debug("      PORTADA: '%s'" % movie['full-size cover url'] if 'full-size cover url' in movie.keys() and movie['full-size cover url'] else '')
-
+        for sr in facade_search_results:
+            trace.debug("  - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr.title, sr.year, sr.imdb_id, sr.imdb_id))
             # kitty console:
             # show_imdb_movie_image(movie)
 
