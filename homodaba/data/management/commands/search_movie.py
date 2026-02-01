@@ -38,15 +38,15 @@ class Command(BaseCommand):
         cd = clean_csv_data(r)
         
         facade_result = facade_search(
-            title=cd['title'], year=r['year'], 
+            title=cd['title'], year=r['year'], exclude_local_data=True
         )
+
+        if facade_result is None or facade_result.movie is None:
+            print('No encontramos la pelicula')
+            return
 
         m = facade_result.movie
 
-        if m is None:
-            print('No encontramos la pelicula')
-            return
-        
         print('## %s (%s) imdb_id="%s" tmdb_id="%s"' % (m.title, m.year, m.imdb_id, m.tmdb_id))
 
         print('')

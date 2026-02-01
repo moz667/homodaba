@@ -19,7 +19,6 @@ SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 = {
     'CR': 'Costa Rica', 'PA': 'Panama', 'UY': 'Uruguay', 'GQ': 'Equatorial Guinea'
 }
 
-
 class FacadeCredit:
     id = None
     name = None
@@ -92,13 +91,17 @@ class FacadeMovie:
                 if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 and at['iso_3166_1'] == 'ES' and (at['type'] == 'Castilian title' or at['type'] == ''):
                     self.title_preferred = at['title']
 
+            if self.title_preferred is None and 'ES' in m.origin_country:
+                self.title_preferred = self.title_original
+
             if self.title_preferred is None:
+                
                 for at in alternative_titles['titles']:
                     if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
                         self.title_preferred = at['title']
             
             if self.title_preferred is None:
-                self.title_preferred = self.title_original
+                self.title_preferred = self.title
 
             for at in alternative_titles['titles']:
                 if not at['iso_3166_1'] in self.title_akas.keys():
