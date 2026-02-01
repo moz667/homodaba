@@ -29,8 +29,9 @@ class Command(BaseCommand):
 
     """
     def add_arguments(self, parser):
-        parser.add_argument('--title', nargs='+', type=str, help="""Titulo a buscar.""")
-        parser.add_argument('--year', nargs='+', type=str, help="""Año a buscar.""")
+        parser.add_argument('--title', nargs='*', type=str, help="""Titulo a buscar.""")
+        parser.add_argument('--year', nargs='*', type=str, help="""Año a buscar.""")
+        parser.add_argument('--imdb_id', nargs='*', type=str, help="""Por imdb id.""")
 
     def search_and_print(self, r, force_check_imdb_id=True):
         trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
@@ -38,7 +39,8 @@ class Command(BaseCommand):
         cd = clean_csv_data(r)
         
         facade_result = facade_search(
-            title=cd['title'], year=r['year'], exclude_local_data=True
+            title=cd['title'], year=r['year'], imdb_id=r['imdb_id'],
+            exclude_local_data=True
         )
 
         if facade_result is None or facade_result.movie is None:
@@ -124,17 +126,26 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        if not 'title' in options or not options['title'] or not options['title'][0]:
-            self.print_help('manage.py', __name__)
-            return
+        title = None
+        if 'title' in options and options['title'] and options['title'][0]:
+            title = options['title'][0]
 
-        if not 'year' in options or not options['year'] or not options['year'][0]:
+        year = None
+        if 'year' in options and options['year'] and options['year'][0]:
+            year = options['year'][0]
+        
+        imdb_id = None
+        if 'imdb_id' in options and options['imdb_id'] and options['imdb_id'][0]:
+            imdb_id = options['imdb_id'][0]
+        
+        if not title and not year and not imdb_id:
             self.print_help('manage.py', __name__)
             return
 
         query = {}
-        query['title'] = options['title'][0]
-        query['year'] = options['year'][0]
+        query['title'] = title
+        query['year'] = year
+        query['imdb_id'] = imdb_id
 
         self.search_and_print(query, True)
 

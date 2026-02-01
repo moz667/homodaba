@@ -255,12 +255,18 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
     
     facade_movie = FacadeMovie()
 
-    if not tmdb_id is None:
-        facade_movie = convert_tmdb_movie2facade_movie(get_tmdb_movie(tmdb_id=tmdb_id))
-    else:
-        # TODO: Hacer busqueda por imdb_id
-        raise NotImplementedError
+    if not imdb_id is None:
+        find_results = tmdb.Find(id=imdb_id).info(external_source='imdb_id')
+        if 'movie_results' in find_results:
+            if len(find_results['movie_results']) < 1 or not 'id' in find_results['movie_results'][0]:
+                raise Exception(message="Movie not found on find by imdb_id")
+            elif len(find_results['movie_results']) > 1:
+                raise Exception(message="Too many results on find by imdb_id")
+            
+            tmdb_id = find_results['movie_results'][0]['id']
 
+    facade_movie = convert_tmdb_movie2facade_movie(get_tmdb_movie(tmdb_id=tmdb_id))
+    
     if not NO_CACHE or UPDATE_CACHE:
         IMDB_CACHE_OBJS.create(
             imdb_id=imdb_id if not imdb_id is None else tmdb_id,
@@ -343,13 +349,13 @@ def clean_string(value):
     s = re.sub(r'[\.:;,\-\[\]\(\)\{\}¿¡]+', ' ', value)
     return re.sub(r'-', ' ', slugify(s))
 
-def facade_get(imdb_id):
-    movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all()
+def facade_get(imdb_id, exclude_local_data=False):
+    movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all() if not exclude_local_data else []
     
     if movies_local_data.count() == 1:
         return FacadeResult.local_data(movies_local_data[0])
     else:
-        return FacadeResult.imdb_data(get_facade_movie(imdb_id))
+        return FacadeResult.imdb_data(get_facade_movie(imdb_id=imdb_id))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
     storage_name=None, path=None, imdb_id=None, not_an_imdb_movie=False, exclude_local_data=False):
