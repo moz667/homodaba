@@ -10,41 +10,34 @@ Revisando tambien la actual libreria que estamos usando de [cinemagoer](https://
 Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas por arreglar:
 
 
-
+## Tareas usando nuevas APIs
 
 * [ ] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
-  * [ ] El problema de tmdb es que no tiene imdbid
+  * [X] ~~El problema de tmdb es que no tiene imdbid~~ Si tiene, se puede buscar por el inclusive
   * [ ] titulo original en caracteres latinos
-  * [ ] titulo internacional
-  * [ ] titulo en castellano
-  * [ ] posibilidad de buscar por titulo y año para acotar
-  * [ ] poster
-  * [ ] directores
-  * [ ] escritores
-  * [ ] actores
-  * [ ] poster: 'https://image.tmdb.org/t/p/w600_and_h900_face/p96dm7sCMn4VYAStA6siNz30G1r.jpg'
-  * [ ] Que en la busqueda tengamos
-    * [ ] Directores
-    * [ ] imdb_id
-```python
->>> matrix_find = tmdb.Find('tt0133093')
->>> matrix_find.info(external_source='imdb_id')
-{'movie_results': [{'adult': False, 'backdrop_path': '/tlm8UkiQsitc8rSuIAscQDCnP8d.jpg', 'id': 603, 'title': 'The Matrix', 'original_title': 'The Matrix', 'overview': 'Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.', 'poster_path': '/p96dm7sCMn4VYAStA6siNz30G1r.jpg', 'media_type': 'movie', 'original_language': 'en', 'genre_ids': [28, 878], 'popularity': 22.9277, 'release_date': '1999-03-31', 'video': False, 'vote_average': 8.237, 'vote_count': 27283}], 'person_results': [], 'tv_results': [], 'tv_episode_results': [], 'tv_season_results': []}
-```
-    * [ ] titulo original
-    * [ ] titulo internacional
-  * [ ] Que en el detalle tengamos
-    * [ ] Coger peli por imdb_id
-    * [ ] 
-* [ ] No aparece ya el campo `original title` en el detalle de la pelicula. *Lo he corregido parcialmente haciendo que sea un campo opcional*
-* [ ] Problemas al recuperar el casting (No encuentra directores, escritores, ni actores)
-* [ ] No encuentra el pais
-* [ ] No encuentra los campos de tageo:
-  * [ ] `genre`
-  * [ ] `cr_system`
-* [ ] Las dimensiones del poster son diferentes a los que teniamos antes (forzar ancho a `180px`)
-* [ ] Al olvidar de poner el año en una pelicula, no recupera los datos de imdb incluso teniendo el id del imdb *Esto seguramente ocurriera ya antes, pero me he dado cuenta haciendo esta prueba*
+  * [X] titulo internacional
+  * [X] titulo en castellano
+  * [X] posibilidad de buscar por titulo y año para acotar
+  * [X] poster
+  * [X] directores
+  * [X] escritores
+  * [X] actores
+  * [X] Que en la busqueda tengamos
+    * [ ] ~~Directores~~ No tiene
+    * [ ] ~~imdb_id~~ No tiene
+    * [ ] ~~titulo original~~ No tiene
+    * [X] titulo internacional
+    * Con el id conseguimos el resto de datos (en el detalle de la peli)
+  * [X] Que en el detalle tengamos
+    * [X] ~~Coger peli por imdb_id~~ No lo tiene pero se puede conseguir el id de tmdb buscando por imdb_id (con `Find`)
 
+* [ ] Pruebas
+  * [X] Nuevo comando de busqueda
+  * [ ] Probar el resto de la aplicacion (que ponemos aqui?)
+
+* [ ] Casos extremos (para luego):
+  * [ ] It 1990 (tv mini-serie)
+    * [ ] Se encuentra por imdb_id (`https://api.themoviedb.org/3/movie/1618880?api_key=<API_KEY>`) pero no tiene casi informacion ¿que hacemos?
 
 ## Pendientes
 1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
