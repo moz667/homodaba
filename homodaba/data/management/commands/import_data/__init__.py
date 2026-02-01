@@ -4,7 +4,8 @@ from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, Genre
 from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import get_imdb_titles, get_imdb_movie
+from data.utils.imdbpy_facade import get_facade_movie
+from data.utils.facade_model import FacadeMovie
 
 from data.management.commands.utils import normalize_age_certificate
 
@@ -80,14 +81,14 @@ def is_valid_imdb_person_for_insert(imdb_person):
         imdb_person['name'] and 'canonical name' in imdb_person.keys() and \
         imdb_person['canonical name']
 
-def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_preferred=None):
+def insert_movie_from_imdb(title, facade_movie:FacadeMovie, tags=[], title_original=None, title_preferred=None):
     # 2.2.4) Para cada uno de los directores
     directors = []
 
-    if 'director' in ia_movie.keys():
+    if len(facade_movie.directors) > 0:
         warning_not_valid_person = 0
 
-        for imdb_person in ia_movie['director']:
+        for imdb_person in facade_movie.directors:
             # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
             # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
             # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
@@ -111,10 +112,10 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
     writers = []
 
-    if 'writer' in ia_movie.keys():
+    if len(facade_movie.writers) > 0:
         warning_not_valid_person = 0
 
-        for imdb_person in ia_movie['writer']:
+        for imdb_person in facade_movie.writers:
             if not is_valid_imdb_person_for_insert(imdb_person):
                 warning_not_valid_person = warning_not_valid_person + 1
                 continue
@@ -135,10 +136,10 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
     # 2.2.5) Para cada uno de casting (lo mismo que para directores)
     casting = []
 
-    if 'cast' in ia_movie.keys():
+    if len(facade_movie.actors) > 0:
         warning_not_valid_person = 0
         i = 0
-        for imdb_person in ia_movie['cast']:
+        for imdb_person in facade_movie.actors:
             # La alta de personas en la base de datos la hemos limitado para 
             # intentar optimizar un poco el rendimiento. (ver settings para mas 
             # info)
@@ -168,29 +169,22 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
         directors=directors, writers=writers, casting=casting
     )
 
-    new_titles, title_akas = get_imdb_titles(ia_movie)
-    
-    if not title_original and 'title_original' in new_titles and new_titles['title_original']:
-        title_original = new_titles['title_original']
-
-    if not title_preferred and 'title_preferred' in new_titles and new_titles['title_preferred']:
-        title_preferred = new_titles['title_preferred']
-
     # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
     local_movie = Movie.objects.create(
-        title=new_titles['title'] if 'title' in new_titles and new_titles['title'] else title,
-        title_original=title_original,
-        title_preferred=title_preferred,
-        imdb_id=ia_movie.getID(),
-        kind=ia_movie['kind'],
-        summary=ia_movie.summary(),
-        poster_url=ia_movie['full-size cover url'] if 'full-size cover url' in ia_movie.keys() else None,
-        poster_thumbnail_url=ia_movie['cover url'] if 'cover url' in ia_movie.keys() else None,
-        year=ia_movie['year'],
-        rating=ia_movie['rating'] if 'rating' in ia_movie.keys() else None,
+        title=facade_movie.title,
+        title_original=facade_movie.title_original,
+        title_preferred=facade_movie.title_preferred,
+        imdb_id=facade_movie.imdb_id,
+        kind=facade_movie.kind,
+        summary=facade_movie.summary,
+        poster_url=facade_movie.poster_url,
+        poster_thumbnail_url=facade_movie.poster_thumbnail_url,
+        year=facade_movie.year,
+        rating=facade_movie.rating,
     )
 
-    if len(title_akas.keys()) > 0:
+    if len(facade_movie.title_akas) > 0:
+        title_akas = facade_movie.title_akas
         for country in title_akas.keys():
             trace.debug("    - %s [%s]" % (title_akas[country], country))
         
@@ -214,33 +208,23 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
             local_movie.title_akas.add(db_title_aka)
     
     # Completando paises de la peli
-    populate_countries(local_movie, ia_movie)
+    populate_countries(local_movie, facade_movie=facade_movie)
 
-    if 'genres' in ia_movie.keys():
-        for tag in ia_movie['genres']:
-            local_movie.genres.add(
-                get_first_or_create_tag(
-                    GenreTag, name=tag
-                )
+    for tag in facade_movie.genres:
+        local_movie.genres.add(
+            get_first_or_create_tag(
+                GenreTag, name=tag
             )
+        )
 
-    if 'certificates' in ia_movie.keys():
-        valid_certs = []
-        if len(ia_movie['certificates']) > 0:
-            for c in ia_movie['certificates']:
-                if c and c.startswith('United States:'):
-                    valid_cert = c.replace('United States:', '')
-                    if not valid_cert in valid_certs:
-                        valid_certs.append(valid_cert)
-
-        if len(valid_certs) > 0:
-            for vc in valid_certs:
-                vc_tag = get_first_or_create_tag(
-                    ContentRatingTag, name=normalize_age_certificate(vc)
-                )
-
-                if not vc_tag in local_movie.content_rating_systems.all():
-                    local_movie.content_rating_systems.add(vc_tag)
+    if len(facade_movie.content_rating_systems) > 0:
+        for c in facade_movie.content_rating_systems:
+            vc_tag = get_first_or_create_tag(
+                ContentRatingTag, name=normalize_age_certificate(vc)
+            )
+            
+            if not vc_tag in local_movie.content_rating_systems.all():
+                local_movie.content_rating_systems.add(vc_tag)
         else:
             trace.warning('No se encontraron clasificaciones de edad para "%s"' % local_movie.get_complete_title())
 
@@ -258,14 +242,15 @@ def insert_movie_from_imdb(title, ia_movie, tags=[], title_original=None, title_
 
     return local_movie
 
-def populate_countries(local_movie, imdb_movie=None):
-    if imdb_movie is None and local_movie.imdb_id:
-        imdb_movie = get_imdb_movie(local_movie.imdb_id)
+def populate_countries(local_movie, facade_movie: FacadeMovie=None):
+    if facade_movie is None and local_movie.imdb_id:
+        facade_movie = get_facade_movie(local_movie.imdb_id)
     
-    if imdb_movie and 'countries' in imdb_movie.keys() and len(imdb_movie['countries']) > 0:
+    if len(facade_movie.countries) > 0:
         trace.debug(" * Añadiendo paises para la peli:")
-        for c in imdb_movie['countries']:
+        for c in facade_movie.countries:
             trace.debug("    - %s" % c)
+            # TODO: Convertir desde iso a nombre
             local_movie.countries.add(get_or_create_country(
                 country=c
             ))

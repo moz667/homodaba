@@ -16,6 +16,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(os.getenv('BASE_DIR', '/opt/app'))
 
+# TMDB Api
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
 # TODO: Quitar todo el tema este de variables para compartir por http
 # e incluirlo en la importacion como un tipo de storage_type mas
 SMB_SHARE_2_URL = {}
@@ -38,13 +41,6 @@ TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))
 
 # Numero de elementos en la pagina de busqueda de peliculas
 ADMIN_MOVIE_LIST_PER_PAGE = int(os.getenv("ADMIN_MOVIE_LIST_PER_PAGE", "100"))
-
-# Tipos de pelicula que consideramos buenos. [por defecto: movie]
-# imdb tiene muchos tipos: movie, tv movie, video... en principio
-# esta guay usar solo movie para las peliculas porque es una forma
-# sencilla de filtrar los resultados de las busquedas para encontrar
-# buenos matches en el casos de peliculas (usando solo movie)
-IMDB_VALID_MOVIE_KINDS = os.getenv("IMDB_VALID_MOVIE_KINDS", 'movie').split(',')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/

@@ -1,23 +1,11 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.utils.translation import gettext as _
-from django.utils.text import slugify
-
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag
+from data.models import Movie, MovieStorageType
 
 from data.utils.imdbpy_facade import clean_string, match_director
 from data.utils import Trace as trace
 
-from imdb import Cinemagoer
-
-import csv
-from datetime import datetime
 from distutils.util import strtobool
 import json
 import re
-import sys
-from time import sleep
 
 """
 Divide un nombre de archivo (sin ruta) en partes diferenciadas
@@ -173,53 +161,3 @@ def trace_validate_imdb_movie(ia_movie, title, director=None):
                 # Esto es para que revises tu csv!!!
                 trace.info("\tNo encontramos el/los director/es '%s' en IMDB para la pelicula '%s'" % (director, title))
 
-
-"""
-Busqueda interactiva.
-
-TODO: No se esta usando pero lo dejamos por aqui por si queremos retomarlo
-TODO: Si lo volvemos a usar, utilizar la cache
-def interactive_imdb_search(title, year, title_alt=None):
-    ia = Cinemagoer(reraiseExceptions=True)
-    search_results = ia.search_movie('%s (%s)' % (title, year))
-            
-    if len(search_results) == 0:
-        search_results = ia.search_movie(title)
-    
-    if len(search_results) == 0 and title_alt:
-        return interactive_imdb_search(title_alt, year)
-
-    if len(search_results) > 0:
-        print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, year))
-        i = 1
-        for sr in search_results:
-            print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
-            i = i + 1
-        print("\tn) Para continuar con el siguiente")
-        print("\tq) Para salir")
-
-        input_return = ''
-        while not input_return:
-            input_return = input("")
-
-            if input_return == 'q':
-                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                exit()
-            elif input_return == 'n':
-                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                return None
-            else:
-                try:
-                    input_return = int(input_return)
-                    if not (input_return > 0 and input_return <= len(search_results)):
-                        trace.error("\tEse valor no es posible.")
-                        input_return = ""
-                except ValueError:
-                    trace.error("\tEse valor no es posible.")
-                    input_return = ""
-        
-        return search_results[int(input_return) - 1]
-    
-    # No encontramos ni una...
-    return None
-"""

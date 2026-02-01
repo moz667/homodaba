@@ -1,3 +1,51 @@
+
+## Update de cinemagoer a 2025.5.19 (git)
+
+**In progress**
+
+Con la ultima importacion he visto que no se estaba añadiendo portadas ni directores ni actores, revisando distintas opciones, vi que [imdbapi.dev](https://imdbapi.dev/) podría ser una mejora considerable, pero requiere que cambiemos bastante codigo.
+
+Revisando tambien la actual libreria que estamos usando de [cinemagoer](https://github.com/cinemagoer/cinemagoer), tiene actualizaciones pero no esta generando relases y te recomienda que uses el repo directamente.
+
+Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas por arreglar:
+
+
+
+
+* [ ] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
+  * [ ] El problema de tmdb es que no tiene imdbid
+  * [ ] titulo original en caracteres latinos
+  * [ ] titulo internacional
+  * [ ] titulo en castellano
+  * [ ] posibilidad de buscar por titulo y año para acotar
+  * [ ] poster
+  * [ ] directores
+  * [ ] escritores
+  * [ ] actores
+  * [ ] poster: 'https://image.tmdb.org/t/p/w600_and_h900_face/p96dm7sCMn4VYAStA6siNz30G1r.jpg'
+  * [ ] Que en la busqueda tengamos
+    * [ ] Directores
+    * [ ] imdb_id
+```python
+>>> matrix_find = tmdb.Find('tt0133093')
+>>> matrix_find.info(external_source='imdb_id')
+{'movie_results': [{'adult': False, 'backdrop_path': '/tlm8UkiQsitc8rSuIAscQDCnP8d.jpg', 'id': 603, 'title': 'The Matrix', 'original_title': 'The Matrix', 'overview': 'Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.', 'poster_path': '/p96dm7sCMn4VYAStA6siNz30G1r.jpg', 'media_type': 'movie', 'original_language': 'en', 'genre_ids': [28, 878], 'popularity': 22.9277, 'release_date': '1999-03-31', 'video': False, 'vote_average': 8.237, 'vote_count': 27283}], 'person_results': [], 'tv_results': [], 'tv_episode_results': [], 'tv_season_results': []}
+```
+    * [ ] titulo original
+    * [ ] titulo internacional
+  * [ ] Que en el detalle tengamos
+    * [ ] Coger peli por imdb_id
+    * [ ] 
+* [ ] No aparece ya el campo `original title` en el detalle de la pelicula. *Lo he corregido parcialmente haciendo que sea un campo opcional*
+* [ ] Problemas al recuperar el casting (No encuentra directores, escritores, ni actores)
+* [ ] No encuentra el pais
+* [ ] No encuentra los campos de tageo:
+  * [ ] `genre`
+  * [ ] `cr_system`
+* [ ] Las dimensiones del poster son diferentes a los que teniamos antes (forzar ancho a `180px`)
+* [ ] Al olvidar de poner el año en una pelicula, no recupera los datos de imdb incluso teniendo el id del imdb *Esto seguramente ocurriera ya antes, pero me he dado cuenta haciendo esta prueba*
+
+
 ## Pendientes
 1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
 1. [ ] Favicon

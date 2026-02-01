@@ -32,122 +32,94 @@ class Command(BaseCommand):
         parser.add_argument('--title', nargs='+', type=str, help="""Titulo a buscar.""")
         parser.add_argument('--year', nargs='+', type=str, help="""Año a buscar.""")
 
-    def get_csv_imdb_json_data(self, r, force_check_imdb_id=True):
+    def search_and_print(self, r, force_check_imdb_id=True):
         trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
-
-        not_an_imdb_movie = False
-        if 'not_an_imdb_movie' in cd:
-            if isinstance(cd['not_an_imdb_movie'], str) and cd['not_an_imdb_movie']:
-                not_an_imdb_movie = strtobool(cd['not_an_imdb_movie'])
-            elif cd['not_an_imdb_movie']:
-                not_an_imdb_movie = True
-
-
+        
         facade_result = facade_search(
             title=cd['title'], year=r['year'], 
-            # title_alt=cd['title_alt'],
-            # director=cd['director'],
-            # storage_type=cd['storage_type'],
-            # storage_name=cd['storage_name'],
-            # path=cd['path'],
-            # imdb_id=cd['imdb_id'],
-            # not_an_imdb_movie=not_an_imdb_movie
         )
 
-        if not facade_result:
-            trace.error('Parece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
-            return None
-
-        # Si ya hemos puesto el imdb_id no tiene sentido comprobar, la damos 
-        # por bueba
-        if not force_check_imdb_id and cd['imdb_id']:
-            return None
-        
-        json_obj = {}
-        json_obj['csv_info'] = {}
-        json_obj['db_info'] = {}
-        json_obj['csv_info'] = {
-            'title': cd['title'],
-            'title_preferred': cd['title_alt'],
-            'year': cd['year'],
-            'director': cd['director'],
-        }
         m = facade_result.movie
 
-        directors = []
+        if m is None:
+            print('No encontramos la pelicula')
+            return
+        
+        print('## %s (%s) imdb_id="%s" tmdb_id="%s"' % (m.title, m.year, m.imdb_id, m.tmdb_id))
 
-        if facade_result.is_local_data:
-            json_obj['db_info']['title'] = m.title
-            json_obj['db_info']['imdb_id'] = m.imdb_id
-            json_obj['db_info']['db_id'] = m.id
-            json_obj['db_info']['year'] = m.year
+        print('')
+        print(m.summary)
+        print('')
 
-            for d in m.get_directors():
-                directors.append({
-                    'db_id': d.id,
-                    'name': d.name,
-                    'canonical_name': d.canonical_name,
-                    'imdb_id': d.imdb_id,
-                })
+        print('* title_original="%s"' % m.title_original)
+        print('* title_preferred="%s"' % m.title_original)
+        print('* kind="%s"' % m.kind)
+        
+        print('* poster_url="%s"' % m.poster_url)
+        print('* poster_thumbnail_url="%s"' % m.poster_thumbnail_url)
+        print('* rating="%s"' % m.rating)
+
+        print ('* Title AKAS:')
+        if len(m.title_akas) > 0:
+            for country in m.title_akas.keys():
+                print('    - %s (%s)' % (m.title_akas[country], country))
         else:
-            trace.warning('La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
+            print ('    - No tiene title AKAS')
 
-            json_obj['db_info']['title'] = m['title']
-            json_obj['db_info']['imdb_id'] = m.getID()
-            json_obj['db_info']['db_id'] = None
-            json_obj['db_info']['year'] = int(m['year'])
+        print ('* Tags:')
+        if len(m.tags) > 0:
+            for t in m.tags:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene tags')
 
-            if 'director' in m.keys():
-                for imdb_director in m['director']:
-                    local_db_directors = Person.objects.filter(imdb_id=imdb_director.getID()).all()
-                    local_db_director = local_db_directors[0] if local_db_directors.count() > 0 else None
+        print ('* Genres:')
+        if len(m.genres) > 0:
+            for t in m.genres:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene genres')
 
-                    if local_db_director is None:
-                        directors.append({
-                            'db_id': None,
-                            'name': imdb_director['name'],
-                            'canonical_name': imdb_director['canonical_name'],
-                            'imdb_id': imdb_director.getID(),
-                        })
-                    else:
-                        directors.append({
-                            'db_id': local_db_director.id,
-                            'name': local_db_director.name,
-                            'canonical_name': local_db_director.canonical_name,
-                            'imdb_id': local_db_director.imdb_id,
-                        })
+        print ('* Content rating systems:')
+        if len(m.content_rating_systems) > 0:
+            for t in m.content_rating_systems:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene content rating systems')
 
-        json_obj['db_info']['directors'] = directors
+        print ('* Directores:')
+        if len(m.directors) > 0:
+            for fc in m.directors:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene directores')
 
-        has_error = False
+        print ('* Escritores:')
+        if len(m.writers) > 0:
+            for fc in m.writers:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene escritores')
 
-        if clean_string(json_obj['db_info']['title']) != clean_string(cd['title']):
-            trace.warning(" - No coincide el titulo csv:'%s' db:'%s'." % (cd['title'], json_obj['db_info']['title']))
-            has_error = True
+        print ('* Actores:')
+        if len(m.actors) > 0:
+            for fc in m.actors:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene actores')
 
-        if not cd['year']:
-            trace.warning(" - No esta definido el año en el csv para la pelicula '%s'." % cd['title'])
-            has_error = True
 
-        if json_obj['db_info']['year'] != int(cd['year']):
-            trace.warning(" - No coincide el año en la pelicula '%s'. csv:'%s' db:'%s'." % (cd['title'], cd['year'], json_obj['db_info']['year']))
-            has_error = True
+        print ('* Paises:')
+        if len(m.countries) > 0:
+            for t in m.countries:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene paises')
 
-        has_director_error = False
-        if 'director' in cd and cd['director']:
-            if not match_director(cd['director'], json_obj['db_info']['directors']):
-                trace.warning(" - No hemos encontrado el/los director/es '%s' para la pelicula '%s'." % (cd['director'], cd['title']))
-                has_error = True
-                has_director_error = True
 
-        if has_director_error:
-            trace.warning(" - Los directores de la pelicula '%s' son:" % cd['title'])
-            for cur_director in json_obj['db_info']['directors']:
-                trace.warning("\t * '%s'." % cur_director['name'])
 
-        return json_obj if has_error else None
 
 
     def handle(self, *args, **options):
@@ -163,8 +135,6 @@ class Command(BaseCommand):
         query['title'] = options['title'][0]
         query['year'] = options['year'][0]
 
-        cur_movie = self.get_csv_imdb_json_data(query, True)
-
-        print(cur_movie)
+        self.search_and_print(query, True)
 
 

@@ -8,7 +8,7 @@ from data.models import Movie, TitleAka, MoviePerson, Tag, Country
 from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
 
 from data.utils import trace
-from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles
+from data.utils.imdbpy_facade import get_facade_movie
 
 from .import_data import populate_countries
 
@@ -236,18 +236,15 @@ def populate_casting(movie):
         movie.save()
 
 def clean_title_and_akas(movie):
-    title_akas = {}
-    new_titles = {}
+    title_akas = []
+    new_titles = []
 
     if movie.imdb_id:
-        imdb_movie = get_imdb_movie(movie.imdb_id)
+        facade_movie = get_facade_movie(movie.imdb_id)
         
-        new_titles, title_akas = get_imdb_titles(imdb_movie)
-
-        if len(title_akas.keys()) > 0:
-            trace.debug(" * Los akas para la pelicula '%s' son:" % movie.title)
-
+        if len(facade_movie.title_akas) > 0:
             movie.title_akas.clear()
+            title_akas = facade_movie.title_akas
 
             for country in title_akas.keys():
                 trace.debug("    - %s [%s]" % (title_akas[country], country))

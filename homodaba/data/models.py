@@ -6,12 +6,11 @@ from django.db.models import Q
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from imdb.utils import KIND_MAP
-
 from homodaba.settings import SMB_SHARE_2_URL, DATABASES
 
 from data.utils import trace
 
+# TODO: Refactorizar para admitir los ids de tmdb
 class ImdbCache(models.Model):
     imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
     search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
