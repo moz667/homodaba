@@ -258,10 +258,9 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
     if not imdb_id is None:
         find_results = tmdb.Find(id=imdb_id).info(external_source='imdb_id')
         if 'movie_results' in find_results:
-            if len(find_results['movie_results']) < 1 or not 'id' in find_results['movie_results'][0]:
-                raise Exception(message="Movie not found on find by imdb_id")
-            elif len(find_results['movie_results']) > 1:
-                raise Exception(message="Too many results on find by imdb_id")
+            if len(find_results['movie_results']) < 1 or not 'id' in find_results['movie_results'][0] \
+                or len(find_results['movie_results']) > 1:
+                return None
             
             tmdb_id = find_results['movie_results'][0]['id']
     
