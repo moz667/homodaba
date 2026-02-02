@@ -446,23 +446,33 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     return None
 
+"""
+TODO: funcion privada
+"""
 def reverse_name(name):
     first = name.split()[0]
     second = " ".join(name.split()[1::])
     reverse_name = " ".join([second, first])
     return reverse_name
 
+"""
+TODO: funcion privada
+"""
 def slugify_directors(director_field):
     directors = []
 
     if director_field:
         for director_name in director_field.split(','):
             directors.append(clean_string(director_name))
+            # TODO: Esto es posible que no sea ya necesario... Investigar
             # Añadimos el director con "Nombre Apellidos" como "Apellidos Nombre" para directores asiáticos
             directors.append(clean_string(reverse_name(director_name)))
     
     return directors
 
+"""
+TODO: funcion privada
+"""
 def match_imdb_movie_by_director(facade_search_results, director):
     matches = []
 
@@ -507,6 +517,9 @@ def is_valid_imdb_movie(facade_movie: FacadeMovie):
     
     return True
 
+"""
+TODO: funcion privada
+"""
 def trace_results(facade_search_results):
     if trace.is_debug():
         for sr in facade_search_results:
@@ -514,6 +527,9 @@ def trace_results(facade_search_results):
             # kitty console:
             # show_imdb_movie_image(movie)
 
+"""
+TODO: funcion privada
+"""
 def search_movie_imdb(title, year=None, title_alt=None, director=None):
     search_results = None
     clean_title = clean_string(title)
@@ -566,6 +582,9 @@ def search_movie_imdb(title, year=None, title_alt=None, director=None):
     
     return search_results
 
+"""
+TODO: funcion privada
+"""
 def search_movie_local_data(title, year, title_alt=None, director=None):
     query_title = Q(title__iexact=title)
     query_title.add(Q(title_original__iexact=title), Q.OR)
