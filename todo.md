@@ -35,9 +35,26 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
   * [X] Nuevo comando de busqueda
   * [ ] Probar el resto de la aplicacion (que ponemos aqui?)
 
-* [ ] Casos extremos (para luego):
-  * [ ] It 1990 (tv mini-serie)
-    * [ ] Se encuentra por imdb_id (`https://api.themoviedb.org/3/movie/1618880?api_key=<API_KEY>`) pero no tiene casi informacion ¿que hacemos?
+* [ ] Problemas:
+  * [ ] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
+
+* [X] Casos extremos (para luego):
+  * [X] It 1990 (tv mini-serie) **Pass**
+    * [X] Se encuentra por imdb_id (`https://api.themoviedb.org/3/movie/1618880?api_key=<API_KEY>`) pero no tiene casi informacion ¿que hacemos?
+      * Buscando por tv (es una mini serie de 2 episodios) la encuentra y tiene first_air_date que podria valer en vez de release_date...
+      * `https://api.themoviedb.org/3/search/tv?query=It&include_adult=false&language=en-US&page=1&year=1990&api_key=<API_KEY>`
+      * Pero no tiene director en los creditos
+      * `https://api.themoviedb.org/3/tv/19614/credits?language=en-US&api_key=<API_KEY>`
+      * Asi que los problemas que veo son que al usar los datos de tv son:
+        * Las estructuras de datos respecto a movie son muy distintos
+        * No comparten id (son diferentes el id de tv que el de movie)
+        * No veo datos completos (no hay director, ni escritor)
+      * Conclusion: Vamos a pasar de TV por ahora
+    * [X] El faro, 1998 (`NO_CACHE=1 python3 ./manage.py search_movie --title "El faro" --year 1998`)
+      * Apaña buscando por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt0168749`
+    * [X] Ifigenia, 1968 (`NO_CACHE=1 python3 ./manage.py search_movie --title "Ifigenia" --year 1968`)
+      * No se encuentra por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt6696960` 
+      * Va a pasar lo mismo que con It, al ser de TV (visto en [imdb](https://www.imdb.com/title/tt6696960/)) pasamos por ahora 
 
 ## Pendientes
 1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
