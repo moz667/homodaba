@@ -74,7 +74,6 @@ class FacadeMovie:
         # tmdb_fields
         self.release_date = None
 
-
     def populate_from_tmdb_movie(self, m):
         self.tmdb_id = m.id
 
@@ -91,21 +90,21 @@ class FacadeMovie:
                 if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 and at['iso_3166_1'] == 'ES' and (at['type'] == 'Castilian title' or at['type'] == ''):
                     self.title_preferred = at['title']
 
-            if self.title_preferred is None and 'ES' in m.origin_country:
+            if self.title_preferred is None and len(m.origin_country) == 1 \
+                and m.origin_country[0] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
                 self.title_preferred = self.title_original
 
             if self.title_preferred is None:
-                
                 for at in alternative_titles['titles']:
                     if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
                         self.title_preferred = at['title']
             
-            if self.title_preferred is None:
-                self.title_preferred = self.title
-
             for at in alternative_titles['titles']:
                 if not at['iso_3166_1'] in self.title_akas.keys():
                     self.title_akas[at['iso_3166_1']] = at['title']
+
+        if self.title_preferred is None:
+            self.title_preferred = self.title
 
         self.imdb_id = m_info['imdb_id'] if 'imdb_id' in m_info and m_info['imdb_id'] else None
 
@@ -118,7 +117,8 @@ class FacadeMovie:
         self.poster_thumbnail_url = 'https://image.tmdb.org/t/p/w780%s' % m_info['poster_path'] if 'poster_path' in m_info else None
         self.poster_url = 'https://image.tmdb.org/t/p/original%s' % m_info['poster_path'] if 'poster_path' in m_info else None
 
-        self.year = datetime.fromisoformat(m_info['release_date']).year if 'release_date' in m_info else None
+        self.year = datetime.fromisoformat(m_info['release_date']).year
+            
         self.rating = m_info['vote_average'] if 'vote_average' in m_info else None
 
         if 'belongs_to_collection' in m_info and m_info['belongs_to_collection']:
@@ -161,3 +161,15 @@ def dictionary_to_facade_credit(p):
 
     return fc
 
+def is_valid_tmdb_movie(m):
+    if not m.id:
+        return False
+    
+    m_info = m.info()
+
+    if not m_info or not 'title' in m_info or not m_info['title'] \
+        or not m.original_title or not 'release_date' in m_info \
+        or not m_info['release_date']:
+        return False
+    
+    return True

@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.utils.text import slugify
 
 from data.models import Movie, MovieStorageType, get_imdb_cache_objects
-from .facade_model import FacadeMovie
+from .facade_model import FacadeMovie, is_valid_tmdb_movie
 
 import tmdbsimple as tmdb
 import requests
@@ -264,8 +264,13 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
                 raise Exception(message="Too many results on find by imdb_id")
             
             tmdb_id = find_results['movie_results'][0]['id']
-
-    facade_movie = convert_tmdb_movie2facade_movie(get_tmdb_movie(tmdb_id=tmdb_id))
+    
+    tmdb_movie = get_tmdb_movie(tmdb_id=tmdb_id)
+    
+    if not is_valid_tmdb_movie(tmdb_movie):
+        return None
+    
+    facade_movie = convert_tmdb_movie2facade_movie(tmdb_movie)
     
     if not NO_CACHE or UPDATE_CACHE:
         IMDB_CACHE_OBJS.create(
