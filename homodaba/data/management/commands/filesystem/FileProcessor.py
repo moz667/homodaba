@@ -386,9 +386,9 @@ class FileProcessor(object):
 
                 if len(posible_facade_movies) > 0:
                     print(" * Aunque hemos encontrado las siguientes: *")
-                    for sr in posible_facade_movies:
+                    for facade_movie in posible_facade_movies:
                         print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (
-                            sr.title, sr.year, sr.imdb_id, sr.imdb_id
+                            facade_movie.title, facade_movie.year, facade_movie.imdb_id, facade_movie.imdb_id
                         ))
 
         return facade_movie, posible_facade_movies

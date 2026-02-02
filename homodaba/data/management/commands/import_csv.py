@@ -12,7 +12,7 @@ import sys
 
 from .utils import trace_validate_imdb_movie, clean_csv_data, csv_validate
 
-from .import_data import get_or_insert_storage, insert_movie_from_imdb, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
+from .import_data import get_or_insert_storage, insert_movie_from_facade_movie, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -155,7 +155,7 @@ class Command(BaseCommand):
         else:
             trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
 
-            local_movie = insert_movie_from_imdb(
+            local_movie = insert_movie_from_facade_movie(
                 r['title'],
                 facade_result.movie, 
                 tags=tags, 

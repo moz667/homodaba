@@ -5,7 +5,7 @@ from data.models import get_first_or_create_tag, get_or_create_country, populate
 
 from data.utils import Trace as trace
 from data.utils.imdbpy_facade import get_facade_movie
-from data.utils.facade_model import FacadeMovie
+from data.utils.facade_model import FacadeMovie, FacadeCredit
 
 from data.management.commands.utils import normalize_age_certificate
 
@@ -21,8 +21,8 @@ def get_or_create_person_not_an_imdb_movie(name):
         imdb_id=None,
     )
 
-def get_or_create_person_from_imdb(imdb_person):
-    local_persons = Person.objects.filter(imdb_id=imdb_person.getID()).all()
+def get_or_create_person_from_facade_credit(facade_credit: FacadeCredit):
+    local_persons = Person.objects.filter(imdb_id=facade_credit.id).all()
 
     if local_persons.count() > 0:
         return local_persons[0]
@@ -30,20 +30,24 @@ def get_or_create_person_from_imdb(imdb_person):
     # Es posible que se haya dado de alta el tipo antes (Con una peli que 
     # no este en el imdb). Para estas actualizamos los datos y devolvemos
     # el primero que encontremos
-    local_persons = Person.objects.filter(name=imdb_person['name'], imdb_id=None).all()
+    local_persons = Person.objects.filter(name=facade_credit.name, imdb_id=None).all()
     if local_persons.count() > 0:
         for lp in local_persons:
-            lp.canonical_name = imdb_person['canonical name']
-            lp.imdb_id = imdb_person.getID()
+            lp.canonical_name = facade_credit.canonical_name
+            lp.imdb_id = facade_credit.id
+            lp.avatar_thumbnail_url = facade_credit.avatar_thumbnail_url
+            lp.avatar_url = facade_credit.avatar_url
 
             lp.save()
         
         return local_persons[0]
 
     return Person.objects.create(
-        name=imdb_person['name'],
-        canonical_name=imdb_person['canonical name'],
-        imdb_id=imdb_person.getID(),
+        name=facade_credit.name,
+        canonical_name=facade_credit.canonical_name,
+        imdb_id=facade_credit.id,
+        avatar_thumbnail_url=facade_credit.avatar_thumbnail_url,
+        avatar_url=facade_credit.avatar_url,
     )
 
 def get_or_insert_storage(movie, is_original=True, storage_type=None, storage_name=None, path=None, resolution=None, media_format=None, version=None):
@@ -76,27 +80,26 @@ def get_or_insert_storage(movie, is_original=True, storage_type=None, storage_na
         version=version,
     )
 
-def is_valid_imdb_person_for_insert(imdb_person):
-    return imdb_person.getID() and 'name' in imdb_person.keys() and \
-        imdb_person['name'] and 'canonical name' in imdb_person.keys() and \
-        imdb_person['canonical name']
+def is_valid_facade_credit_for_insert(facade_credit: FacadeCredit):
+    return facade_credit.id and 'name' in facade_credit.name \
+        and facade_credit.canonical_name
 
-def insert_movie_from_imdb(title, facade_movie:FacadeMovie, tags=[], title_original=None, title_preferred=None):
+def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], title_original=None, title_preferred=None):
     # 2.2.4) Para cada uno de los directores
     directors = []
 
     if len(facade_movie.directors) > 0:
         warning_not_valid_person = 0
 
-        for imdb_person in facade_movie.directors:
+        for facade_credit in facade_movie.directors:
             # 2.2.4.1) Buscamos si lo tenemos dado de alta (imdb_id)
             # 2.2.4.1.1) Si lo tenemos dado de alta lo recuperamos de la bbdd
             # 2.2.4.1.2) Si no, lo damos de alta las personas implicadas con los datos basicos (sin recuperar detalle)
-            if not is_valid_imdb_person_for_insert(imdb_person):
+            if not is_valid_facade_credit_for_insert(facade_credit):
                 warning_not_valid_person = warning_not_valid_person + 1
                 continue
 
-            lp = get_or_create_person_from_imdb(imdb_person)
+            lp = get_or_create_person_from_facade_credit(facade_credit)
 
             if not lp.is_director:
                 lp.is_director = True
@@ -107,7 +110,7 @@ def insert_movie_from_imdb(title, facade_movie:FacadeMovie, tags=[], title_origi
         if warning_not_valid_person > 0:
             trace.warning('\t\t- Director no valido (%s)' % warning_not_valid_person)
     else:
-        trace.warning('\tinsert_movie_from_imdb: No encontramos directores para la pelicula "%s"' % title)
+        trace.warning('\tinsert_movie_from_facade_movie: No encontramos directores para la pelicula "%s"' % title)
     
     # 2.2.5) Para cada uno de los escritores (lo mismo que para directores)
     writers = []
@@ -115,12 +118,12 @@ def insert_movie_from_imdb(title, facade_movie:FacadeMovie, tags=[], title_origi
     if len(facade_movie.writers) > 0:
         warning_not_valid_person = 0
 
-        for imdb_person in facade_movie.writers:
-            if not is_valid_imdb_person_for_insert(imdb_person):
+        for facade_credit in facade_movie.writers:
+            if not is_valid_facade_credit_for_insert(facade_credit):
                 warning_not_valid_person = warning_not_valid_person + 1
                 continue
 
-            lp = get_or_create_person_from_imdb(imdb_person)
+            lp = get_or_create_person_from_facade_credit(facade_credit)
 
             if not lp.is_writer:
                 lp.is_writer = True
@@ -139,18 +142,18 @@ def insert_movie_from_imdb(title, facade_movie:FacadeMovie, tags=[], title_origi
     if len(facade_movie.actors) > 0:
         warning_not_valid_person = 0
         i = 0
-        for imdb_person in facade_movie.actors:
+        for facade_credit in facade_movie.actors:
             # La alta de personas en la base de datos la hemos limitado para 
             # intentar optimizar un poco el rendimiento. (ver settings para mas 
             # info)
             if not CASTING_LIMIT or i < CASTING_LIMIT:
-                if not is_valid_imdb_person_for_insert(imdb_person):
+                if not is_valid_facade_credit_for_insert(facade_credit):
                     warning_not_valid_person = warning_not_valid_person + 1
                     continue
 
                 i = i + 1
 
-                lp = get_or_create_person_from_imdb(imdb_person)
+                lp = get_or_create_person_from_facade_credit(facade_credit)
 
                 if not lp.is_actor:
                     lp.is_actor = True

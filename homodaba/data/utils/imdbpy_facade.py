@@ -32,6 +32,9 @@ IMDB_CACHE_OBJS = get_imdb_cache_objects()
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
 """
 
+"""
+TODO: funcion privada
+"""
 def match_imdb_id(imdb_id, facade_search_results):
     for sr in facade_search_results:
         if sr.imdb_id == imdb_id:
@@ -39,6 +42,9 @@ def match_imdb_id(imdb_id, facade_search_results):
     
     return False
 
+"""
+TODO: funcion privada
+"""
 def facade_result_match_imdb_year(year, facade_search_results):
     facade_result_year_matches = []
 
@@ -205,40 +211,17 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
 
     return None, promisings
 
+"""
+TODO: funcion privada
+"""
 def serialize(obj):
     return codecs.encode(pickle.dumps(obj), "base64").decode()
 
+"""
+TODO: funcion privada
+"""
 def unserialize(str_obj):
     return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
-
-def get_aka_type_and_value(title_aka_raw):
-    # World-wide (English title)
-    matches = re.search('( World-wide \(.*\))$', title_aka_raw)
-
-    # (original title)
-    if not matches:
-        matches = re.search('( \(.*\))$', title_aka_raw)
-
-    if matches:
-        title_type_match = matches.group(0)
-        title_type_clean = title_type_match.replace('(', '').replace(')', '')
-        title_aka_clean = title_aka_raw.replace(title_type_match, '')
-
-        return title_type_clean, title_aka_clean
-    
-    return None, title_aka_raw
-
-def is_spanish_country(country):
-    spanish_language_countries = [
-        'Mexico', 'Colombia', 'Spain', 'Argentina',
-        'Peru', 'Venezuela', 'Chile', 'Guatemala',
-        'Ecuador', 'Bolivia', 'Cuba',
-        'Dominican Republic', 'Honduras', 'Paraguay',
-        'El Salvador', 'Nicaragua', 'Costa Rica',
-        'Panama', 'Uruguay', 'Equatorial Guinea',
-    ]
-
-    return country in spanish_language_countries
 
 def get_facade_movie(imdb_id=None, tmdb_id=None):
     if not imdb_id and not tmdb_id:
@@ -279,15 +262,42 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
 
     return facade_movie
 
+"""
+TODO: funcion privada
+"""
 def get_tmdb_movie(tmdb_id):
-    # TODO: Cachear...
-    return tmdb.Movies(tmdb_id)
+    if not NO_CACHE:
+        cache_key = 'get_tmdb_movie(%s)' % tmdb_id
+        cache_data = IMDB_CACHE_OBJS.filter(search_query=cache_key).all()
 
+        if cache_data.count() > 0:
+            if not UPDATE_CACHE:
+                return unserialize(cache_data[0].raw_data)
+            else:
+                IMDB_CACHE_OBJS.filter(search_query=cache_key).delete()
+    
+    tmdb_movie = tmdb.Movies(tmdb_id)
+
+    if not NO_CACHE or UPDATE_CACHE:
+        cache_key = 'get_tmdb_movie(%s)' % tmdb_id
+        IMDB_CACHE_OBJS.create(
+            search_query=cache_key,
+            raw_data=serialize(tmdb_movie)
+        )
+    
+    return tmdb_movie
+
+"""
+TODO: funcion privada
+"""
 def convert_tmdb_movie2facade_movie(tmdb_movie):
     fm = FacadeMovie()
     fm.populate_from_tmdb_movie(tmdb_movie)
     return fm
 
+"""
+TODO: funcion privada
+"""
 def search_imdb_movies(search_query, title=None, year=None):
     if not NO_CACHE:
         cache_data = IMDB_CACHE_OBJS.filter(search_query=search_query).all()
@@ -323,7 +333,9 @@ def search_imdb_movies(search_query, title=None, year=None):
 
     return imdb_results
 
-
+"""
+TODO: Revisar esta clase (solo se usa aqui pero se devuelve en alguna func)
+"""
 class FacadeResult:
     is_local_data = False
     is_imdb_data = False
@@ -353,6 +365,9 @@ def clean_string(value):
     s = re.sub(r'[\.:;,\-\[\]\(\)\{\}¿¡]+', ' ', value)
     return re.sub(r'-', ' ', slugify(s))
 
+"""
+TODO: Ojo con esta func, no me gusta que devuelva dos tipos de objeto distintos... cuidadito
+"""
 def facade_get(imdb_id, exclude_local_data=False):
     movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all() if not exclude_local_data else []
     

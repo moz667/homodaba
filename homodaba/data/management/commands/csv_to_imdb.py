@@ -1,10 +1,8 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils.translation import gettext as _
-from django.utils.text import slugify
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag
+from data.models import Person
 
 from data.utils import Trace as trace
 from data.utils.imdbpy_facade import facade_search, match_director, clean_string
@@ -134,30 +132,29 @@ class Command(BaseCommand):
         else:
             trace.warning('La pelicula "%s (%s)" no se encuentra en la base de datos.' % (r['title'], r['year']))
 
-            json_obj['db_info']['title'] = m['title']
-            json_obj['db_info']['imdb_id'] = m.getID()
+            json_obj['db_info']['title'] = m.title
+            json_obj['db_info']['imdb_id'] = m.imdb_id
             json_obj['db_info']['db_id'] = None
-            json_obj['db_info']['year'] = int(m['year'])
+            json_obj['db_info']['year'] = int(m.year)
 
-            if 'director' in m.keys():
-                for imdb_director in m['director']:
-                    local_db_directors = Person.objects.filter(imdb_id=imdb_director.getID()).all()
-                    local_db_director = local_db_directors[0] if local_db_directors.count() > 0 else None
+            for d in m.directors:
+                local_db_directors = Person.objects.filter(imdb_id=d.id).all()
+                local_db_director = local_db_directors[0] if local_db_directors.count() > 0 else None
 
-                    if local_db_director is None:
-                        directors.append({
-                            'db_id': None,
-                            'name': imdb_director['name'],
-                            'canonical_name': imdb_director['canonical_name'],
-                            'imdb_id': imdb_director.getID(),
-                        })
-                    else:
-                        directors.append({
-                            'db_id': local_db_director.id,
-                            'name': local_db_director.name,
-                            'canonical_name': local_db_director.canonical_name,
-                            'imdb_id': local_db_director.imdb_id,
-                        })
+                if local_db_director is None:
+                    directors.append({
+                        'db_id': None,
+                        'name': d.name,
+                        'canonical_name': d.canonical_name,
+                        'imdb_id': d.id,
+                    })
+                else:
+                    directors.append({
+                        'db_id': local_db_director.id,
+                        'name': local_db_director.name,
+                        'canonical_name': local_db_director.canonical_name,
+                        'imdb_id': local_db_director.imdb_id,
+                    })
 
         json_obj['db_info']['directors'] = directors
 

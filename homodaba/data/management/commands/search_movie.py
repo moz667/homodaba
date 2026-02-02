@@ -1,12 +1,7 @@
 from django.core.management.base import BaseCommand
 
-from data.models import Person
-
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import facade_search, match_director, clean_string
-
-import csv
-from distutils.util import strtobool
+from data.utils.imdbpy_facade import facade_search
 
 from .utils import clean_csv_data
 from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.py

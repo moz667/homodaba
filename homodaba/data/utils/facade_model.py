@@ -153,7 +153,7 @@ def dictionary_to_facade_credit(p):
     # {'adult': False, 'gender': 2, 'id': 4671, 'known_for_department': 'Editing', 'name': 'Zach Staenberg', 'original_name': 'Zach Staenberg', 'popularity': 0.2352, 'profile_path': '/fTE4gvedUe9xJRAdKUnCM09TkwZ.jpg', 'credit_id': '52fe425bc3a36847f8018141', 'department': 'Editing', 'job': 'Editor'}
     # {'adult': False, 'gender': 2, 'id': 6384, 'known_for_department': 'Acting', 'name': 'Keanu Reeves', 'original_name': 'Keanu Reeves', 'popularity': 11.1443, 'profile_path': '/kEoUZKEG7dzbCESDjd0CKAN1r0n.jpg', 'cast_id': 34, 'character': 'Neo', 'credit_id': '52fe425bc3a36847f80181c1', 'order': 0}
     fc = FacadeCredit()
-    fc.id = p['id']
+    fc.id = 'tmdb:' . p['id']
     fc.name = p['name']
     fc.canonical_name = p['original_name']
     fc.avatar_thumbnail_url = 'https://image.tmdb.org/t/p/w780%s' % p['profile_path'] if 'profile_path' in p and p['profile_path'] else None
