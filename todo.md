@@ -31,12 +31,39 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
   * [X] Que en el detalle tengamos
     * [X] ~~Coger peli por imdb_id~~ No lo tiene pero se puede conseguir el id de tmdb buscando por imdb_id (con `Find`)
 
+* [ ] Nueva funcionalidad
+  * [ ] Permitir importar pelis que no encuentra
+
+* [ ] Cambios en el modelo
+  * [ ] ImdbCache
+    * [ ] Cambiar de nombre por algo mas generico (APICache)
+    * [ ] Modificar la estructura a algo tipo clave/valor
+    * [ ] Tener una estrategia para generar la clave independientemente del:
+      * tipo de API
+      * Si es una busqueda, detalle, etc...
+  * [ ] Person
+    * [ ] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
+  * [ ] TitleAka
+    * [ ] Añadir un campo con un subtipo de pais (algo generico en plan zone)
+  * [ ] Country
+    * [ ] Añadir un campo con el codigo iso_3166_1 y que sea unico
+  * [ ] Movie
+    * [ ] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
+
 * [ ] Pruebas
   * [X] Nuevo comando de busqueda
   * [ ] Probar el resto de la aplicacion (que ponemos aqui?)
+    * [X] Probar escaneo de directorios
+    * [X] Probar importar csv (con imdb_id)
+    * [ ] Probar importar csv (sin imdb_id)
+  * [ ] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
 
 * [ ] Problemas:
   * [ ] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
+  * [X] El pais de origen de la peli ahora se guarda como iso y se muestra como tal. Convertir a nombre de pais.
+  * [X] No funciona el filtro por persona
+  * [X] Tamaño de las miniaturas en la admin (es tochillo)
+  * [X] Tamaño de las miniaturas en la busqueda (es tochillo)
 
 * [X] Casos extremos (para luego):
   * [X] It 1990 (tv mini-serie) **Pass**
