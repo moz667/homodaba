@@ -245,12 +245,12 @@ class Movie(models.Model):
 
     def get_imdb_url(self):
         if self.imdb_id:
-            return 'https://www.imdb.com/title/tt%s/' % self.imdb_id
+            return 'https://www.imdb.com/title/%s/' % (('tt%s' % self.imdb_id) if self.imdb_id[0] != 't' else self.imdb_id)
         return 'https://www.imdb.com/title/tt0385307/'
 
     def get_poster_thumbnail_img(self):
         return format_html(
-            '<a href="{}" target="_blank" class="modal-photo" ref="noopener noreferrer"><img src="{}" alt="{}" /></a>',
+            '<a href="{}" target="_blank" class="modal-photo" ref="noopener noreferrer"><img style="max-width: 101px;" src="{}" alt="{}" /></a>',
             self.get_imdb_url(),
             self.clean_poster_thumbnail_url(),
             self.title,
