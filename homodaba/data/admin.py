@@ -5,7 +5,7 @@ from django.urls import path
 
 from admin_auto_filters.filters import AutocompleteFilter
 
-from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, ImdbCache
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, ImdbCache, Country
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
@@ -45,6 +45,10 @@ class ImdbCacheAdmin(admin.ModelAdmin):
         # on the 'other' database.
         return super().formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
 admin.site.register(ImdbCache, ImdbCacheAdmin)
+
+class CountryAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(Country, CountryAdmin)
 
 class TagAdmin(admin.ModelAdmin):
     pass
