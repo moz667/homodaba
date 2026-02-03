@@ -79,7 +79,7 @@
                     <span class="movie-rating badge badge-primary">{{ movie.rating }}</span>
                 {% endif %}
                 <a href="{{ movie.get_imdb_url }}" target="_blank" ref="noopener noreferrer">
-                    <img class="img-fluid float-left" 
+                    <img class="img-fluid float-left"
                         src="{{ movie.clean_poster_thumbnail_url }}" alt="{{ movie.get_the_main_title }}" />
                 </a>
             </div>
