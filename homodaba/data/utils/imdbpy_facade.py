@@ -387,6 +387,8 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
 
     # Buscamos por imdb_id primero (easy)
     if imdb_id:
+        if imdb_id[0] != 't':
+            imdb_id = 'tt%s' % imdb_id
         trace.debug('\t\t- Buscando por imdb_id "%s"...' % imdb_id)
         return facade_get(imdb_id)
     
@@ -493,9 +495,9 @@ def match_director(director, facade_credit_directors):
         if p.canonical_name:
             movie_directors.append(clean_string(p.canonical_name))
     
-    slugify_directors = slugify_directors(director)
+    ssddss = slugify_directors(director)
 
-    for slugify_director in slugify_directors:
+    for slugify_director in ssddss:
         if slugify_director in movie_directors:
             return True
     

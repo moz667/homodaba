@@ -143,21 +143,21 @@ def normalize_age_certificate(raw_certificate):
     return raw_certificate
 
 """
-Compara los datos recuperados de imdb en ia_movie con el title y director que 
+Compara los datos recuperados de la API en facade_movie con el title y director que 
 le pasamos como parametro.
 Si no coinciden, sacamos un mensaje notificando las diferencias.
 """
-def trace_validate_imdb_movie(ia_movie, title, director=None):
+def trace_validate_facade_movie(facade_movie, title, director=None):
     # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-    if clean_string(ia_movie['title']) != clean_string(title):
-        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+    if clean_string(facade_movie.title) != clean_string(title):
+        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, facade_movie.title))
 
     # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
     if director:
-        if not 'director' in ia_movie.keys():
-            trace.info('\ttrace_validate_ia_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+        if len(facade_movie.directors) == 0:
+            trace.info('\trace_validate_facade_movie: No encontramos directores para la pelicula "%s"' % facade_movie.title)
         else:
-            if not match_director(director, ia_movie['director']):
+            if not match_director(director, facade_movie.directors):
                 # Esto es para que revises tu csv!!!
                 trace.info("\tNo encontramos el/los director/es '%s' en IMDB para la pelicula '%s'" % (director, title))
 

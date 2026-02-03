@@ -10,7 +10,7 @@ import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, clean_csv_data, csv_validate
+from .utils import trace_validate_facade_movie, clean_csv_data, csv_validate
 
 from .import_data import get_or_insert_storage, insert_movie_from_facade_movie, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
 
@@ -128,8 +128,11 @@ class Command(BaseCommand):
 
         tags = cd['tags']
 
-        if not facade_result and not not_an_imdb_movie:
-            trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+        if not facade_result or not facade_result.movie:
+            if not not_an_imdb_movie:
+                trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+            else:
+                trace.error('\tParece que no encontramos la pelicula "%s (%s) [imdb_id:%s]"' % (cd['title'], r['year'], cd['imdb_id']))
             return None
 
         local_movie = None
@@ -153,7 +156,7 @@ class Command(BaseCommand):
             local_movie = facade_result.movie
         # El resto son pelis nuevas (localizables por el imdb)
         else:
-            trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
+            trace_validate_facade_movie(facade_result.movie, cd['title'], director=cd['director'])
 
             local_movie = insert_movie_from_facade_movie(
                 r['title'],

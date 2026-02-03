@@ -81,7 +81,7 @@ def get_or_insert_storage(movie, is_original=True, storage_type=None, storage_na
     )
 
 def is_valid_facade_credit_for_insert(facade_credit: FacadeCredit):
-    return facade_credit.id and 'name' in facade_credit.name \
+    return facade_credit.id and facade_credit.name \
         and facade_credit.canonical_name
 
 def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], title_original=None, title_preferred=None):
@@ -172,7 +172,7 @@ def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], tit
         directors=directors, writers=writers, casting=casting
     )
 
-    # TODO: Que hacemos aqui... ponemos el titulo del csv o el de ia_movie?
+    # TODO: Que hacemos aqui... ponemos el titulo del csv o el de facade_movie?
     local_movie = Movie.objects.create(
         title=facade_movie.title,
         title_original=facade_movie.title_original,

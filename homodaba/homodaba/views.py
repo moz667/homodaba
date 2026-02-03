@@ -153,7 +153,7 @@ def get_person_filter(request, request_key, **kargs):
     if request_key in request.GET.keys():
         if request.GET[request_key]:
             imdb_id = None
-            pattern = re.compile(".*\[([0-9]+)\]")
+            pattern = re.compile(".*\[(.*)\]")
             person_name = request.GET[request_key]
 
             if pattern.search(person_name):
