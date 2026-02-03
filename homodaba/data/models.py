@@ -1,3 +1,4 @@
+from iso3166 import countries
 from requests.utils import requote_uri
 
 from django.core.paginator import Paginator
@@ -103,6 +104,18 @@ class TitleAka(models.Model):
 class Country(models.Model):
     NO_COUNTRY = 'Sin País'
     name = models.CharField(max_length=255, unique=True)
+
+    def get_display_name(self):
+        if len(self.name) > 2:
+            return self.name
+        
+        iso_country = countries.get(self.name)
+        if len(iso_country.name) < 15:
+            return iso_country.name 
+        elif len(iso_country.apolitical_name) < 15:
+            return iso_country.apolitical_name
+        else:
+            return iso_country.alpha3
 
     class Meta:
         ordering = ['name']

@@ -37,7 +37,7 @@
         <div class="countries">
             <small>
                 {% for country in movie.countries.all %}
-                    {{ country }}{% if not forloop.last %}, {% endif %}
+                    {{ country.get_display_name }}{% if not forloop.last %}, {% endif %}
                 {% endfor %}
             </small>
         </div>
