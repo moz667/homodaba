@@ -45,11 +45,14 @@ def match_imdb_id(imdb_id, facade_search_results):
 """
 TODO: funcion privada
 """
-def facade_result_match_imdb_year(year, facade_search_results):
+def facade_result_match_imdb_year(year, facade_search_results, allow_almost_year=False):
     facade_result_year_matches = []
 
     for sr in facade_search_results:
         if sr.year == int(year):
+            facade_result_year_matches.append(sr)
+        
+        if allow_almost_year and (sr.year - 1) == int(year):
             facade_result_year_matches.append(sr)
         
     return facade_result_year_matches
@@ -84,8 +87,14 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     trace_results(facade_movie_results)
 
     # Matches por year:
-    facade_result_year_matches = facade_result_match_imdb_year(year=year, facade_search_results=facade_movie_results) if year else []
-    is_match_by_year = len(facade_result_year_matches) > 0
+    facade_result_year_matches = []
+    is_match_by_year = False
+    if year:
+        facade_result_year_matches = facade_result_match_imdb_year(
+            year=year, facade_search_results=facade_movie_results, allow_almost_year=True
+        )
+        is_match_by_year = len(facade_result_year_matches) > 0
+
 
     # Lista temporal donde vamos poniendo los mas prometedores
     # Si tenemos year_matches, pues ya hemos reducido... si no por defecto 
@@ -510,7 +519,7 @@ TODO: funcion privada
 def trace_results(facade_search_results):
     if trace.is_debug():
         for sr in facade_search_results:
-            trace.debug("  - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (sr.title, sr.year, sr.imdb_id, sr.imdb_id))
+            trace.debug("  - %s (%s) [%s] https://www.imdb.com/title/%s" % (sr.title, sr.year, sr.imdb_id, sr.imdb_id))
             # kitty console:
             # show_imdb_movie_image(movie)
 
