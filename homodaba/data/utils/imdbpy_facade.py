@@ -106,8 +106,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
         director_movie_matches = []
 
         for facade_movie in facade_director_matches:
-            if is_valid_imdb_movie(facade_movie):
-                director_movie_matches.append(facade_movie)
+            director_movie_matches.append(facade_movie)
         
         # Si encuentra solo uno, lo damos por bueno (ver comentario de arriba)
         if len(director_movie_matches) == 1:
@@ -124,8 +123,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
             if facade_movie.kind == Movie.MK_MOVIE:
                 # Solo si hemos encontrado con año
                 if is_match_by_year:
-                    if is_valid_imdb_movie(facade_movie):
-                        title_movie_matches.append(facade_movie)
+                    title_movie_matches.append(facade_movie)
             facade_title_matches.append(facade_movie)
 
     # Si tenemos solo un match con year, titulo y es una peli valida lo damos
@@ -153,9 +151,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
                     for aka in facade_movie.title_akas:
                         if aka == clean_title:
                             facade_title_matches.append(facade_movie)
-
-                            if is_valid_imdb_movie(facade_movie):
-                                title_movie_matches.append(facade_movie)
+                            title_movie_matches.append(facade_movie)
                             is_aka_match = True
                             break
                 
@@ -179,10 +175,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # Si solo hemos encontrado un facade_movie_matches asumimos que es el bueno 
     # (si pusimos year)
     if is_match_by_year and len(facade_movie_matches) == 1:
-        facade_movie = facade_movie_matches[0]
-
-        if is_valid_imdb_movie(facade_movie):
-            return facade_movie, facade_movie_results
+        return facade_movie_matches[0], facade_movie_results
     
     # llegados a este punto, pueden haber ocurrido varias cosas:
     #   - El titulo es muy generico y devuelve demasiados matches
@@ -321,9 +314,12 @@ def search_imdb_movies(search_query, title=None, year=None):
         response = search.movie(query=search_query)
 
     for sr in search.results:
-        imdb_results.append(
-            convert_tmdb_movie2facade_movie(get_tmdb_movie(sr['id']))
-        )
+        tmdb_movie = get_tmdb_movie(sr['id'])
+        
+        if is_valid_tmdb_movie(tmdb_movie):
+            imdb_results.append(
+                convert_tmdb_movie2facade_movie(tmdb_movie)
+            )
     
     if not NO_CACHE or UPDATE_CACHE:
         IMDB_CACHE_OBJS.create(
@@ -502,22 +498,11 @@ def match_director(director, facade_credit_directors):
             return True
     
     trace.debug("SLUGIFY INPUT DIRECTORS:")
-    trace.debug(slugify_directors)
+    trace.debug(ssddss)
     trace.debug("SLUGIFY IMDB DIRECTORS:")
     trace.debug(movie_directors)
 
     return False
-
-def is_valid_imdb_movie(facade_movie: FacadeMovie):
-    if facade_movie.kind is None:
-        return False
-    elif facade_movie.kind != Movie.MK_MOVIE:
-        return False
-    
-    if facade_movie.poster_url is None:
-        return False
-    
-    return True
 
 """
 TODO: funcion privada

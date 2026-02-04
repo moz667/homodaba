@@ -253,14 +253,11 @@ class Movie(models.Model):
         return ''
 
     def get_formated_imdb_id(self):
-        if self.imdb_id:
-            return 'tt%s' % self.imdb_id
-        
-        return ''
+        return maybe_format_imdb_id(self.imdb_id)
 
     def get_imdb_url(self):
         if self.imdb_id:
-            return 'https://www.imdb.com/title/%s/' % (('tt%s' % self.imdb_id) if self.imdb_id[0] != 't' else self.imdb_id)
+            return 'https://www.imdb.com/title/%s/' % self.get_formated_imdb_id()
         return 'https://www.imdb.com/title/tt0385307/'
 
     def get_poster_thumbnail_img(self):
@@ -632,3 +629,6 @@ def populate_movie_auto_tags(movie):
 
 def get_imdb_cache_objects():
     return ImdbCache.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')
+
+def maybe_format_imdb_id(maybe_imdb_id):
+    return ('tt%s' % maybe_imdb_id if maybe_imdb_id and maybe_imdb_id[0] != 't' else maybe_imdb_id)
