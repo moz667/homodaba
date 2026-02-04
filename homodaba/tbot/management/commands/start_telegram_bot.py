@@ -75,7 +75,7 @@ de datos (actualmente "%s") """ % self.home_name)
     def get_movie_detail_mini_html(self, movie):
         s = format_html('<b>id:{}</b> <a href="{}" ref="noopener noreferrer"><i>{}</i></a>\n',
             movie.id, 
-            'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
+            'https://www.imdb.com/title/%s' % movie.imdb_id, 
             movie.get_complete_title()
         )
         # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())
@@ -112,7 +112,7 @@ de datos (actualmente "%s") """ % self.home_name)
     def get_movie_detail_html(self, movie):
         s = '<b>id:%s</b> <a href="%s" ref="noopener noreferrer"><i>%s</i></a>\n' % (
             str(movie.id), 
-            'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
+            'https://www.imdb.com/title/%s' % movie.imdb_id, 
             movie.get_complete_title()
         )
         # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())

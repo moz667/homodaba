@@ -5,7 +5,7 @@ from data.models import MoviePerson
 def get_movie_detail_mini_html(movie):
     s = format_html('<b>id:{}</b> <a href="{}"><i>{}</i></a>\n',
         movie.id, 
-        'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
+        'https://www.imdb.com/title/%s' % movie.imdb_id, 
         movie.get_complete_title()
     )
     # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())
@@ -42,7 +42,7 @@ def get_persons_html(movie, role=None, limit=10, label='Casting:'):
 def get_movie_detail_html(movie):
     s = '<b>id:%s</b> <a href="%s"><i>%s</i></a>\n' % (
         str(movie.id), 
-        'https://www.imdb.com/title/tt%s' % movie.imdb_id, 
+        'https://www.imdb.com/title/%s' % movie.imdb_id, 
         movie.get_complete_title()
     )
     # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())
