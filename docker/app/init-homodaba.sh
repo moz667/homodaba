@@ -9,10 +9,15 @@ if [ "$DATABASE_ENGINE" = "mysql" ] ; then
   if [ -n "$DATABASE_PASSWORD" ]; then
     PWD_PARAM="-p\"${DATABASE_PASSWORD}\""
   fi
+  SSL_ARGS='--ssl=FALSE'
+  if [ -n "$DATABASE_SSL_PEM" ]; then
+    # TODO: Probar si funciona esto
+    SSL_ARGS="--ssl-ca=$DATABASE_SSL_PEM"
+  fi
   until \
     echo 'Waiting for SQL to be ready' && \
-    mysqladmin -u"$DATABASE_USER" ${PWD_PARAM} -h"$DATABASE_HOST" ping --silent; do
-      echo "mysqladmin -u$DATABASE_USER ${PWD_PARAM} -h$DATABASE_HOST ping --silent"
+    mariadb-admin -u"$DATABASE_USER" ${PWD_PARAM} -h"$DATABASE_HOST" $SSL_ARGS ping --silent; do
+      echo "mariadb-admin -u$DATABASE_USER ${PWD_PARAM} -h$DATABASE_HOST $SSL_ARGS ping --silent"
       sleep 1
     done
 fi

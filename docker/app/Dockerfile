@@ -1,4 +1,4 @@
-FROM python:3.11.3-alpine3.17
+FROM python:3.14.3-alpine3.23
 
 ARG APP_SRC_PATH=homodaba
 ARG DATABASE_ENGINE

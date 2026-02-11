@@ -3,9 +3,17 @@ from data.models import Movie, MovieStorageType
 from data.utils.imdbpy_facade import clean_string, match_director
 from data.utils import Trace as trace
 
-from distutils.util import strtobool
 import json
 import re
+
+def strtobool(val):
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f"Valor no válido: {val}")
 
 """
 Divide un nombre de archivo (sin ruta) en partes diferenciadas

@@ -65,7 +65,6 @@ LOGOUT_REDIRECT_URL = 'home'
 
 INSTALLED_APPS = [
     'admin_interface',
-    'colorfield',
     'data.apps.DataConfig',
     'tbot.apps.TbotConfig',
     'django.contrib.admin',
@@ -157,8 +156,19 @@ if os.getenv('DATABASE_ENGINE', '') == 'mysql':
             'PASSWORD':  os.getenv('DATABASE_PASSWORD', ''),
             'HOST': os.getenv('DATABASE_HOST', ''),
             'PORT': os.getenv('DATABASE_PORT', ''),
+            'OPTIONS': {
+                'sql_mode': 'traditional',
+            }
         }
     }
+
+    if os.getenv('DATABASE_SSL_PEM', ''):
+        # TODO: Probar esto. Me da que faltan cosas
+        DATABASES['default']['OPTIONS']['ssl'] = {
+            'ca': os.getenv('DATABASE_SSL_PEM', ''),
+        }
+    else:
+        DATABASES['default']['OPTIONS']['ssl'] = 'DISABLED'
 
 # cache en base de datos separada
 if os.getenv('CACHE_DATABASE', 1):

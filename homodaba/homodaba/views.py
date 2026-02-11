@@ -1,4 +1,3 @@
-from distutils.util import strtobool
 import re
 
 from django.contrib.auth.decorators import login_required
@@ -66,11 +65,8 @@ def search_movies(request):
     actor = get_person_filter(request, 'actor', is_actor=True)
 
     unseen = None
-    if 'unseen' in request.GET.keys():
-        if isinstance(request.GET['unseen'], str) and request.GET['unseen']:
-            unseen = strtobool(request.GET['unseen'])
-        elif request.GET['unseen']:
-            unseen = True
+    if 'unseen' in request.GET.keys() and isinstance(request.GET['unseen'], str) and request.GET['unseen']:
+        unseen = (request.GET['unseen'] == 'True') 
 
     seen_tag = get_or_create_user_tag(request.user, UserTag.SEEN_TAG)
 

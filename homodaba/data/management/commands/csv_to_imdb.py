@@ -9,11 +9,10 @@ from data.utils.imdbpy_facade import facade_search, match_director, clean_string
 
 import csv
 from datetime import datetime
-from distutils.util import strtobool
 import json
 import sys
 
-from .utils import clean_csv_data, csv_validate
+from .utils import clean_csv_data, csv_validate, strtobool
 from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.py
 
 
