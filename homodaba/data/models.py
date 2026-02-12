@@ -31,9 +31,10 @@ class Person(models.Model):
     DEFAULT_NO_WRITER = 'Sin Escritor'
     DEFAULT_NO_ACTOR = 'Sin Actor'
 
-    name = models.CharField('Nombre', max_length=200, null=False, blank=False)
-    canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
+    name = models.CharField('Nombre', max_length=200, null=False, blank=False, db_index=True)
+    canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False, db_index=True)
+    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True, db_index=True)
+    tmdb_id = models.CharField('TMDB ID', max_length=20, null=True, blank=True, db_index=True)
     avatar_url = models.CharField('Foto (URL)', max_length=255, null=True, blank=True)
     avatar_thumbnail_url = models.CharField('Foto en miniatura (URL)', max_length=255, null=True, blank=True)
     is_director = models.BooleanField('Director', default=False, null=False, blank=False)
@@ -44,6 +45,12 @@ class Person(models.Model):
     def get_imdb_url(self):
         if self.imdb_id:
             return 'https://www.imdb.com/name/nm%s/' % self.imdb_id
+        
+        return None
+    
+    def get_tmdb_url(self):
+        if self.tmdb_id:
+            return 'https://www.themoviedb.org/person/%s' % self.tmdb_id
         
         return None
 
@@ -150,12 +157,13 @@ class Movie(models.Model):
     ]
 
     title = models.CharField('Título (Internacional)', max_length=200, 
-        null=False, blank=False)
+        null=False, blank=False, db_index=True)
     title_original = models.CharField('Título (Original)', max_length=200, 
-        null=True, blank=True)
+        null=True, blank=True, db_index=True)
     title_preferred = models.CharField('Título (Idioma preferido)', 
-        max_length=200, null=True, blank=True)
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
+        max_length=200, null=True, blank=True, db_index=True)
+    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True, db_index=True)
+    tmdb_id = models.CharField('TMDB ID', max_length=20, null=True, blank=True, db_index=True)
     kind = models.CharField('Clase de pélicula', max_length=20, 
         choices=MOVIE_KINDS, default=MK_MOVIE, null=False, blank=False)
     summary = models.TextField('Resumen', null=True, blank=True)

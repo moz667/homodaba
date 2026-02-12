@@ -169,7 +169,7 @@ class MovieAdmin(admin.ModelAdmin):
 admin.site.register(Movie, MovieAdmin)
 
 class PersonAdmin(admin.ModelAdmin):
-    list_display = ('name', 'imdb_id', 'is_director', 'is_writer', 'is_actor', 'avatar_url')
+    list_display = ('name', 'imdb_id', 'tmdb_id', 'is_director', 'is_writer', 'is_actor', 'avatar_url')
 
     search_fields = ('name', 'canonical_name',)
     list_filter = ('is_director', 'is_writer', 'is_actor', )

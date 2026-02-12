@@ -3,7 +3,7 @@ from django.db.models import Q, Max, Min
 import re
 from datetime import datetime
 
-from .models import Movie, TitleAka, MoviePerson
+from .models import Movie
 
 from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE
 
