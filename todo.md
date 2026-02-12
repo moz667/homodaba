@@ -12,7 +12,7 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
 
 ## Tareas usando nuevas APIs
 
-* [ ] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
+* [X] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
   * [X] ~~El problema de tmdb es que no tiene imdbid~~ Si tiene, se puede buscar por el inclusive
   * [ ] titulo original en caracteres latinos
   * [X] titulo internacional
@@ -35,10 +35,10 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
   * [ ] Permitir importar pelis que no encuentra
 
 * [ ] Cambios en el modelo
-  * [ ] ImdbCache
-    * [ ] Cambiar de nombre por algo mas generico (APICache)
-    * [ ] Modificar la estructura a algo tipo clave/valor
-    * [ ] Tener una estrategia para generar la clave independientemente del:
+  * [X] ImdbCache
+    * [X] Cambiar de nombre por algo mas generico (APICache)
+    * [X] Modificar la estructura a algo tipo clave/valor
+    * [X] Tener una estrategia para generar la clave independientemente del:
       * tipo de API
       * Si es una busqueda, detalle, etc...
   * [ ] Person

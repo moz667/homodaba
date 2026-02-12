@@ -5,7 +5,7 @@ from django.urls import path
 
 from admin_auto_filters.filters import AutocompleteFilter
 
-from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, ImdbCache, Country
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, CacheTable, Country
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
 
@@ -19,7 +19,7 @@ class DirectorFilter(AutocompleteFilter):
     def get_autocomplete_url(self, request, model_admin):
         return reverse('admin:json_autocomplete_director_search')
 
-class ImdbCacheAdmin(admin.ModelAdmin):
+class CacheTableAdmin(admin.ModelAdmin):
     # A handy constant for the name of the alternate database.
     using = 'cache' if 'cache' in DATABASES.keys() else 'default'
 
@@ -44,7 +44,7 @@ class ImdbCacheAdmin(admin.ModelAdmin):
         # Tell Django to populate ManyToMany widgets using a query
         # on the 'other' database.
         return super().formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
-admin.site.register(ImdbCache, ImdbCacheAdmin)
+admin.site.register(CacheTable, CacheTableAdmin)
 
 class CountryAdmin(admin.ModelAdmin):
     pass

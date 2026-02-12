@@ -4,27 +4,27 @@ from requests.utils import requote_uri
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+
 
 from homodaba.settings import SMB_SHARE_2_URL, DATABASES
 
 from data.utils import trace
 
-# TODO: Refactorizar para admitir los ids de tmdb
-class ImdbCache(models.Model):
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
-    search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
-    raw_data = models.TextField('Raw Data', null=True, blank=True)
+MAX_CACHE_KEY_SIZE = 255
+
+class CacheTable(models.Model):
+    key = models.CharField(max_length=MAX_CACHE_KEY_SIZE, unique=True, db_index=True)
+    value = models.TextField()
 
     def __str__(self):
-        return self.imdb_id if self.imdb_id else self.search_query
+        return self.key
 
     class Meta:
-        indexes = [
-            models.Index(fields=['search_query'], name='imdbcache_search_query_idx'),
-            models.Index(fields=['imdb_id'], name='imdbcache_imdb_id_idx'),
-        ]
+        verbose_name = "Entrada de Caché"
+        verbose_name_plural = "Entradas de Caché"
 
 class Person(models.Model):
     DEFAULT_NO_DIRECTOR = 'Sin Director'
@@ -627,8 +627,8 @@ def populate_movie_auto_tags(movie):
         movie.tags.add(db_tag)
         movie.save()
 
-def get_imdb_cache_objects():
-    return ImdbCache.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')
+def get_table_cache_objects():
+    return CacheTable.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')
 
 def maybe_format_imdb_id(maybe_imdb_id):
     return ('tt%s' % maybe_imdb_id if maybe_imdb_id and maybe_imdb_id[0] != 't' else maybe_imdb_id)

@@ -185,7 +185,18 @@ if os.getenv('CACHE_DATABASE', 1):
             'PASSWORD':  os.getenv('CACHE_DATABASE_PASSWORD', ''),
             'HOST': os.getenv('CACHE_DATABASE_HOST', ''),
             'PORT': os.getenv('CACHE_DATABASE_PORT', ''),
+            'OPTIONS': {
+                'sql_mode': 'traditional',
+            }
         }
+
+        if os.getenv('CACHE_DATABASE_SSL_PEM', ''):
+            # TODO: Probar esto. Me da que faltan cosas
+            DATABASES['cache']['OPTIONS']['ssl'] = {
+                'ca': os.getenv('CACHE_DATABASE_SSL_PEM', ''),
+            }
+        else:
+            DATABASES['cache']['OPTIONS']['ssl'] = 'DISABLED'
 
 
 

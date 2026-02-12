@@ -1,20 +1,18 @@
 from django.db.models import Q
 from django.utils.text import slugify
 
-from data.models import Movie, MovieStorageType, get_imdb_cache_objects
+from data.models import Movie, MovieStorageType
 from .facade_model import FacadeMovie, is_valid_tmdb_movie
+from .cache import add_cache, get_cache
 
 import tmdbsimple as tmdb
 import requests
 
-import pickle
 import re
-
-import codecs
 
 from . import Trace as trace
 
-from homodaba.settings import NO_CACHE, UPDATE_CACHE, TMDB_API_KEY
+from homodaba.settings import TMDB_API_KEY
 
 # kitty console:
 # * OJO: para usar pixcat hay que instalarlo:
@@ -25,8 +23,6 @@ from homodaba.settings import NO_CACHE, UPDATE_CACHE, TMDB_API_KEY
 tmdb.API_KEY = TMDB_API_KEY
 tmdb.REQUESTS_TIMEOUT = 5
 tmdb.REQUESTS_SESSION = requests.Session()
-
-IMDB_CACHE_OBJS = get_imdb_cache_objects()
 
 """
 TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
@@ -213,30 +209,15 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
 
     return None, promisings
 
-"""
-TODO: funcion privada
-"""
-def serialize(obj):
-    return codecs.encode(pickle.dumps(obj), "base64").decode()
-
-"""
-TODO: funcion privada
-"""
-def unserialize(str_obj):
-    return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
-
 def get_facade_movie(imdb_id=None, tmdb_id=None):
     if not imdb_id and not tmdb_id:
         return None
     
-    if not NO_CACHE:
-        cache_data = IMDB_CACHE_OBJS.filter(imdb_id=imdb_id if not imdb_id is None else tmdb_id).all()
-
-        if cache_data.count() > 0:
-            if not UPDATE_CACHE:
-                return unserialize(cache_data[0].raw_data)
-            else:
-                IMDB_CACHE_OBJS.filter(imdb_id=imdb_id if not imdb_id is None else tmdb_id).delete()
+    cache_key = key="gfm(%s)" % (
+        "imdb:%s" % imdb_id if imdb_id else "tmdb:%s" % tmdb_id
+    )
+    if cached_obj := get_cache(key=cache_key):
+        return cached_obj
     
     facade_movie = FacadeMovie()
 
@@ -256,38 +237,19 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
     
     facade_movie = convert_tmdb_movie2facade_movie(tmdb_movie)
     
-    if not NO_CACHE or UPDATE_CACHE:
-        IMDB_CACHE_OBJS.create(
-            imdb_id=imdb_id if not imdb_id is None else tmdb_id,
-            raw_data=serialize(facade_movie)
-        )
-
-    return facade_movie
+    return add_cache(key=cache_key, value=facade_movie)
 
 """
 TODO: funcion privada
 """
 def get_tmdb_movie(tmdb_id):
-    if not NO_CACHE:
-        cache_key = 'get_tmdb_movie(%s)' % tmdb_id
-        cache_data = IMDB_CACHE_OBJS.filter(search_query=cache_key).all()
-
-        if cache_data.count() > 0:
-            if not UPDATE_CACHE:
-                return unserialize(cache_data[0].raw_data)
-            else:
-                IMDB_CACHE_OBJS.filter(search_query=cache_key).delete()
+    cache_key = 'gtm(%s)' % tmdb_id
+    if cached_obj := get_cache(key=cache_key):
+        return cached_obj
     
     tmdb_movie = tmdb.Movies(tmdb_id)
 
-    if not NO_CACHE or UPDATE_CACHE:
-        cache_key = 'get_tmdb_movie(%s)' % tmdb_id
-        IMDB_CACHE_OBJS.create(
-            search_query=cache_key,
-            raw_data=serialize(tmdb_movie)
-        )
-    
-    return tmdb_movie
+    return add_cache(key=cache_key, value=tmdb_movie)
 
 """
 TODO: funcion privada
@@ -301,14 +263,9 @@ def convert_tmdb_movie2facade_movie(tmdb_movie):
 TODO: funcion privada
 """
 def search_imdb_movies(search_query, title=None, year=None):
-    if not NO_CACHE:
-        cache_data = IMDB_CACHE_OBJS.filter(search_query=search_query).all()
-
-        if cache_data.count() > 0:
-            if not UPDATE_CACHE:
-                return unserialize(cache_data[0].raw_data)
-            else:
-                IMDB_CACHE_OBJS.filter(search_query=search_query).delete()
+    cache_key = 'sim(%s)' % search_query
+    if cached_obj := get_cache(key=cache_key):
+        return cached_obj
     
     imdb_results = []
 
@@ -329,14 +286,8 @@ def search_imdb_movies(search_query, title=None, year=None):
             imdb_results.append(
                 convert_tmdb_movie2facade_movie(tmdb_movie)
             )
-    
-    if not NO_CACHE or UPDATE_CACHE:
-        IMDB_CACHE_OBJS.create(
-            search_query=search_query,
-            raw_data=serialize(imdb_results)
-        )
 
-    return imdb_results
+    return add_cache(key=cache_key, value=imdb_results)
 
 """
 TODO: Revisar esta clase (solo se usa aqui pero se devuelve en alguna func)
