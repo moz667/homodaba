@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'admin_auto_filters',
+    'colorfield',
     # 'easy_select2',
     # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
