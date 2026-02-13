@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.utils.text import slugify
 
-from data.models import Movie, MovieStorageType
+from data.models import Movie, MovieStorageType, maybe_format_imdb_id
 from .facade_model import FacadeMovie, is_valid_tmdb_movie
 from .cache import add_cache, get_cache
 
@@ -25,15 +25,56 @@ tmdb.REQUESTS_TIMEOUT = 5
 tmdb.REQUESTS_SESSION = requests.Session()
 
 """
-TODO: Hay un poco de chocho con search_movie_imdb y search_imdb_movies... revisar/refactorizar... :P
+TODO: Revisar esta clases, lo mismo mover al modelo
 """
+class FacadeResult:
+    is_local_data = False
+    storage_match = False
+    movie: FacadeMovie|Movie = None
+    local_movie: Movie = None
+    facade_movie: FacadeMovie = None
+
+    @staticmethod
+    def local_data(movie, storage_match=False):
+        facade_result = FacadeResult()
+        facade_result.is_local_data = True
+        facade_result.storage_match = storage_match
+        facade_result.movie = movie
+        facade_result.local_movie = movie
+
+        return facade_result
+
+    @staticmethod
+    def facade_data(facade_movie, storage_match=False):
+        facade_result = FacadeResult()
+        facade_result.is_local_data = False
+        facade_result.storage_match = storage_match
+        facade_result.movie = facade_movie
+        facade_result.facade_movie = facade_movie
+
+        return facade_result
+
+class FacadeMatch:
+    is_a_match = False
+    facade_movie = None
+    promissing_facade_movies: list[FacadeMovie] = []
+
+    @staticmethod
+    def populate(facade_movie, promissing_facade_movies: list[FacadeMovie]=[]):
+        facade_match = FacadeMatch()
+        facade_match.is_a_match = facade_movie != None
+        facade_match.facade_movie = facade_movie
+        facade_match.promissing_facade_movies = promissing_facade_movies
+
+        return facade_match
 
 """
 TODO: funcion privada
 """
-def match_imdb_id(imdb_id, facade_search_results):
+def is_match_facade_movie_by_id(facade_movie: FacadeMovie, facade_search_results: list[FacadeMovie]):
     for sr in facade_search_results:
-        if sr.imdb_id == imdb_id:
+        if (sr.imdb_id and sr.imdb_id == facade_movie.imdb_id) or \
+            (sr.tmdb_id and sr.tmdb_id == facade_movie.tmdb_id):
             return True
     
     return False
@@ -41,15 +82,15 @@ def match_imdb_id(imdb_id, facade_search_results):
 """
 TODO: funcion privada
 """
-def facade_result_match_imdb_year(year, facade_search_results, allow_almost_year=False):
-    facade_result_year_matches = []
+def matchs_by_year_facade_movies(year, facade_movies: list[FacadeMovie], allow_almost_year=False):
+    facade_result_year_matches: list[FacadeMovie] = []
 
-    for sr in facade_search_results:
-        if sr.year == int(year):
-            facade_result_year_matches.append(sr)
+    for facade_movie in facade_movies:
+        if facade_movie.year == int(year):
+            facade_result_year_matches.append(facade_movie)
         
-        if allow_almost_year and (sr.year - 1) == int(year):
-            facade_result_year_matches.append(sr)
+        if allow_almost_year and (facade_movie.year - 1) == int(year):
+            facade_result_year_matches.append(facade_movie)
         
     return facade_result_year_matches
 
@@ -63,18 +104,18 @@ def facade_result_match_imdb_year(year, facade_search_results, allow_almost_year
 # os.system("kitty +kitten icat %s" % movie['full-size cover url'])
 
 """
-Busca resultados exactos o prometedores en imdb
+Busca resultados exactos o prometedores en la API
 
-@return:
-    imdb_movie, un resultado de tipo Cinemagoer.Movie o None si no consigue encontrar uno exacto
-    promisings, lista con search results prometedores (ver search_imdb_movies)
+Devuelve un FacadeMatch con los resultados
 """
 def match_facade_movie(title, year=None, title_alt=None, director=None):
-    facade_movie_results = search_movie_imdb(title, year=year, title_alt=title_alt, director=director)
+    facade_movie_results = search_facade_movies_by_title_and_year(title, year=year)
 
-    # TODO: si no encuentra nada con esta busqueda... que podemos hacer?
-    if not facade_movie_results or len(facade_movie_results) == 0:
-        return None, []
+    if not facade_movie_results and title_alt:
+        facade_movie_results = search_facade_movies_by_title_and_year(title_alt, year=year)
+
+    if not facade_movie_results:
+        return FacadeMatch.populate(None, facade_movie_results)
 
     trace.debug("match_facade_movie('%s', 'year=%s', 'title_alt=%s', 'director=%s')" % (
         title, year, title_alt, director)
@@ -86,8 +127,8 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     facade_result_year_matches = []
     is_match_by_year = False
     if year:
-        facade_result_year_matches = facade_result_match_imdb_year(
-            year=year, facade_search_results=facade_movie_results, allow_almost_year=True
+        facade_result_year_matches = matchs_by_year_facade_movies(
+            year=year, facade_movies=facade_movie_results, allow_almost_year=True
         )
         is_match_by_year = len(facade_result_year_matches) > 0
 
@@ -104,24 +145,24 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # sobre todo si es solo un resultado, ya que un director es raro que 
     # trabaje en mas de una peli que nos haya sido devuelta por la busqueda
     # de imdb y filtrado por año
-    facade_director_matches = []
+    facade_director_matches: list[FacadeMovie] = []
 
     if not director is None and is_match_by_year:
         facade_director_matches = match_imdb_movie_by_director(facade_result_year_matches, director)
-        director_movie_matches = []
+        director_movie_matches: list[FacadeMovie] = []
 
         for facade_movie in facade_director_matches:
             director_movie_matches.append(facade_movie)
         
         # Si encuentra solo uno, lo damos por bueno (ver comentario de arriba)
         if len(director_movie_matches) == 1:
-            return director_movie_matches[0], facade_movie_results
+            return FacadeMatch.populate(director_movie_matches[0], facade_movie_results)
 
     # Matches por titulo
-    facade_title_matches = []
+    facade_title_matches: list[FacadeMovie] = []
     slugify_title = clean_string(title)
 
-    title_movie_matches = []
+    title_movie_matches: list[FacadeMovie] = []
 
     for facade_movie in facade_clean_matches:
         if clean_string(facade_movie.title) == slugify_title:
@@ -134,7 +175,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # Si tenemos solo un match con year, titulo y es una peli valida lo damos
     # por bueno
     if len(title_movie_matches) == 1:
-        return title_movie_matches[0], facade_movie_results
+        return FacadeMatch.populate(title_movie_matches[0], facade_movie_results)
 
     # Si no hemos encontrado ningun match por titulo, buscamos en los akas
     # de los mas prometedores (esto puede tardar un wevete dependiendo
@@ -146,7 +187,7 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
 
         for facade_movie in facade_clean_matches:
             # Si el titulo ya esta en title_matches pasamos al siguiente
-            if match_imdb_id(facade_movie.imdb_id, facade_title_matches):
+            if is_match_facade_movie_by_id(facade_movie, facade_title_matches):
                 continue
             
             for clean_title in clean_titles:
@@ -166,21 +207,21 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # Si tenemos solo un match con year, titulo (ahora por los akas) y 
     # es una peli valida lo damos por bueno
     if is_match_by_year and len(title_movie_matches) == 1:
-        return title_movie_matches[0], facade_movie_results
+        return FacadeMatch.populate(title_movie_matches[0], facade_movie_results)
 
     if len(facade_title_matches) > 0:
         facade_clean_matches = facade_title_matches
 
     # Buscamos matches que sean solo de los tipos que nos interesen
-    facade_movie_matches = []
-    other_matches = []
+    facade_movie_matches: list[FacadeMovie] = []
+    other_matches: list[FacadeMovie] = []
 
     facade_movie_matches = facade_clean_matches
 
     # Si solo hemos encontrado un facade_movie_matches asumimos que es el bueno 
     # (si pusimos year)
     if is_match_by_year and len(facade_movie_matches) == 1:
-        return facade_movie_matches[0], facade_movie_results
+        return FacadeMatch.populate(facade_movie_matches[0], facade_movie_results)
     
     # llegados a este punto, pueden haber ocurrido varias cosas:
     #   - El titulo es muy generico y devuelve demasiados matches
@@ -189,39 +230,31 @@ def match_facade_movie(title, year=None, title_alt=None, director=None):
     # En resumen, no sabemos como continuar asi que devolvemos
     # una lista completando con las listas que hemos sacado
     # intentando ordenar por los mas prometedores
-    promisings = []
+    promisings: list[FacadeMovie] = []
 
     # Ordenamos primero por los ultimos matches (facade_movie_matches)
-    for sr in facade_movie_matches:
-        promisings.append(sr)
-    
     # Como segunda opcion tenemos los de director
-    for sr in facade_director_matches:
-        promisings.append(sr) if not match_imdb_id(sr.imdb_id, promisings) else None
-
     # Como tercera opcion other_matches
-    for sr in other_matches:
-        promisings.append(sr) if not match_imdb_id(sr.imdb_id, promisings) else None
-
     # Por ultimo cogemos el resto de matches
-    for sr in facade_movie_results:
-        promisings.append(sr) if not match_imdb_id(sr.imdb_id, promisings) else None
+    for facade_movie in facade_movie_matches + facade_director_matches + other_matches + facade_movie_results:
+        if not is_match_facade_movie_by_id(facade_movie, promisings):
+            promisings.append(facade_movie)
 
-    return None, promisings
+    return FacadeMatch.populate(None, promisings)
 
 def get_facade_movie(imdb_id=None, tmdb_id=None):
     if not imdb_id and not tmdb_id:
         return None
     
-    cache_key = key="gfm(%s)" % (
+    cache_key = "gfm(%s)" % (
         "imdb:%s" % imdb_id if imdb_id else "tmdb:%s" % tmdb_id
     )
     if cached_obj := get_cache(key=cache_key):
         return cached_obj
     
-    facade_movie = FacadeMovie()
+    tmdb_movie = get_tmdb_movie(tmdb_id=tmdb_id) if tmdb_id else None
 
-    if not imdb_id is None:
+    if imdb_id and not tmdb_movie:
         find_results = tmdb.Find(id=imdb_id).info(external_source='imdb_id')
         if 'movie_results' in find_results:
             if len(find_results['movie_results']) < 1 or not 'id' in find_results['movie_results'][0] \
@@ -229,10 +262,10 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
                 return None
             
             tmdb_id = find_results['movie_results'][0]['id']
+
+            tmdb_movie = get_tmdb_movie(tmdb_id=tmdb_id) if tmdb_id else None
     
-    tmdb_movie = get_tmdb_movie(tmdb_id=tmdb_id)
-    
-    if not is_valid_tmdb_movie(tmdb_movie):
+    if not tmdb_movie or not is_valid_tmdb_movie(tmdb_movie):
         return None
     
     facade_movie = convert_tmdb_movie2facade_movie(tmdb_movie)
@@ -262,12 +295,12 @@ def convert_tmdb_movie2facade_movie(tmdb_movie):
 """
 TODO: funcion privada
 """
-def search_imdb_movies(search_query, title=None, year=None):
+def search_facade_movies(search_query, title=None, year=None):
     cache_key = 'sim(%s)' % search_query
     if cached_obj := get_cache(key=cache_key):
         return cached_obj
     
-    imdb_results = []
+    imdb_results: list[FacadeMovie] = []
 
     search = tmdb.Search()
     if not title is None and not year is None:
@@ -289,34 +322,6 @@ def search_imdb_movies(search_query, title=None, year=None):
 
     return add_cache(key=cache_key, value=imdb_results)
 
-"""
-TODO: Revisar esta clase (solo se usa aqui pero se devuelve en alguna func)
-"""
-class FacadeResult:
-    is_local_data = False
-    is_imdb_data = False
-    storage_match = False
-    movie = None
-    posible_movies = [] # Candidatas posibles
-
-    @staticmethod
-    def local_data(movie, storage_match=False):
-        facade_result = FacadeResult()
-        facade_result.is_local_data = True
-        facade_result.storage_match = storage_match
-        facade_result.movie = movie
-
-        return facade_result
-
-    @staticmethod
-    def imdb_data(facade_movie, storage_match=False):
-        facade_result = FacadeResult()
-        facade_result.is_local_data = False
-        facade_result.storage_match = storage_match
-        facade_result.movie = facade_movie
-
-        return facade_result
-
 def clean_string(value):
     s = re.sub(r'[\.:;,\-\[\]\(\)\{\}¿¡]+', ' ', value)
     return re.sub(r'-', ' ', slugify(s))
@@ -324,16 +329,26 @@ def clean_string(value):
 """
 TODO: Ojo con esta func, no me gusta que devuelva dos tipos de objeto distintos... cuidadito
 """
-def facade_get(imdb_id, exclude_local_data=False):
-    movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all() if not exclude_local_data else []
+def facade_get(imdb_id=None, tmdb_id=None, exclude_local_data=False):
+    if not imdb_id and not tmdb_id:
+        return FacadeResult.facade_data(None)
+    
+    movies_local_data = []
+
+    if not exclude_local_data:
+        if imdb_id:
+            movies_local_data = Movie.objects.filter(imdb_id=imdb_id).all()
+        
+        if tmdb_id and not movies_local_data:
+            movies_local_data = Movie.objects.filter(tmdb_id=tmdb_id).all()
     
     if movies_local_data.count() == 1:
         return FacadeResult.local_data(movies_local_data[0])
     else:
-        return FacadeResult.imdb_data(get_facade_movie(imdb_id=imdb_id))
+        return FacadeResult.facade_data(get_facade_movie(imdb_id=imdb_id, tmdb_id=tmdb_id))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None, imdb_id=None, not_an_imdb_movie=False, exclude_local_data=False):
+    storage_name=None, path=None, imdb_id=None, tmdb_id=None, not_an_imdb_movie=False, exclude_local_data=False):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
@@ -341,13 +356,21 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
     en cualquier otro caso devuelve None
     """
 
-    # Buscamos por imdb_id primero (easy)
+    facade_result = None
+
+    # Buscamos por imdb_id o tmdb_id primero (easy)
     if imdb_id:
-        if imdb_id[0] != 't':
-            imdb_id = 'tt%s' % imdb_id
+        imdb_id = maybe_format_imdb_id(imdb_id)
         trace.debug('\t\t- Buscando por imdb_id "%s"...' % imdb_id)
-        return facade_get(imdb_id)
-    
+        facade_result = facade_get(imdb_id=imdb_id)
+
+    if tmdb_id and not facade_result:
+        trace.debug('\t\t- Buscando por tmdb_id "%s"...' % tmdb_id)
+        facade_result = facade_get(tmdb_id=tmdb_id)
+
+    if facade_result:
+        return facade_result
+
     if not exclude_local_data:
         # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
         # si se trata de una peli almacenada en el disco
@@ -378,29 +401,34 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
             return None
     
     trace.debug('\t\t- Buscando en imdb "title=%s year=%s title_alt=%s director=%s"...' % (title, year, title_alt, director))
-    facade_movie, facade_search_results = match_facade_movie(
+    facade_match = match_facade_movie(
         title, year, title_alt=title_alt, 
         director=director
     )
 
-    if not facade_movie is None:
-        # Por ultima vez comprobamos que no la tenemos dada de alta en local
-        local_movies = Movie.objects.filter(imdb_id=facade_movie.imdb_id).all()
+    if facade_match:
+        if facade_match.facade_movie:
+            kargs = {}
 
-        if local_movies.count() == 0:
-            return FacadeResult.imdb_data(facade_movie)
+            if facade_match.facade_movie.imdb_id:
+                kargs['imdb_id'] = facade_match.facade_movie.imdb_id
+            if facade_match.facade_movie.tmdb_id:
+                kargs['tmdb_id'] = facade_match.facade_movie.tmdb_id
+            
+            # Por ultima vez comprobamos que no la tenemos dada de alta en local
+            local_movies = Movie.objects.filter(**kargs).all() if kargs else []
 
-        return FacadeResult.local_data(local_movies[0])
-    
-    if facade_search_results is None or len(facade_search_results) == 0:
-        return None
-    
+            if local_movies.count() == 0:
+                return FacadeResult.facade_data(facade_match.facade_movie)
 
-    # Llegados a este punto no hemos encontrado ninguna coincidencia decente
-    # sacamos un mensaje y devolvemos None
-    trace.debug(" * No encontramos coincidencia clara para la peli '%s (%s)' *" % (title, year))
-    trace.debug(" * Aunque hemos encontrado las siguientes: *")
-    trace_results(facade_search_results)
+            return FacadeResult.local_data(local_movies[0])
+
+        if facade_match.promissing_facade_movies:
+            # Llegados a este punto no hemos encontrado ninguna coincidencia decente
+            # sacamos un mensaje y devolvemos None
+            trace.debug(" * No encontramos coincidencia clara para la peli '%s (%s)' *" % (title, year))
+            trace.debug(" * Aunque hemos encontrado las siguientes: *")
+            trace_results(facade_match.promissing_facade_movies)
 
     return None
 
@@ -417,7 +445,7 @@ def reverse_name(name):
 TODO: funcion privada
 """
 def slugify_directors(director_field):
-    directors = []
+    directors: list[str] = []
 
     if director_field:
         for director_name in director_field.split(','):
@@ -431,7 +459,7 @@ def slugify_directors(director_field):
 """
 TODO: funcion privada
 """
-def match_imdb_movie_by_director(facade_search_results, director):
+def match_imdb_movie_by_director(facade_search_results: list[FacadeMovie], director):
     matches = []
 
     for facade_movie in facade_search_results:
@@ -477,55 +505,45 @@ def trace_results(facade_search_results):
 """
 TODO: funcion privada
 """
-def search_movie_imdb(title, year=None, title_alt=None, director=None):
-    search_results = None
+def search_facade_movies_by_title_and_year(title, year=None):
+    search_results: list[FacadeMovie] = []
     clean_title = clean_string(title)
 
-    if title and year:
+    if year:
         # Buscamos por titulo y año en IMDB
         trace.debug('\t\t\t- Buscando en imdb por titulo y año "title=%s year=%s"...' % (title, year))
-        search_results = search_imdb_movies(search_query=title, title=title, year=year)
+        search_results = search_facade_movies(search_query=title, title=title, year=year)
 
-        if search_results is None or len(search_results) == 0:
+        if not search_results:
             trace.debug('\t\t\t- Buscando en imdb por titulo limpio y año "clean_title=%s year=%s"...' % (clean_title, year))
-            search_results = search_imdb_movies(search_query=clean_title, title=clean_title, year=year)
+            search_results = search_facade_movies(search_query=clean_title, title=clean_title, year=year)
         
-        if search_results is None or len(search_results) == 0:
+        if not search_results:
             trace.debug('\t\t\t- Buscando en imdb por titulo en query y año "title=%s year=%s"...' % (title, year))
-            search_results = search_imdb_movies(search_query=title, year=year)
+            search_results = search_facade_movies(search_query=title, year=year)
 
-        if search_results is None or len(search_results) == 0:
+        if not search_results:
             trace.debug('\t\t\t- Buscando en imdb por titulo limpio en query y año "clean_title=%s year=%s"...' % (clean_title, year))
-            search_results = search_imdb_movies(search_query=title, year=year)
+            search_results = search_facade_movies(search_query=clean_title, year=year)
     
-    if search_results is None or len(search_results) == 0:
+    if not search_results:
         trace.debug('\t\t\t- Buscando en imdb por titulo "title=%s"...' % title)
-        search_results = search_imdb_movies(title, title=title)
+        search_results = search_facade_movies(title, title=title)
     
-    if search_results is None or len(search_results) == 0:
+    if not search_results:
         trace.debug('\t\t\t- Buscando en imdb por titulo limpio "clean_string(title)=%s"...' % clean_string(title))
-        search_results = search_imdb_movies(clean_title, title=clean_title)
+        search_results = search_facade_movies(clean_title, title=clean_title)
 
-    if search_results is None or len(search_results) == 0:
+    if not search_results:
         trace.debug('\t\t\t- Buscando en imdb por titulo en search_query "title=%s"...' % title)
-        search_results = search_imdb_movies(title)
+        search_results = search_facade_movies(title)
     
-    if search_results is None or len(search_results) == 0:
+    if not search_results:
         trace.debug('\t\t\t- Buscando en imdb por titulo limpio en search_query "clean_title=%s"...' % clean_string(title))
-        search_results = search_imdb_movies(clean_title)
+        search_results = search_facade_movies(clean_title)
     
-    # Si aun no lo encontramos por el titulo principal, 
-    # buscamos por el alt (si lo tiene)
-    # TODO: Revisar esto... no entiendo porque pero antes solo buscaba por 
-    # title_alt si le habiamos pasado director:
-    # if (search_results is None or len(search_results) == 0) and title_alt and not director is None:
-    if (search_results is None or len(search_results) == 0) and title_alt:
-        trace.debug('\t\t\t- Buscando en imdb por titulo alt, año y director "title_alt=%s year=%s director=%s)"...' % (title_alt, year, director))
-        return search_movie_imdb(title_alt, year=year, director=director)
-    
-    if search_results is None or len(search_results) == 0:
+    if not search_results:
         trace.debug("NO se han encontrado resultados en la busqueda IMDB para %s (%s)" % (title, year))
-        return None
     
     return search_results
 

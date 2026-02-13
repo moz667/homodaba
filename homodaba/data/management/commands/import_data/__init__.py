@@ -9,7 +9,7 @@ from data.utils.facade_model import FacadeMovie, FacadeCredit
 
 from data.management.commands.utils import normalize_age_certificate
 
-def get_or_create_person_not_an_imdb_movie(name):
+def get_or_create_person_by_name(name):
     local_persons = Person.objects.filter(name__icontains=name).all()
 
     if local_persons.count() > 0:
@@ -19,33 +19,40 @@ def get_or_create_person_not_an_imdb_movie(name):
         name=name,
         canonical_name=name,
         imdb_id=None,
+        tmdb_id=None,
     )
 
+def get_person_from_facade_credit(facade_credit: FacadeCredit):
+    kargs = {}
+
+    if facade_credit.imdb_id:
+        kargs['imdb_id'] = facade_credit.imdb_id
+
+    if facade_credit.tmdb_id:
+        kargs['tmdb_id'] = facade_credit.tmdb_id
+    
+    if facade_credit.name:
+        kargs['name'] = facade_credit.name
+    
+    if len(kargs) > 0:
+        local_persons = Person.objects.filter(**kargs).all()
+
+        if local_persons.count() > 0:
+            return local_persons[0]
+
+    return None
+
 def get_or_create_person_from_facade_credit(facade_credit: FacadeCredit):
-    local_persons = Person.objects.filter(imdb_id=facade_credit.id).all()
+    local_person = get_person_from_facade_credit(facade_credit=facade_credit)
 
-    if local_persons.count() > 0:
-        return local_persons[0]
-
-    # Es posible que se haya dado de alta el tipo antes (Con una peli que 
-    # no este en el imdb). Para estas actualizamos los datos y devolvemos
-    # el primero que encontremos
-    local_persons = Person.objects.filter(name=facade_credit.name, imdb_id=None).all()
-    if local_persons.count() > 0:
-        for lp in local_persons:
-            lp.canonical_name = facade_credit.canonical_name
-            lp.imdb_id = facade_credit.id
-            lp.avatar_thumbnail_url = facade_credit.avatar_thumbnail_url
-            lp.avatar_url = facade_credit.avatar_url
-
-            lp.save()
-        
-        return local_persons[0]
+    if local_person:
+        return local_person
 
     return Person.objects.create(
         name=facade_credit.name,
         canonical_name=facade_credit.canonical_name,
-        imdb_id=facade_credit.id,
+        imdb_id=facade_credit.imdb_id,
+        tmdb_id=facade_credit.tmdb_id,
         avatar_thumbnail_url=facade_credit.avatar_thumbnail_url,
         avatar_url=facade_credit.avatar_url,
     )
@@ -81,7 +88,7 @@ def get_or_insert_storage(movie, is_original=True, storage_type=None, storage_na
     )
 
 def is_valid_facade_credit_for_insert(facade_credit: FacadeCredit):
-    return facade_credit.id and facade_credit.name \
+    return (facade_credit.imdb_id or facade_credit.tmdb_id) and facade_credit.name \
         and facade_credit.canonical_name
 
 def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], title_original=None, title_preferred=None):
@@ -178,6 +185,7 @@ def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], tit
         title_original=facade_movie.title_original,
         title_preferred=facade_movie.title_preferred,
         imdb_id=facade_movie.imdb_id,
+        tmdb_id=facade_movie.tmdb_id,
         kind=facade_movie.kind,
         summary=facade_movie.summary,
         poster_url=facade_movie.poster_url,
@@ -246,8 +254,8 @@ def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], tit
     return local_movie
 
 def populate_countries(local_movie, facade_movie: FacadeMovie=None):
-    if facade_movie is None and local_movie.imdb_id:
-        facade_movie = get_facade_movie(local_movie.imdb_id)
+    if facade_movie is None and (local_movie.imdb_id or local_movie.tmdb_id):
+        facade_movie = get_facade_movie(imdb_id=local_movie.imdb_id, tmdb_id=local_movie.tmdb_id)
     
     if len(facade_movie.countries) > 0:
         trace.debug(" * Añadiendo paises para la peli:")
@@ -263,11 +271,11 @@ def populate_countries(local_movie, facade_movie: FacadeMovie=None):
             country=Country.NO_COUNTRY
         ))
 
-def insert_movie_from_a_not_an_imdb_movie(title, year, directors=[], tags=[], title_original=None, title_preferred=None):
+def insert_movie_from_a_not_an_imdb_movie(title, year, directors: list[str]=[], tags: list[str]=[], title_original=None, title_preferred=None):
     db_directors = []
 
-    for d in directors:
-        lp = get_or_create_person_not_an_imdb_movie(name=d)
+    for director_name in directors:
+        lp = get_or_create_person_by_name(name=director_name)
 
         if not lp.is_director:
             lp.is_director = True
@@ -283,6 +291,7 @@ def insert_movie_from_a_not_an_imdb_movie(title, year, directors=[], tags=[], ti
         title_original=title_original,
         title_preferred=title_preferred,
         imdb_id=None,
+        tmdb_id=None,
         kind=Movie.MK_NOT_AN_IMDB_MOVIE,
         summary=None,
         poster_url=None,
@@ -356,7 +365,7 @@ def insert_casting_on_local_movie(local_movie, directors=[], writers=[], casting
 def populate_default_casting(directors=[], writers=[], casting=[]):
     if not len(directors):
         # Si no tiene director creamos una persona que sea Sin Director
-        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_DIRECTOR)
+        lp = get_or_create_person_by_name(name=Person.DEFAULT_NO_DIRECTOR)
 
         if not lp.is_director:
             lp.is_director = True
@@ -365,14 +374,14 @@ def populate_default_casting(directors=[], writers=[], casting=[]):
         directors = [lp]
     
     if not len(writers):
-        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_WRITER)
+        lp = get_or_create_person_by_name(name=Person.DEFAULT_NO_WRITER)
         if not lp.is_writer:
             lp.is_writer = True
             lp.save()
         writers = [lp]
     
     if not len(casting):
-        lp = get_or_create_person_not_an_imdb_movie(name=Person.DEFAULT_NO_ACTOR)
+        lp = get_or_create_person_by_name(name=Person.DEFAULT_NO_ACTOR)
         if not lp.is_actor:
             lp.is_actor = True
             lp.save()

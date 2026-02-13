@@ -14,6 +14,7 @@ import sys
 
 from .utils import clean_csv_data, csv_validate, strtobool
 from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.py
+from .import_data import get_person_from_facade_credit
 
 
 # TODO: Buscar diferencias en year y director?
@@ -56,19 +57,6 @@ class Command(BaseCommand):
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
 
-
-    def get_or_create_person(self, ia_person):
-        local_persons = Person.objects.filter(imdb_id=ia_person.getID()).all()
-
-        if local_persons.count() > 0:
-            return local_persons[0]
-        
-        return Person.objects.create(
-            name=ia_person['name'],
-            canonical_name=ia_person['canonical name'],
-            imdb_id=ia_person.getID(),
-        )
-
     def get_csv_imdb_json_data(self, r, force_check_imdb_id=True):
         trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
@@ -90,6 +78,7 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
+            tmdb_id=cd['tmdb_id'],
             not_an_imdb_movie=not_an_imdb_movie
         )
 
@@ -118,6 +107,7 @@ class Command(BaseCommand):
         if facade_result.is_local_data:
             json_obj['db_info']['title'] = m.title
             json_obj['db_info']['imdb_id'] = m.imdb_id
+            json_obj['db_info']['tmdb_id'] = m.tmdb_id
             json_obj['db_info']['db_id'] = m.id
             json_obj['db_info']['year'] = m.year
 
@@ -133,19 +123,20 @@ class Command(BaseCommand):
 
             json_obj['db_info']['title'] = m.title
             json_obj['db_info']['imdb_id'] = m.imdb_id
+            json_obj['db_info']['tmdb_id'] = m.tmdb_id
             json_obj['db_info']['db_id'] = None
             json_obj['db_info']['year'] = int(m.year)
 
             for d in m.directors:
-                local_db_directors = Person.objects.filter(imdb_id=d.id).all()
-                local_db_director = local_db_directors[0] if local_db_directors.count() > 0 else None
+                local_db_director = get_person_from_facade_credit(facade_credit=d)
 
                 if local_db_director is None:
                     directors.append({
                         'db_id': None,
                         'name': d.name,
                         'canonical_name': d.canonical_name,
-                        'imdb_id': d.id,
+                        'imdb_id': d.imdb_id,
+                        'tmdb_id': d.tmdb_id,
                     })
                 else:
                     directors.append({
@@ -153,6 +144,7 @@ class Command(BaseCommand):
                         'name': local_db_director.name,
                         'canonical_name': local_db_director.canonical_name,
                         'imdb_id': local_db_director.imdb_id,
+                        'tmdb_id': local_db_director.tmdb_id,
                     })
 
         json_obj['db_info']['directors'] = directors

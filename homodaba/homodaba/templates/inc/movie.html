@@ -27,7 +27,7 @@
         <div class="directors">
             <em>
                 {% for director in movie.get_directors %}
-                    <a href="{% url 'search_movies' %}?director={{ director.name }}{% if director.imdb_id %} [{{ director.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'director' %}">
+                    <a href="{% url 'search_movies' %}?director={{ director.name }} {{ director.get_filter_external_id }}&order_by={{ order_by }}{% search_filters_as_url_args filters 'director' %}">
                         {{ director.name }}
                     </a>{% if not forloop.last %}, {% endif %}
                 {% endfor %}
@@ -109,7 +109,7 @@
                 <ul class="writers">
                     {% for writer in movie.writers.all %}
                         <li class="writer">
-                            <a href="{% url 'search_movies' %}?writer={{ writer.name }}{% if writer.imdb_id %} [{{ writer.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'writer' %}">
+                            <a href="{% url 'search_movies' %}?writer={{ writer.name }} {{ writer.get_filter_external_id }}&order_by={{ order_by }}{% search_filters_as_url_args filters 'writer' %}">
                                 {{ writer.name }}
                             </a>
                         </li>
@@ -133,7 +133,7 @@
                 <ul class="casting">
                     {% for actor in movie.actors.all %}
                         <li style="{% if forloop.counter > 6 %} display: none;{% endif %}" class="actor">
-                            <a href="{% url 'search_movies' %}?actor={{ actor.name }}{% if actor.imdb_id %} [{{ actor.imdb_id }}]{% endif %}&order_by={{ order_by }}{% search_filters_as_url_args filters 'actor' %}">
+                            <a href="{% url 'search_movies' %}?actor={{ actor.name }} {{ actor.get_filter_external_id }}&order_by={{ order_by }}{% search_filters_as_url_args filters 'actor' %}">
                                 {{ actor.name }}
                             </a>
                         </li>

@@ -12,7 +12,7 @@ from .decorators import json_basic_auth
 from data.models import Tag, Movie, MovieStorageType, get_last_items
 from data.search import populate_search_filter
 
-def populate_data(data, movies, request):
+def populate_data(data, movies: list[Movie], request):
     share_protocol = 'SMB'
     if 'protocol' in request.GET.keys() and request.GET["protocol"] in ["SMB", "HTTP"]:
         share_protocol = request.GET["protocol"]

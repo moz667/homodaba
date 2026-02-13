@@ -149,16 +149,26 @@ def get_person_filter(request, request_key, **kargs):
     if request_key in request.GET.keys():
         if request.GET[request_key]:
             imdb_id = None
-            pattern = re.compile(".*\[(.*)\]")
+            pattern = re.compile(".*\[imdb_id:(.*)\]")
             person_name = request.GET[request_key]
 
             if pattern.search(person_name):
                 imdb_id = pattern.search(person_name).groups()[0]
-                person_name = person_name.replace("[%s]" % imdb_id, "").strip()
+                person_name = person_name.replace("[imdb_id:%s]" % imdb_id, "").strip()
+            
+            tmdb_id = None
+            pattern = re.compile(".*\[tmdb_id:(.*)\]")
+            person_name = request.GET[request_key]
+
+            if pattern.search(person_name):
+                tmdb_id = pattern.search(person_name).groups()[0]
+                person_name = person_name.replace("[tmdb_id:%s]" % tmdb_id, "").strip()
 
             persons = []
             if imdb_id:
-                persons = Person.objects.filter(name=person_name, imdb_id=imdb_id, **kargs).all()
+                persons = Person.objects.filter(imdb_id=imdb_id).all()
+            elif tmdb_id:
+                persons = Person.objects.filter(imdb_id=tmdb_id).all()
             else:
                 persons = Person.objects.filter(name=person_name, **kargs).all()
 

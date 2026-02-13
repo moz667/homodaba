@@ -42,6 +42,15 @@ class Person(models.Model):
     is_actor = models.BooleanField('Actor', default=False, null=False, blank=False)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
 
+    def get_filter_external_id(self):
+        if self.imdb_id:
+            return "[imdb_id:%s]" % self.imdb_id
+        elif self.tmdb_id:
+            return "[tmdb_id:%s]" % self.tmdb_id
+
+        return ""
+        
+
     def get_imdb_url(self):
         if self.imdb_id:
             return 'https://www.imdb.com/name/nm%s/' % self.imdb_id
@@ -247,10 +256,10 @@ class Movie(models.Model):
         return self.get_persons(MoviePerson.RT_ACTOR)
 
     def clean_poster_thumbnail_url(self):
-        return self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@._V1_SY150_CR0,0,101,150_.jpg'
+        return self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://image.tmdb.org/t/p/w780/5oJBRsNQks7bLb2ztY1XWYsA8xw.jpg'
 
     def clean_poster_url(self):
-        return self.poster_url if self.poster_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@.jpg'
+        return self.poster_url if self.poster_url else 'https://image.tmdb.org/t/p/original/5oJBRsNQks7bLb2ztY1XWYsA8xw.jpg'
 
     def get_plot(self):
         if self.summary:
@@ -267,6 +276,11 @@ class Movie(models.Model):
         if self.imdb_id:
             return 'https://www.imdb.com/title/%s/' % self.get_formated_imdb_id()
         return 'https://www.imdb.com/title/tt0385307/'
+
+    def get_tmdb_url(self):
+        if self.tmdb_id:
+            return 'https://www.themoviedb.org/movie/%s' % self.tmdb_id
+        return 'https://www.themoviedb.org/movie/10040'
 
     def get_poster_thumbnail_img(self):
         return format_html(

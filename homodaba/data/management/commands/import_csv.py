@@ -123,6 +123,7 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
+            tmdb_id=cd['tmdb_id'],
             not_an_imdb_movie=not_an_imdb_movie
         )
 
@@ -132,7 +133,7 @@ class Command(BaseCommand):
             if not not_an_imdb_movie:
                 trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
             else:
-                trace.error('\tParece que no encontramos la pelicula "%s (%s) [imdb_id:%s]"' % (cd['title'], r['year'], cd['imdb_id']))
+                trace.error('\tParece que no encontramos la pelicula "%s (%s) [imdb_id:%s] [tmdb_id:%s]"' % (cd['title'], r['year'], cd['imdb_id'], cd['tmdb_id']))
             return None
 
         local_movie = None
@@ -153,14 +154,14 @@ class Command(BaseCommand):
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             trace.warning("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
-            local_movie = facade_result.movie
+            local_movie = facade_result.local_movie
         # El resto son pelis nuevas (localizables por el imdb)
         else:
-            trace_validate_facade_movie(facade_result.movie, cd['title'], director=cd['director'])
+            trace_validate_facade_movie(facade_result.facade_movie, cd['title'], director=cd['director'])
 
             local_movie = insert_movie_from_facade_movie(
                 r['title'],
-                facade_result.movie, 
+                facade_result.facade_movie, 
                 tags=tags, 
                 title_original=cd['title_original'],
                 title_preferred=cd['title_preferred'],

@@ -28,21 +28,22 @@ class Command(BaseCommand):
         parser.add_argument('--year', nargs='*', type=str, help="""Año a buscar.""")
         parser.add_argument('--imdb_id', nargs='*', type=str, help="""Por imdb id.""")
 
-    def search_and_print(self, r, force_check_imdb_id=True):
+    def search_and_print(self, r):
         trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
         
         facade_result = facade_search(
-            title=cd['title'], year=r['year'], imdb_id=r['imdb_id'],
+            title=cd['title'], year=r['year'],
+            imdb_id=r['imdb_id'], tmdb_id=r['tmdb_id'], 
             exclude_local_data=True
         )
 
-        if facade_result is None or facade_result.movie is None:
+        if facade_result is None or facade_result.facade_movie is None:
             print('No encontramos la pelicula')
             return
 
-        m = facade_result.movie
+        m = facade_result.facade_movie
 
         print('## %s (%s) imdb_id="%s" tmdb_id="%s"' % (m.title, m.year, m.imdb_id, m.tmdb_id))
 
@@ -116,10 +117,6 @@ class Command(BaseCommand):
         else:
             print ('    - No tiene paises')
 
-
-
-
-
     def handle(self, *args, **options):
         title = None
         if 'title' in options and options['title'] and options['title'][0]:
@@ -142,6 +139,6 @@ class Command(BaseCommand):
         query['year'] = year
         query['imdb_id'] = imdb_id
 
-        self.search_and_print(query, True)
+        self.search_and_print(query)
 
 

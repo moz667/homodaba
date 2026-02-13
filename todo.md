@@ -41,14 +41,14 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
     * [X] Tener una estrategia para generar la clave independientemente del:
       * tipo de API
       * Si es una busqueda, detalle, etc...
-  * [ ] Person
-    * [ ] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
+  * [X] Person
+    * [X] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
   * [ ] TitleAka
     * [ ] Añadir un campo con un subtipo de pais (algo generico en plan zone)
   * [ ] Country
     * [ ] Añadir un campo con el codigo iso_3166_1 y que sea unico
-  * [ ] Movie
-    * [ ] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
+  * [X] Movie
+    * [X] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
 
 * [ ] Pruebas
   * [X] Nuevo comando de busqueda
@@ -57,6 +57,8 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
     * [X] Probar importar csv (con imdb_id)
     * [ ] Probar importar csv (sin imdb_id)
   * [ ] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
+  * [ ] Probar telegram bot
+  * [ ] Probar elasticache
 
 * [ ] Problemas:
   * [ ] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
@@ -201,3 +203,5 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
 1. [X] ~~Hacer responsive la lista de peliculas de la admin (o lo mismo hacer una plantilla para el tema de busqueda... la admin esta bien pero tiene muchas cosas de django que lo mismo nos la soplan)~~
     - ~~Estoy dandole vueltas a esto y creo que lo mejor al final va a ser sacar una vista especial para las busquedas (y dejar la admin como estaba al principio :P)~~
 1. [X] ~~Mirar themes de admin con bootstrap~~
+
+## Mesh

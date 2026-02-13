@@ -86,6 +86,7 @@ def clean_csv_data(r):
     year = int(r['year']) if 'year' in r and r['year'] else Movie.DEFAULT_NO_YEAR
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
+    tmdb_id = r['tmdb_id'] if 'tmdb_id' in r and r['tmdb_id'] else None
 
     not_an_imdb_movie = False
     if 'not_an_imdb_movie' in r:
@@ -134,6 +135,7 @@ def clean_csv_data(r):
         'year':year,
         'is_original':is_original,
         'imdb_id':imdb_id,
+        'tmdb_id':tmdb_id,
         'not_an_imdb_movie':not_an_imdb_movie,
         'storage_type':storage_type,
         'media_format':media_format,

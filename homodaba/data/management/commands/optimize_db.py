@@ -1,11 +1,7 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.utils.translation import gettext as _
-from django.utils.text import slugify
+from django.core.management.base import BaseCommand
 
-
-from data.models import Movie, TitleAka, MoviePerson, Tag, Country
-from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
+from data.models import Movie, TitleAka, MoviePerson, Tag
+from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
 from data.utils import trace
 from data.utils.imdbpy_facade import get_facade_movie
@@ -169,7 +165,9 @@ class Command(BaseCommand):
                             movies = Movie.objects.filter(id=csv_row['id']).all()
                         elif 'imdb_id' in csv_row and csv_row['imdb_id']:
                             movies = Movie.objects.filter(imdb_id=csv_row['imdb_id']).all()
-                        
+                        elif 'tmdb_id' in csv_row and csv_row['tmdb_id']:
+                            movies = Movie.objects.filter(tmdb_id=csv_row['tmdb_id']).all()
+
                         if movies.count() > 0:
                             for movie in movies:
                                 trace.debug('>> %s (%s) [id:%s]' % (movie.title, movie.get_countries_as_text(), movie.id))
@@ -235,12 +233,12 @@ def populate_casting(movie):
     if got_changes:
         movie.save()
 
-def clean_title_and_akas(movie):
+def clean_title_and_akas(movie: Movie):
     title_akas = []
     new_titles = []
 
-    if movie.imdb_id:
-        facade_movie = get_facade_movie(movie.imdb_id)
+    if movie.imdb_id or movie.tmdb_id:
+        facade_movie = get_facade_movie(imdb_id=movie.imdb_id, tmdb_id=movie.tmdb_id)
         
         if len(facade_movie.title_akas) > 0:
             movie.title_akas.clear()

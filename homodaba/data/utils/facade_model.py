@@ -20,32 +20,33 @@ SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 = {
 }
 
 class FacadeCredit:
-    id = None
-    name = None
-    canonical_name = None
-    avatar_url = None
-    avatar_thumbnail_url = None
+    imdb_id: str = None
+    tmdb_id: str = None
+    name: str = None
+    canonical_name: str = None
+    avatar_url: str = None
+    avatar_thumbnail_url: str = None
 
 class FacadeMovie:
-    title = None
-    title_original = None
-    title_preferred = None
-    imdb_id = None
-    tmdb_id = None
-    kind = Movie.MK_MOVIE
-    summary = None
-    poster_url = None
-    poster_thumbnail_url = None
-    year = None
-    rating = None
-    title_akas = {}
-    tags = []
-    genres = []
-    content_rating_systems = []
-    directors = []
-    writers = []
-    actors = []
-    countries = []
+    title: str = None
+    title_original: str = None
+    title_preferred: str = None
+    imdb_id: str = None
+    tmdb_id: str = None
+    kind: str = Movie.MK_MOVIE
+    summary: str = None
+    poster_url: str = None
+    poster_thumbnail_url: str = None
+    year: int = None
+    rating: float = None
+    title_akas: dict[str, str] = {}
+    tags: list[str] = []
+    genres: list[str] = []
+    content_rating_systems: list[str] = []
+    directors: list[FacadeCredit] = []
+    writers: list[FacadeCredit] = []
+    actors: list[FacadeCredit] = []
+    countries: list[str] = []
 
     # tmdb_fields
     release_date = None
@@ -153,7 +154,8 @@ def dictionary_to_facade_credit(p):
     # {'adult': False, 'gender': 2, 'id': 4671, 'known_for_department': 'Editing', 'name': 'Zach Staenberg', 'original_name': 'Zach Staenberg', 'popularity': 0.2352, 'profile_path': '/fTE4gvedUe9xJRAdKUnCM09TkwZ.jpg', 'credit_id': '52fe425bc3a36847f8018141', 'department': 'Editing', 'job': 'Editor'}
     # {'adult': False, 'gender': 2, 'id': 6384, 'known_for_department': 'Acting', 'name': 'Keanu Reeves', 'original_name': 'Keanu Reeves', 'popularity': 11.1443, 'profile_path': '/kEoUZKEG7dzbCESDjd0CKAN1r0n.jpg', 'cast_id': 34, 'character': 'Neo', 'credit_id': '52fe425bc3a36847f80181c1', 'order': 0}
     fc = FacadeCredit()
-    fc.id = 'tmdb:%s' % p['id']
+    fc.imdb_id = None
+    fc.tmdb_id = p['id']
     fc.name = p['name']
     fc.canonical_name = p['original_name']
     fc.avatar_thumbnail_url = 'https://image.tmdb.org/t/p/w780%s' % p['profile_path'] if 'profile_path' in p and p['profile_path'] else None
