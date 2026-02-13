@@ -168,7 +168,7 @@ def get_person_filter(request, request_key, **kargs):
             if imdb_id:
                 persons = Person.objects.filter(imdb_id=imdb_id).all()
             elif tmdb_id:
-                persons = Person.objects.filter(imdb_id=tmdb_id).all()
+                persons = Person.objects.filter(tmdb_id=tmdb_id).all()
             else:
                 persons = Person.objects.filter(name=person_name, **kargs).all()
 
