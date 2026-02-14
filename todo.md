@@ -45,8 +45,8 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
     * [X] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
   * [ ] TitleAka
     * [ ] Añadir un campo con un subtipo de pais (algo generico en plan zone)
-  * [ ] Country
-    * [ ] Añadir un campo con el codigo iso_3166_1 y que sea unico
+  * [ ] ~~Country~~
+    * [ ] ~~Añadir un campo con el codigo iso_3166_1 y que sea unico~~
   * [X] Movie
     * [X] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
 
