@@ -9,7 +9,7 @@ from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE
 
 if ELASTICSEARCH_DSL:
     from .documents import MovieDocument
-    from elasticsearch_dsl import Q as DSL_Q
+    from elasticsearch.dsl import Q as DSL_Q
 
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
         genre=None, content_rating_system=None, tag=None, year=None, 
@@ -266,7 +266,7 @@ def extract_year(search_term):
     y es un valor de 4 caracteres
     """
     if search_term.find('(') > -1 and search_term.find(')') > 3:
-        year_str = re.compile('.*\(|\)').sub('', search_term)
+        year_str = re.compile(r'.*\\(|\\)').sub('', search_term)
         if year_str.isdigit():
             year = int(year_str)
             
@@ -274,7 +274,7 @@ def extract_year(search_term):
             min_year = list(Movie.objects.aggregate(Min('year')).values())[0]
             
             if year >= min_year and year <= max_year:
-                search_term = re.compile('\(.*').sub('', search_term).strip()
+                search_term = re.compile(r'\\(.*').sub('', search_term).strip()
                 return year, search_term
     
     return None, search_term
