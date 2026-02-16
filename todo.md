@@ -14,7 +14,7 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
 
 * [X] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
   * [X] ~~El problema de tmdb es que no tiene imdbid~~ Si tiene, se puede buscar por el inclusive
-  * [ ] titulo original en caracteres latinos
+  * [ ] ~~titulo original en caracteres latinos~~ No lo acabo de ver claro... quias en otra ocasion
   * [X] titulo internacional
   * [X] titulo en castellano
   * [X] posibilidad de buscar por titulo y año para acotar
@@ -31,8 +31,8 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
   * [X] Que en el detalle tengamos
     * [X] ~~Coger peli por imdb_id~~ No lo tiene pero se puede conseguir el id de tmdb buscando por imdb_id (con `Find`)
 
-* [ ] Nueva funcionalidad
-  * [ ] Permitir importar pelis que no encuentra
+* [X] Nueva funcionalidad
+  * [X] Permitir importar pelis que no encuentra
 
 * [ ] Cambios en el modelo
   * [X] ImdbCache
@@ -52,13 +52,13 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
 
 * [ ] Pruebas
   * [X] Nuevo comando de busqueda
-  * [ ] Probar el resto de la aplicacion (que ponemos aqui?)
+  * [X] Probar el resto de la aplicacion (que ponemos aqui?)
     * [X] Probar escaneo de directorios
     * [X] Probar importar csv (con imdb_id)
-    * [ ] Probar importar csv (sin imdb_id)
-  * [ ] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
+    * [X] Probar importar csv (sin imdb_id)
+  * [X] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
   * [ ] Probar telegram bot
-  * [ ] Probar elasticache
+  * [X] Probar elasticache **No funciona!**
 
 * [ ] Problemas:
   * [ ] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
@@ -84,6 +84,56 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
     * [X] Ifigenia, 1968 (`NO_CACHE=1 python3 ./manage.py search_movie --title "Ifigenia" --year 1968`)
       * No se encuentra por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt6696960` 
       * Va a pasar lo mismo que con It, al ser de TV (visto en [imdb](https://www.imdb.com/title/tt6696960/)) pasamos por ahora 
+
+## Elasticsearch
+
+Elasticsearch ha dejado de funcionar con las ultimas versiones de homodaba, como tampoco se estaba usando lo vamos a dejar como una tarea pendiente de revisar.
+
+Para poder probar elastic search hay que hacer lo siguiente al compose:
+
+1. Añadir el argumento de construccion `ELASTICSEARCH: true` a la imagen de la app principal
+2. Añadir al entorno la variable que especifica a la app la localizacion del servicio de elasticsearch, `- ES_DSL_HOSTS=http://dev-elasticsearch:9200`
+3. Añadir el servicio con el elasticsearch (ver mas abajo con caracteristicas del mismo en el servicio `dev-elasticsearch`)
+
+**Ejemplo de compose:**
+```yaml
+services:
+    ...
+    dev-app:
+        extends:
+            service: app
+            file: docker-compose.base.yml
+        build:
+            args:
+                ...
+                ELASTICSEARCH: true
+        ...
+    dev-elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:9.2.5
+        restart: always
+        environment:
+            - discovery.type=single-node
+            - xpack.security.enabled=false
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        volumes:
+            - esdata:/usr/share/elasticsearch/data
+
+volumes:
+  esdata:
+    driver: local
+
+```
+
+### Tareas pendientes de elasticsearch
+
+* [ ] No funciona la creacion/rellenado de indices Error: `elastic_transport.ConnectionTimeout: Connection timed out` al ejecutar:
+  * `python manage.py search_index --create` (crea el indice pero no lo rellena con valores)
+  * `python manage.py search_index --populate`
+* [ ] No funciona la busqueda (seguramente porque no tenemos indices), por ejemplo accediendo a: `http://127.0.0.1:8000/homodaba/movies/?director=&writer=&actor=&tag=&genre=&cr_system=&user_tag=&unseen=&order_by=&search_term=Zach`
+
 
 ## Pendientes
 1. [ ] Usar [pyproject-toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/)
