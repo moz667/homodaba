@@ -130,11 +130,12 @@ class Command(BaseCommand):
         tags = cd['tags']
 
         if not facade_result or not facade_result.movie:
-            if not not_an_imdb_movie:
+            if not_an_imdb_movie:
                 trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+                facade_result = None
             else:
                 trace.error('\tParece que no encontramos la pelicula "%s (%s) [imdb_id:%s] [tmdb_id:%s]"' % (cd['title'], r['year'], cd['imdb_id'], cd['tmdb_id']))
-            return None
+                return None
 
         local_movie = None
 
@@ -157,6 +158,7 @@ class Command(BaseCommand):
             local_movie = facade_result.local_movie
         # El resto son pelis nuevas (localizables por el imdb)
         else:
+            print(facade_result.facade_movie)
             trace_validate_facade_movie(facade_result.facade_movie, cd['title'], director=cd['director'])
 
             local_movie = insert_movie_from_facade_movie(

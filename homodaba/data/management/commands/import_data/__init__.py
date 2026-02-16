@@ -308,9 +308,6 @@ def insert_movie_from_a_not_an_imdb_movie(title, year, directors: list[str]=[], 
 
     populate_local_movie_tags(local_movie, tags)
 
-    # Completando paises de la peli (sin imdb)
-    populate_countries(local_movie)
-
     local_movie.save()
 
     return local_movie
