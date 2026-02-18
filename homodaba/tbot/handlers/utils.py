@@ -1,6 +1,8 @@
+import asyncio
+
 from django.utils.html import format_html
 
-from data.models import MoviePerson
+from data.models import MoviePerson, Movie
 
 def get_movie_detail_mini_html(movie):
     s = format_html('<b>id:{}</b> <a href="{}"><i>{}</i></a>\n',
@@ -39,7 +41,7 @@ def get_persons_html(movie, role=None, limit=10, label='Casting:'):
     
     return s
 
-def get_movie_detail_html(movie):
+def get_movie_detail_html(movie: Movie):
     s = '<b>id:%s</b> <a href="%s"><i>%s</i></a>\n' % (
         str(movie.id), 
         'https://www.imdb.com/title/%s' % movie.imdb_id, 
@@ -47,7 +49,7 @@ def get_movie_detail_html(movie):
     )
     # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())
     s = s + movie.get_storage_types_html_tg()
-    other_titles = movie.get_other_titles()
+    other_titles = movie.get_main_titles()
     if len(other_titles) > 0:
         s = s + '<b>Otros títulos (akas):</b> %s\n' % other_titles
 
@@ -68,13 +70,13 @@ def get_movie_detail_html(movie):
     return s
 
 def print_movie(movie, update):
-    update.message.reply_html(
+    asyncio.run(update.message.reply_html(
         get_movie_detail_html(movie)
-    )
+    ))
 
 def print_movies(movies, update):
     s = ''
     for m in movies:
         s = s + get_movie_detail_mini_html(m)
     
-    update.message.reply_html(s, disable_web_page_preview=True if movies.count() > 1 else False)
+    asyncio.run(update.message.reply_html(s, disable_web_page_preview=True if movies.count() > 1 else False))

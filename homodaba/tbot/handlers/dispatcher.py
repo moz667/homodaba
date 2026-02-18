@@ -1,63 +1,59 @@
 """
     Telegram event handlers
 """
+import asyncio
 
 import telegram
+from telegram import Update
 from telegram.ext import (
-    Updater, Dispatcher, Filters,
-    CommandHandler, MessageHandler,
+    Updater,
+    MessageHandler,
     InlineQueryHandler, CallbackQueryHandler,
     ChosenInlineResultHandler,
+    ApplicationBuilder, CommandHandler, ContextTypes, filters
 )
 
 from homodaba.settings import TBOT_TOKEN
 
 from .commands import start_command, search_command, movie_detail_command, help_command
 
-
-def setup_dispatcher(dp):
+def setup_dispatcher(app: ApplicationBuilder):
     """
     Adding handlers for events from Telegram
     """
-    dp.add_handler(CommandHandler("start", start_command))
-    dp.add_handler(CommandHandler("search", search_command))
-    # TODO: Por ahora pasamos que no tiene mucho sentido la lista de pelis
-    # dp.add_handler(CommandHandler("list", list_movies_command))
-    dp.add_handler(CommandHandler("movie", movie_detail_command))
-    dp.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("search", search_command))
+    app.add_handler(CommandHandler("movie", movie_detail_command))
+    app.add_handler(CommandHandler("help", help_command))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, search_command))
-
-    return dp
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_command))
 
 
-def init_bot():
+async def init_bot():
     """ Run bot in pooling mode """
-    updater = Updater(TBOT_TOKEN, use_context=True)
+    app = ApplicationBuilder().token(TBOT_TOKEN).build()
 
-    dp = updater.dispatcher
-    dp = setup_dispatcher(dp)
+    setup_dispatcher(app)
 
-    bot_info = telegram.Bot(TBOT_TOKEN).get_me()
-    bot_link = f"https://t.me/" + bot_info["username"]
+    await app.initialize() 
 
-    print(f"Pooling of '{bot_link}' started")
-    updater.start_polling()
-    updater.idle()
+    bot_info = await app.bot.get_me()
+    bot_link = f"https://t.me/{bot_info.username}"
 
-"""
-TODO: NPI para que es esto:
-@task(ignore_result=True)
-def process_telegram_event(update_json):
-    update = telegram.Update.de_json(update_json, bot)
-    dispatcher.process_update(update)
-"""
+    print(f"Pooling of '{bot_link}' started... Press Ctrl+C to finish.")
+    await app.updater.start_polling()
+    await app.start()
 
-# Global variable - best way I found to init Telegram bot
-bot = telegram.Bot(TBOT_TOKEN)
-dispatcher = setup_dispatcher(Dispatcher(bot, None, workers=0, use_context=True))
-"""
-TODO: NPI para que es esto:
-TELEGRAM_BOT_USERNAME = bot.get_me()["username"]
-"""
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except (KeyboardInterrupt, SystemExit):
+        await app.stop()
+    finally:
+        if app.updater.running:
+            await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
+        print("Bot sucessfolly finished.")
+
