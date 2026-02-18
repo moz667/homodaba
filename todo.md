@@ -50,14 +50,14 @@ Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas 
   * [X] Movie
     * [X] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
 
-* [ ] Pruebas
+* [X] Pruebas
   * [X] Nuevo comando de busqueda
   * [X] Probar el resto de la aplicacion (que ponemos aqui?)
     * [X] Probar escaneo de directorios
     * [X] Probar importar csv (con imdb_id)
     * [X] Probar importar csv (sin imdb_id)
   * [X] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
-  * [ ] Probar telegram bot
+  * [X] Probar telegram bot
   * [X] Probar elasticache **No funciona!**
 
 * [ ] Problemas:
