@@ -1,8 +1,10 @@
-import asyncio
-
+from asgiref.sync import sync_to_async
 from django.utils.html import format_html
 
 from data.models import MoviePerson, Movie
+from data.search import movie_search_filter
+
+from homodaba.settings import TBOT_LIMIT_MOVIES
 
 def get_movie_detail_mini_html(movie):
     s = format_html('<b>id:{}</b> <a href="{}"><i>{}</i></a>\n',
@@ -69,14 +71,30 @@ def get_movie_detail_html(movie: Movie):
 
     return s
 
-def print_movie(movie, update):
-    asyncio.run(update.message.reply_html(
-        get_movie_detail_html(movie)
-    ))
-
-def print_movies(movies, update):
+def get_movies_detail_mini_html(movies):
     s = ''
     for m in movies:
         s = s + get_movie_detail_mini_html(m)
     
-    asyncio.run(update.message.reply_html(s, disable_web_page_preview=True if movies.count() > 1 else False))
+    return s
+
+@sync_to_async
+def get_movie_detail_html_by_id(id: int):
+    movies = Movie.objects.filter(id=id).all()
+    if movies.count() == 1:
+        return get_movie_detail_html(movies[0])
+    
+    return "<b>No encontramos la película que buscas.</b>"
+
+@sync_to_async
+def search_movies_as_html(search_term):
+    movies, use_distinct = movie_search_filter(search_term)
+    movies = movies.order_by('title').all()
+
+    if movies.count() == 0:
+        return True, """No encontramos películas con el término "%s".""" % search_term
+    else:
+        s_extra = ""
+        if movies.count() > TBOT_LIMIT_MOVIES:
+            s_extra = """<b>Hemos encontrado mas de "%s" películas.</b>\n""" % str(TBOT_LIMIT_MOVIES)
+        return movies.count() > 1, s_extra + get_movies_detail_mini_html(movies[:TBOT_LIMIT_MOVIES])
