@@ -7,13 +7,18 @@ from django.utils.html import format_html
 from data.models import Movie, Person, MovieStorageType, MoviePerson
 from data.search import movie_search_filter
 
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import (
+    MessageHandler,
+    ApplicationBuilder, 
+    CommandHandler, filters
+)
 
-import csv
-import os
+
+import asyncio
+from asgiref.sync import sync_to_async
 import logging
 
-from homodaba.settings import TBOT_TOKEN
+from homodaba.settings import TBOT_TOKEN, TBOT_LIMIT_MOVIES
 
 """
 Dave: Open the pod bay doors, please, HAL. Open the pod bay doors, please, HAL. Hello, HAL, do you read me? Hello, HAL, do you read me? Do you read me, HAL? Do you read me, HAL? Hello, HAL, do you read me? Hello, HAL, do you read me? Do you read me, HAL?
@@ -56,19 +61,17 @@ conseguir de la variable de entorno "TBOT_TOKEN" """)
         parser.add_argument('--home-name', type=str, help="""Nombre de la base
 de datos (actualmente "%s") """ % self.home_name)
     
-    def start(self, update, context):
+    async def start(self, update, context):
         """Send a message when the command /start is issued."""
-        update.message.reply_text('Bienvenido a %s!' % self.home_name)
-        self.help_command(update, context)
+        await update.message.reply_text('Bienvenido a %s!' % self.home_name)
+        await self.help_command(update, context)
 
-    def help_command(self, update, context):
-        print("A HELP COMMAND!!!!")
+    async def help_command(self, update, context):
         if not update:
             return
-        update.message.reply_html("""
+        await update.message.reply_html("""
 <b>/help: </b> Muestra este mensaje.
-<b>[/search] texto [(año)]: </b> Busca peliculas que coincidan con texto (opcionalmente del año entre parentesis). Si se especifica el texto entre comillas dobles, busca términos exactos.
-<b>/list: </b> Lista las primeras 10 péliculas.
+<b>[/search] texto: </b> Busca peliculas que coincidan con texto. Si se especifica el texto entre comillas dobles, busca términos exactos.
 <b>/movie id: </b> Muestra el detalle de la película con ese id.
 """)
 
@@ -109,7 +112,7 @@ de datos (actualmente "%s") """ % self.home_name)
         
         return s
 
-    def get_movie_detail_html(self, movie):
+    def get_movie_detail_html(self, movie: Movie):
         s = '<b>id:%s</b> <a href="%s" ref="noopener noreferrer"><i>%s</i></a>\n' % (
             str(movie.id), 
             'https://www.imdb.com/title/%s' % movie.imdb_id, 
@@ -117,9 +120,17 @@ de datos (actualmente "%s") """ % self.home_name)
         )
         # '<b>id:%s "%s"</b>\n' % (m.id, m.get_complete_title())
         s = s + movie.get_storage_types_html_tg()
-        other_titles = movie.get_other_titles()
-        if len(other_titles) > 0:
-            s = s + '<b>Otros títulos (akas):</b> %s\n' % other_titles
+        other_titles = movie.get_main_titles()
+        if len(other_titles) > 1:
+            s_other_titles = ''
+
+            for title_key in other_titles.keys():
+                ot = other_titles[title_key]
+                if title_key != 'title' and 'value' in ot and ot['value'] != movie.title:
+                    s_other_titles = s_other_titles + ' * %s (%s / %s)\n' % (ot['value'], ot['short_name'], title_key)
+            
+            if s_other_titles:
+                s = s + '<b>Otros títulos (akas):</b>\n' + s_other_titles
 
         s = s + self.get_persons_html(
             movie, role=MoviePerson.RT_DIRECTOR, 
@@ -135,15 +146,37 @@ de datos (actualmente "%s") """ % self.home_name)
             movie, role=MoviePerson.RT_ACTOR, limit=5
         )
 
-        logger.debug(s)
-
+        return s
+    
+    def get_movies_detail_mini_html(self, movies):
+        s = ''
+        for m in movies:
+            s = s + self.get_movie_detail_mini_html(m)
+        
         return s
 
-    def print_movie(self, movie, update):
-        update.message.reply_html(
-            self.get_movie_detail_html(movie)
-        )
+    @sync_to_async
+    def get_movie_detail_html_by_id(self, id):
+            movies = Movie.objects.filter(id=id).all()
+            if movies.count() == 1:
+                return self.get_movie_detail_html(movies[0])
+            from asgiref.sync import sync_to_async
+            return "<b>No encontramos la película que buscas.</b>"
 
+
+    @sync_to_async
+    def search_movies_as_html(self, search_term):
+        movies, use_distinct = movie_search_filter(search_term)
+        movies = movies.order_by('title').all()
+
+        if movies.count() == 0:
+            return True, """No encontramos películas con el término "%s".""" % search_term
+        else:
+            s_extra = ""
+            if movies.count() > TBOT_LIMIT_MOVIES:
+                s_extra = """<b>Hemos encontrado mas de "%s" películas.</b>\n""" % str(TBOT_LIMIT_MOVIES)
+            return movies.count() > 1, s_extra + self.get_movies_detail_mini_html(movies[:TBOT_LIMIT_MOVIES])
+    
     def print_movies(self, movies, update):
         s = ''
         for m in movies:
@@ -151,48 +184,66 @@ de datos (actualmente "%s") """ % self.home_name)
         
         update.message.reply_html(s, disable_web_page_preview=True if movies.count() > 1 else False)
 
-    def movie_detail(self, update, context):
+    async def movie_detail(self, update, context):
         if not update:
             return
         id = update.message.text if update and update.message else None
         if id:
             id = id[len('/movie'):].strip() if id.startswith('/movie') else id
-            movies = Movie.objects.filter(id=id).all()
-            if movies.count() == 1:
-                self.print_movie(movies[0], update)
-            else:
-                update.message.reply_text("No encontramos la película que buscas.")
+            movie_detail_html = await self.get_movie_detail_html_by_id(id)
+            await update.message.reply_html(movie_detail_html)
 
-    def list_movies(self, update, context):
-        if not update:
-            return
-        # TODO: hacer algo para resolver el problema
-        # de que son muchos, opciones:
-        #   - Paginar (creando un boton que pida mas)
-        #   - Generar un CSV y mandarlo (poniendolo en MEDIA)
-        #       "https://core.telegram.org/bots/api#sending-files"
-        update.message.reply_text("""El problema con la lista de peliculas es que son demasiadas... asi que solo te voy a sacar las primeras %s""" % str(LIMIT_MOVIES))
-        self.print_movies(Movie.objects.all()[:LIMIT_MOVIES], update)
-
-    def search(self, update, context):
+    async def search(self, update, context):
         if not update:
             return
         search_term = update.message.text if update and update.message else None
 
         if search_term:
             search_term = search_term[len('/search'):].strip() if search_term.startswith('/search') else search_term
-            
-            movies, use_distinct = movie_search_filter(search_term)
-            movies = movies.order_by('title').all()
-
-            if movies.count() == 0:
-                update.message.reply_text("""No encontramos películas con el término "%s".""" % search_term)
-            else:
-                if movies.count() > LIMIT_MOVIES:
-                    update.message.reply_text("""Hemos encontrado mas de "%s" películas.""" % str(LIMIT_MOVIES))
-                self.print_movies(movies[:LIMIT_MOVIES], update)
+            disable_web_page_preview, search_movies_html = await self.search_movies_as_html(search_term)
+            await update.message.reply_html(search_movies_html, disable_web_page_preview=disable_web_page_preview)
         else:
-            update.message.reply_text("Tienes que introducir algún término de búsqueda")
+            await update.message.reply_text("Tienes que introducir algún término de búsqueda")
+
+    def setup_dispatcher(self, app: ApplicationBuilder):
+        """
+        Adding handlers for events from Telegram
+        """
+        app.add_handler(CommandHandler("start", self.start))
+        app.add_handler(CommandHandler("search", self.search))
+        app.add_handler(CommandHandler("movie", self.movie_detail))
+        app.add_handler(CommandHandler("help", self.help_command))
+
+        # on noncommand i.e message - echo the message on Telegram
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.search))
+
+
+    async def init_bot(self, token):
+        """ Run bot in pooling mode """
+        app = ApplicationBuilder().token(token).build()
+
+        self.setup_dispatcher(app)
+
+        await app.initialize() 
+
+        bot_info = await app.bot.get_me()
+        bot_link = f"https://t.me/{bot_info.username}"
+
+        print(f"Pooling of '{bot_link}' started... Press Ctrl+C to finish.")
+        await app.updater.start_polling()
+        await app.start()
+
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except (KeyboardInterrupt, SystemExit):
+            await app.stop()
+        finally:
+            if app.updater.running:
+                await app.updater.stop()
+            await app.stop()
+            await app.shutdown()
+            print("Bot sucessfolly finished.")
 
     def handle(self, *args, **options):
         token = TBOT_TOKEN
@@ -215,28 +266,9 @@ de datos (actualmente "%s") """ % self.home_name)
             logging.getLogger().setLevel(logging.DEBUG)
         
         print("""Start the bot.""")
-        # Create the Updater and pass it your bot's token.
-        # Make sure to set use_context=True to use the new context based callbacks
-        # Post version 12 this will no longer be necessary
-        updater = Updater(token, use_context=True)
 
-        # Get the dispatcher to register handlers
-        dp = updater.dispatcher
-
-        # on different commands - answer in Telegram
-        dp.add_handler(CommandHandler("start", self.start))
-        dp.add_handler(CommandHandler("search", self.search))
-        dp.add_handler(CommandHandler("list", self.list_movies))
-        dp.add_handler(CommandHandler("movie", self.movie_detail))
-        dp.add_handler(CommandHandler("help", self.help_command))
-
-        # on noncommand i.e message - echo the message on Telegram
-        dp.add_handler(MessageHandler(Filters.text & ~Filters.command, self.search))
-
-        # Start the Bot
-        updater.start_polling()
-
-        # Run the bot until you press Ctrl-C or the process receives SIGINT,
-        # SIGTERM or SIGABRT. This should be used most of the time, since
-        # start_polling() is non-blocking and will stop the bot gracefully.
-        updater.idle()
+        try:
+            asyncio.run(self.init_bot(token=token))
+        except RuntimeError:
+            # Evita el error visual de loop cerrado al final en algunos SO
+            pass

@@ -3,14 +3,9 @@
 """
 import asyncio
 
-import telegram
-from telegram import Update
 from telegram.ext import (
-    Updater,
     MessageHandler,
-    InlineQueryHandler, CallbackQueryHandler,
-    ChosenInlineResultHandler,
-    ApplicationBuilder, CommandHandler, ContextTypes, filters
+    ApplicationBuilder, CommandHandler, filters
 )
 
 from homodaba.settings import TBOT_TOKEN

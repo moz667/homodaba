@@ -53,7 +53,15 @@ def get_movie_detail_html(movie: Movie):
     s = s + movie.get_storage_types_html_tg()
     other_titles = movie.get_main_titles()
     if len(other_titles) > 0:
-        s = s + '<b>Otros títulos (akas):</b> %s\n' % other_titles
+        s_other_titles = ''
+
+        for title_key in other_titles.keys():
+            ot = other_titles[title_key]
+            if title_key != 'title' and 'value' in ot and ot['value'] != movie.title:
+                s_other_titles = s_other_titles + ' * %s (%s / %s)\n' % (ot['value'], ot['short_name'], title_key)
+        
+        if s_other_titles:
+            s = s + '<b>Otros títulos (akas):</b>\n' + s_other_titles
 
     s = s + get_persons_html(
         movie, role=MoviePerson.RT_DIRECTOR, 
