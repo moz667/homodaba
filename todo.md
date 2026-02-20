@@ -1,90 +1,3 @@
-
-## Update de cinemagoer a 2025.5.19 (git)
-
-**In progress**
-
-Con la ultima importacion he visto que no se estaba añadiendo portadas ni directores ni actores, revisando distintas opciones, vi que [imdbapi.dev](https://imdbapi.dev/) podría ser una mejora considerable, pero requiere que cambiemos bastante codigo.
-
-Revisando tambien la actual libreria que estamos usando de [cinemagoer](https://github.com/cinemagoer/cinemagoer), tiene actualizaciones pero no esta generando relases y te recomienda que uses el repo directamente.
-
-Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas por arreglar:
-
-
-## Tareas usando nuevas APIs
-
-* [X] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
-  * [X] ~~El problema de tmdb es que no tiene imdbid~~ Si tiene, se puede buscar por el inclusive
-  * [ ] ~~titulo original en caracteres latinos~~ No lo acabo de ver claro... quias en otra ocasion
-  * [X] titulo internacional
-  * [X] titulo en castellano
-  * [X] posibilidad de buscar por titulo y año para acotar
-  * [X] poster
-  * [X] directores
-  * [X] escritores
-  * [X] actores
-  * [X] Que en la busqueda tengamos
-    * [ ] ~~Directores~~ No tiene
-    * [ ] ~~imdb_id~~ No tiene
-    * [ ] ~~titulo original~~ No tiene
-    * [X] titulo internacional
-    * Con el id conseguimos el resto de datos (en el detalle de la peli)
-  * [X] Que en el detalle tengamos
-    * [X] ~~Coger peli por imdb_id~~ No lo tiene pero se puede conseguir el id de tmdb buscando por imdb_id (con `Find`)
-
-* [X] Nueva funcionalidad
-  * [X] Permitir importar pelis que no encuentra
-
-* [ ] Cambios en el modelo
-  * [X] ImdbCache
-    * [X] Cambiar de nombre por algo mas generico (APICache)
-    * [X] Modificar la estructura a algo tipo clave/valor
-    * [X] Tener una estrategia para generar la clave independientemente del:
-      * tipo de API
-      * Si es una busqueda, detalle, etc...
-  * [X] Person
-    * [X] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
-  * [ ] TitleAka
-    * [ ] Añadir un campo con un subtipo de pais (algo generico en plan zone)
-  * [ ] ~~Country~~
-    * [ ] ~~Añadir un campo con el codigo iso_3166_1 y que sea unico~~
-  * [X] Movie
-    * [X] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
-
-* [X] Pruebas
-  * [X] Nuevo comando de busqueda
-  * [X] Probar el resto de la aplicacion (que ponemos aqui?)
-    * [X] Probar escaneo de directorios
-    * [X] Probar importar csv (con imdb_id)
-    * [X] Probar importar csv (sin imdb_id)
-  * [X] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
-  * [X] Probar telegram bot
-  * [X] Probar elasticache **No funciona!**
-
-* [ ] Problemas:
-  * [ ] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
-  * [X] El pais de origen de la peli ahora se guarda como iso y se muestra como tal. Convertir a nombre de pais.
-  * [X] No funciona el filtro por persona
-  * [X] Tamaño de las miniaturas en la admin (es tochillo)
-  * [X] Tamaño de las miniaturas en la busqueda (es tochillo)
-
-* [X] Casos extremos (para luego):
-  * [X] It 1990 (tv mini-serie) **Pass**
-    * [X] Se encuentra por imdb_id (`https://api.themoviedb.org/3/movie/1618880?api_key=<API_KEY>`) pero no tiene casi informacion ¿que hacemos?
-      * Buscando por tv (es una mini serie de 2 episodios) la encuentra y tiene first_air_date que podria valer en vez de release_date...
-      * `https://api.themoviedb.org/3/search/tv?query=It&include_adult=false&language=en-US&page=1&year=1990&api_key=<API_KEY>`
-      * Pero no tiene director en los creditos
-      * `https://api.themoviedb.org/3/tv/19614/credits?language=en-US&api_key=<API_KEY>`
-      * Asi que los problemas que veo son que al usar los datos de tv son:
-        * Las estructuras de datos respecto a movie son muy distintos
-        * No comparten id (son diferentes el id de tv que el de movie)
-        * No veo datos completos (no hay director, ni escritor)
-      * Conclusion: Vamos a pasar de TV por ahora
-    * [X] El faro, 1998 (`NO_CACHE=1 python3 ./manage.py search_movie --title "El faro" --year 1998`)
-      * Apaña buscando por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt0168749`
-    * [X] Ifigenia, 1968 (`NO_CACHE=1 python3 ./manage.py search_movie --title "Ifigenia" --year 1968`)
-      * No se encuentra por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt6696960` 
-      * Va a pasar lo mismo que con It, al ser de TV (visto en [imdb](https://www.imdb.com/title/tt6696960/)) pasamos por ahora 
-
 ## Elasticsearch
 
 Elasticsearch ha dejado de funcionar con las ultimas versiones de homodaba, como tampoco se estaba usando lo vamos a dejar como una tarea pendiente de revisar.
@@ -254,4 +167,87 @@ volumes:
     - ~~Estoy dandole vueltas a esto y creo que lo mejor al final va a ser sacar una vista especial para las busquedas (y dejar la admin como estaba al principio :P)~~
 1. [X] ~~Mirar themes de admin con bootstrap~~
 
-## Mesh
+### Update de cinemagoer a 2025.5.19 (git)
+
+Con la ultima importacion he visto que no se estaba añadiendo portadas ni directores ni actores, revisando distintas opciones, vi que [imdbapi.dev](https://imdbapi.dev/) podría ser una mejora considerable, pero requiere que cambiemos bastante codigo.
+
+Revisando tambien la actual libreria que estamos usando de [cinemagoer](https://github.com/cinemagoer/cinemagoer), tiene actualizaciones pero no esta generando relases y te recomienda que uses el repo directamente.
+
+Despues de hacer unas pruebas, parece que va algo mejor aunque aun faltan cosas por arreglar:
+
+**Al final deprecado, usamos tmdb**
+
+### Tareas usando nueva API tmdb
+
+* [X] Probar tmdb api (themoviedatabase.org), aunque hay clientes de api parecen bastante antiguos
+  * [X] ~~El problema de tmdb es que no tiene imdbid~~ Si tiene, se puede buscar por el inclusive
+  * [ ] ~~titulo original en caracteres latinos~~ No lo acabo de ver claro... quias en otra ocasion
+  * [X] titulo internacional
+  * [X] titulo en castellano
+  * [X] posibilidad de buscar por titulo y año para acotar
+  * [X] poster
+  * [X] directores
+  * [X] escritores
+  * [X] actores
+  * [X] Que en la busqueda tengamos
+    * [ ] ~~Directores~~ No tiene
+    * [ ] ~~imdb_id~~ No tiene
+    * [ ] ~~titulo original~~ No tiene
+    * [X] titulo internacional
+    * Con el id conseguimos el resto de datos (en el detalle de la peli)
+  * [X] Que en el detalle tengamos
+    * [X] ~~Coger peli por imdb_id~~ No lo tiene pero se puede conseguir el id de tmdb buscando por imdb_id (con `Find`)
+
+* [X] Nueva funcionalidad
+  * [X] Permitir importar pelis que no encuentra
+
+* [ ] Cambios en el modelo
+  * [X] ImdbCache
+    * [X] Cambiar de nombre por algo mas generico (APICache)
+    * [X] Modificar la estructura a algo tipo clave/valor
+    * [X] Tener una estrategia para generar la clave independientemente del:
+      * tipo de API
+      * Si es una busqueda, detalle, etc...
+  * [X] Person
+    * [X] Añadir campo tmdb_id (Modificar la creacion de Person para que pille el nuevo campo)
+  * [X] TitleAka
+    * [X] Añadir un campo con un subtipo de pais (algo generico en plan zone)
+  * [ ] ~~Country~~
+    * [ ] ~~Añadir un campo con el codigo iso_3166_1 y que sea unico~~
+  * [X] Movie
+    * [X] Añadir campo tmdb_id (Modificar la creacion de Movie para que pille el nuevo campo)
+
+* [X] Pruebas
+  * [X] Nuevo comando de busqueda
+  * [X] Probar el resto de la aplicacion (que ponemos aqui?)
+    * [X] Probar escaneo de directorios
+    * [X] Probar importar csv (con imdb_id)
+    * [X] Probar importar csv (sin imdb_id)
+  * [X] OJO: la nueva api abusa de microservicios (el detalle de una pelicula es minimo y va cargando info, haciendo mas peticiones al resto de datos, segun accedemos a metodos, como por ejemplo `info` o `credits`), comprobar que almacena la api_key y ver que podemos hacer... quizas almacenar la FacadeMovie y olvidarnos de almacenar la Movie devuelta con la API?
+  * [X] Probar telegram bot
+  * [X] Probar elasticache **No funciona!**
+
+* [X] Problemas:
+  * [X] Problema con `title_akas` (la clave por pais se repite: euskera, catala los pone como ES pero con distinto type)
+  * [X] El pais de origen de la peli ahora se guarda como iso y se muestra como tal. Convertir a nombre de pais.
+  * [X] No funciona el filtro por persona
+  * [X] Tamaño de las miniaturas en la admin (es tochillo)
+  * [X] Tamaño de las miniaturas en la busqueda (es tochillo)
+
+* [X] Casos extremos (para luego):
+  * [X] It 1990 (tv mini-serie) **Pass**
+    * [X] Se encuentra por imdb_id (`https://api.themoviedb.org/3/movie/1618880?api_key=<API_KEY>`) pero no tiene casi informacion ¿que hacemos?
+      * Buscando por tv (es una mini serie de 2 episodios) la encuentra y tiene first_air_date que podria valer en vez de release_date...
+      * `https://api.themoviedb.org/3/search/tv?query=It&include_adult=false&language=en-US&page=1&year=1990&api_key=<API_KEY>`
+      * Pero no tiene director en los creditos
+      * `https://api.themoviedb.org/3/tv/19614/credits?language=en-US&api_key=<API_KEY>`
+      * Asi que los problemas que veo son que al usar los datos de tv son:
+        * Las estructuras de datos respecto a movie son muy distintos
+        * No comparten id (son diferentes el id de tv que el de movie)
+        * No veo datos completos (no hay director, ni escritor)
+      * Conclusion: Vamos a pasar de TV por ahora
+    * [X] El faro, 1998 (`NO_CACHE=1 python3 ./manage.py search_movie --title "El faro" --year 1998`)
+      * Apaña buscando por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt0168749`
+    * [X] Ifigenia, 1968 (`NO_CACHE=1 python3 ./manage.py search_movie --title "Ifigenia" --year 1968`)
+      * No se encuentra por imdb_id: `NO_CACHE=1 python3 ./manage.py search_movie --imdb_id tt6696960` 
+      * Va a pasar lo mismo que con It, al ser de TV (visto en [imdb](https://www.imdb.com/title/tt6696960/)) pasamos por ahora 
