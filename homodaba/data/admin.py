@@ -59,6 +59,7 @@ class GenreTagAdmin(admin.ModelAdmin):
 admin.site.register(GenreTag, GenreTagAdmin)
 
 class TitleAkaAdmin(admin.ModelAdmin):
+    list_display = ('title', 'country', 'title_type')
     search_fields = ('title',)
 admin.site.register(TitleAka, TitleAkaAdmin)
 

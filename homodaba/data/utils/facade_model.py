@@ -101,8 +101,10 @@ class FacadeMovie:
                         self.title_preferred = at['title']
             
             for at in alternative_titles['titles']:
-                if not at['iso_3166_1'] in self.title_akas.keys():
-                    self.title_akas[at['iso_3166_1']] = at['title']
+                key = '%s_%s' % (at['iso_3166_1'], at['type']) if 'type' in at and at['type'] else at['iso_3166_1']
+
+                if not key in self.title_akas.keys():
+                    self.title_akas[key] = at['title']
 
         if self.title_preferred is None:
             self.title_preferred = self.title

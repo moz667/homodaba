@@ -158,7 +158,6 @@ class Command(BaseCommand):
             local_movie = facade_result.local_movie
         # El resto son pelis nuevas (localizables por el imdb)
         else:
-            print(facade_result.facade_movie)
             trace_validate_facade_movie(facade_result.facade_movie, cd['title'], director=cd['director'])
 
             local_movie = insert_movie_from_facade_movie(

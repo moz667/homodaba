@@ -196,27 +196,25 @@ def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], tit
 
     if len(facade_movie.title_akas) > 0:
         title_akas = facade_movie.title_akas
-        for country in title_akas.keys():
-            trace.debug("    - %s [%s]" % (title_akas[country], country))
+        for key in title_akas.keys():
+            key_parts = key.split('_')
+            country = key_parts[0]
+            title_type = key_parts[1] if len(key_parts) > 1 else None
+
+            trace.debug("    - %s [%s] (%s)" % (title_akas[key], country, title_type))
         
             db_title_aka = get_first_or_create_tag(
-                TitleAka, title=title_akas[country]
+                TitleAka, title=title_akas[key], country=country, title_type=title_type
             )
-
-            if db_title_aka.country:
-                if db_title_aka.country != country:
-                    # El problema aqui es que el aka deberia permitir varios paises... 
-                    # pero tenemos un poco en el aire que hacemos con TitleAka (yo 
-                    # ultimamente pienso que tendriamos que borrarla... asi que por 
-                    # ahora solo informamos en modo debug)
-                    trace.debug("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
-                        title_akas[country], db_title_aka.country, country
-                    ))
-            else:
-                db_title_aka.country = country
-                db_title_aka.save()
             
-            local_movie.title_akas.add(db_title_aka)
+            match = False
+            for ta in local_movie.title_akas.all():
+                if ta.id == db_title_aka.id:
+                    match = True
+                    break
+            
+            if not match:
+                local_movie.title_akas.add(db_title_aka)
     
     # Completando paises de la peli
     populate_countries(local_movie, facade_movie=facade_movie)

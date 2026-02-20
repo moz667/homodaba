@@ -62,8 +62,12 @@ class Command(BaseCommand):
 
         print ('* Title AKAS:')
         if len(m.title_akas) > 0:
-            for country in m.title_akas.keys():
-                print('    - %s (%s)' % (m.title_akas[country], country))
+            for key in m.title_akas.keys():
+                key_parts = key.split('_')
+                country = key_parts[0]
+                title_type = key_parts[1] if len(key_parts) > 1 else None
+                
+                print('    - %s [%s] (%s)' % (m.title_akas[key], country, title_type))
         else:
             print ('    - No tiene title AKAS')
 
