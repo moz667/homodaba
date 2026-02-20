@@ -229,7 +229,7 @@ def insert_movie_from_facade_movie(title, facade_movie:FacadeMovie, tags=[], tit
     if len(facade_movie.content_rating_systems) > 0:
         for c in facade_movie.content_rating_systems:
             vc_tag = get_first_or_create_tag(
-                ContentRatingTag, name=normalize_age_certificate(vc)
+                ContentRatingTag, name=normalize_age_certificate(c)
             )
             
             if not vc_tag in local_movie.content_rating_systems.all():
