@@ -160,7 +160,7 @@ Si no coinciden, sacamos un mensaje notificando las diferencias.
 def trace_validate_facade_movie(facade_movie, title, director=None):
     # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
     if clean_string(facade_movie.title) != clean_string(title):
-        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, facade_movie.title))
+        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado de la api externa "%s"' % (title, facade_movie.title))
 
     # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
     if director:

@@ -20,7 +20,7 @@ from .import_data import get_person_from_facade_credit
 # TODO: Buscar diferencias en year y director?
 
 class Command(BaseCommand):
-    help = _('Localiza cambios entre el csv e imdb y los saca como un archivo json.')
+    help = _('Localiza cambios entre el csv y la api externa, sacando los cambios como un archivo json.')
 
     """
     Pinta la ayuda y sale

@@ -10,7 +10,7 @@ from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.
 # TODO: Buscar diferencias en year y director?
 
 class Command(BaseCommand):
-    help = 'Localiza cambios entre el csv e imdb y los saca como un archivo json.'
+    help = 'Busqueda usando la api externa y la cache'
 
     """
     Pinta la ayuda y sale

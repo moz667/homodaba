@@ -106,7 +106,7 @@ de datos (actualmente "%s") """ % self.home_name)
             for p in persons:
                 i = i + 1
                 if limit and i > limit:
-                    s = s + ' * Hay más resultados, visita imdb o la bbdd para ver el resto...'
+                    s = s + ' * Hay más resultados, visita imdb/tmdb o la bbdd para ver el resto...'
                     break
                 s = s + self.get_person_row_html(p)
         

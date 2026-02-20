@@ -400,7 +400,7 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
             trace.debug(" * La pelicula '%s (%s)' se trata de una pelicula que no se encuentra en el imdb y que todavia no hemos dado de alta." % (title, year))
             return None
     
-    trace.debug('\t\t- Buscando en imdb "title=%s year=%s title_alt=%s director=%s"...' % (title, year, title_alt, director))
+    trace.debug('\t\t- Buscando en api externa "title=%s year=%s title_alt=%s director=%s"...' % (title, year, title_alt, director))
     facade_match = match_facade_movie(
         title, year, title_alt=title_alt, 
         director=director
@@ -511,35 +511,35 @@ def search_facade_movies_by_title_and_year(title, year=None):
 
     if year:
         # Buscamos por titulo y año en IMDB
-        trace.debug('\t\t\t- Buscando en imdb por titulo y año "title=%s year=%s"...' % (title, year))
+        trace.debug('\t\t\t- Buscando en api externa por titulo y año "title=%s year=%s"...' % (title, year))
         search_results = search_facade_movies(search_query=title, title=title, year=year)
 
         if not search_results:
-            trace.debug('\t\t\t- Buscando en imdb por titulo limpio y año "clean_title=%s year=%s"...' % (clean_title, year))
+            trace.debug('\t\t\t- Buscando en api externa por titulo limpio y año "clean_title=%s year=%s"...' % (clean_title, year))
             search_results = search_facade_movies(search_query=clean_title, title=clean_title, year=year)
         
         if not search_results:
-            trace.debug('\t\t\t- Buscando en imdb por titulo en query y año "title=%s year=%s"...' % (title, year))
+            trace.debug('\t\t\t- Buscando en api externa por titulo en query y año "title=%s year=%s"...' % (title, year))
             search_results = search_facade_movies(search_query=title, year=year)
 
         if not search_results:
-            trace.debug('\t\t\t- Buscando en imdb por titulo limpio en query y año "clean_title=%s year=%s"...' % (clean_title, year))
+            trace.debug('\t\t\t- Buscando en api externa por titulo limpio en query y año "clean_title=%s year=%s"...' % (clean_title, year))
             search_results = search_facade_movies(search_query=clean_title, year=year)
     
     if not search_results:
-        trace.debug('\t\t\t- Buscando en imdb por titulo "title=%s"...' % title)
+        trace.debug('\t\t\t- Buscando en api externa por titulo "title=%s"...' % title)
         search_results = search_facade_movies(title, title=title)
     
     if not search_results:
-        trace.debug('\t\t\t- Buscando en imdb por titulo limpio "clean_string(title)=%s"...' % clean_string(title))
+        trace.debug('\t\t\t- Buscando en api externa por titulo limpio "clean_string(title)=%s"...' % clean_string(title))
         search_results = search_facade_movies(clean_title, title=clean_title)
 
     if not search_results:
-        trace.debug('\t\t\t- Buscando en imdb por titulo en search_query "title=%s"...' % title)
+        trace.debug('\t\t\t- Buscando en api externa por titulo en search_query "title=%s"...' % title)
         search_results = search_facade_movies(title)
     
     if not search_results:
-        trace.debug('\t\t\t- Buscando en imdb por titulo limpio en search_query "clean_title=%s"...' % clean_string(title))
+        trace.debug('\t\t\t- Buscando en api externa por titulo limpio en search_query "clean_title=%s"...' % clean_string(title))
         search_results = search_facade_movies(clean_title)
     
     if not search_results:
