@@ -162,6 +162,7 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
             search_query = Q(title__icontains=search_term)
             search_query.add(Q(title_original__icontains=search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=search_term), Q.OR)
         else:
             search_query = Q(title__iexact=search_term)
             search_query.add(Q(title__icontains=' ' + search_term), Q.OR)
@@ -172,6 +173,9 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
             search_query.add(Q(title_preferred__iexact=search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=' ' + search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=search_term+ ' '), Q.OR)
+            search_query.add(Q(directors__name__iexact=search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=' ' + search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=search_term+ ' '), Q.OR)
 
     if year:
         search_query_new = Q(year=year)
