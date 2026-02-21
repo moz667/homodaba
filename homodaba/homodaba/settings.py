@@ -53,6 +53,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = False if os.getenv("DJANGO_DEBUG", '0') == '0' else True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1 localhost').split()
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost http://127.0.0.1').split()
 
 # Upgrading to django-3.2.10
 DEFAULT_AUTO_FIELD='django.db.models.AutoField'
