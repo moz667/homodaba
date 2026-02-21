@@ -174,7 +174,7 @@ def scan_all_videos(path, is_root=True, tag=None):
         #  - "TITULO", para los que no sean scrapeables en el imdb y no sepamos año
         s = cur_item["name"]
         
-        pattern = re.compile("(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
+        pattern = re.compile(r"(.*) \(([0-9]+)\) \[tt([0-9]+)\]")
         reg_search = pattern.search(s)
 
         if reg_search:
@@ -182,7 +182,7 @@ def scan_all_videos(path, is_root=True, tag=None):
             cur_item["year"] = reg_search.group(2)
             cur_item["title"] = reg_search.group(1)
         else:
-            pattern = re.compile("(.*) \(([0-9]+)\)")
+            pattern = re.compile(r"(.*) \(([0-9]+)\)")
             reg_search = pattern.search(s)
 
             if reg_search:

@@ -298,7 +298,7 @@ class FileProcessor(object):
         # Titulo (Director/es, año)
 
         # Buscamos el año
-        possible_years = re.findall('\d+\d+\d+\d+', cur_name)
+        possible_years = re.findall(r'\d+\d+\d+\d+', cur_name)
         for pos_year in reversed(possible_years):
             if int(pos_year) > 1930 and int(pos_year) <= datetime.now().year:
                 year = pos_year
@@ -312,10 +312,10 @@ class FileProcessor(object):
             # hacer estos replaces:
             #   s/(año).*//
             #   s/año.*//
-            pattern = re.compile("\(%s\)" % year)
+            pattern = re.compile(r"\(%s\)" % year)
 
             if pattern.search(cur_name):
-                new_cur_name = re.sub("\(%s\).*" % year, "", cur_name).strip()
+                new_cur_name = re.sub(r"\(%s\).*" % year, "", cur_name).strip()
                 if len(new_cur_name) > 0:
                     cur_name = new_cur_name
             else:
