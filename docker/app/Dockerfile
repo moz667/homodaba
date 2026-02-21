@@ -5,11 +5,6 @@ ARG DATABASE_ENGINE
 ARG ELASTICSEARCH
 ARG TELEGRAM
 
-ENV PYTHONUNBUFFERED=1 \
-  SECRET_KEY=${SECRET_KEY} \
-  ES_DSL_HOSTS=${ES_DSL_HOSTS} \
-  DATABASE_ENGINE=${DATABASE_ENGINE}
-
 WORKDIR /opt/app
 
 # Instalacion basica (django + sqlite):
@@ -25,9 +20,6 @@ RUN if [ "$DATABASE_ENGINE" = "mysql" ]; then \
       apk add mariadb-client mariadb-dev && \
       pip3 install -r homodaba/requirements-mysql.txt; \
     fi
-
-# TODO: Todo esto esta sin probar... VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-# Seguramente tendremos que meter algun apk add mas :P
 
 # Elastic search:
 ARG ELASTICSEARCH
@@ -45,15 +37,13 @@ RUN if [ "$TELEGRAM" != "" -a "$TELEGRAM" != "false" ]; then \
       pip3 install -r homodaba/requirements-telegram.txt; \
     fi
 
-# TODO: Todo esto esta sin probar... ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 ADD homodaba /opt/app/homodaba
 ADD static /opt/app/static
 
 EXPOSE 8000
 
 COPY docker/app/init-homodaba.sh /opt/app/init-homodaba.sh
-COPY docker/app/sample/sample-data.csv ${IMPORT_ROOT}/sample-data.csv
+COPY docker/app/sample/sample-data.csv /opt/app/import/sample-data.csv
 
 RUN mkdir -p /opt/app/sqlite
 
