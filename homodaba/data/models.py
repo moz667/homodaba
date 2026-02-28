@@ -223,7 +223,7 @@ class Movie(models.Model):
         other_titles = []
         if self.title_original and main_title != self.title_original:
             other_titles.append(self.title_original)
-        if self.title_preferred and main_title != self.title_preferred:
+        if self.title_preferred and main_title != self.title_preferred and self.title_preferred != self.title_original:
             other_titles.append(self.title_preferred)
 
         return other_titles
