@@ -11,14 +11,6 @@ SPANISH_LANGUAGE_COUNTRIES = [
     'Panama', 'Uruguay', 'Equatorial Guinea',
 ]
 
-SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 = {
-    'MX': 'Mexico', 'CO': 'Colombia', 'ES': 'Spain', 'AR': 'Argentina',
-    'PE': 'Peru', 'VE': 'Venezuela', 'CL': 'Chile', 'GT': 'Guatemala',
-    'EC': 'Ecuador', 'BO': 'Bolivia', 'CU': 'Cuba', 'DO': 'Dominican Republic',
-    'HN': 'Honduras', 'PY': 'Paraguay', 'SV': 'El Salvador', 'NI': 'Nicaragua',
-    'CR': 'Costa Rica', 'PA': 'Panama', 'UY': 'Uruguay', 'GQ': 'Equatorial Guinea'
-}
-
 class FacadeCredit:
     imdb_id: str = None
     tmdb_id: str = None
@@ -88,17 +80,8 @@ class FacadeMovie:
             # {'iso_3166_1': 'TH', 'title': 'X', 'type': ''}
             # type npi de para que se usa
             for at in alternative_titles['titles']:
-                if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1 and at['iso_3166_1'] == 'ES' and (at['type'] == 'Castilian title' or at['type'] == ''):
+                if at['iso_3166_1'] == 'ES' and (at['type'] == 'Castilian title' or at['type'] == ''):
                     self.title_preferred = at['title']
-
-            if self.title_preferred is None and len(m.origin_country) == 1 \
-                and m.origin_country[0] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
-                self.title_preferred = self.title_original
-
-            if self.title_preferred is None:
-                for at in alternative_titles['titles']:
-                    if at['iso_3166_1'] in SPANISH_LANGUAGE_COUNTRIES_ISO_3166_1:
-                        self.title_preferred = at['title']
             
             for at in alternative_titles['titles']:
                 key = '%s_%s' % (at['iso_3166_1'], at['type']) if 'type' in at and at['type'] else at['iso_3166_1']
