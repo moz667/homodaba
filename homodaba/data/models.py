@@ -225,6 +225,10 @@ class Movie(models.Model):
             other_titles.append(self.title_original)
         if self.title_preferred and main_title != self.title_preferred and self.title_preferred != self.title_original:
             other_titles.append(self.title_preferred)
+        
+        for aka in self.title_akas.all():
+            if aka.title_type == 'transliteration':
+                other_titles.append(aka.title)
 
         return other_titles
     get_other_main_titles.short_description = 'Otros títulos'
