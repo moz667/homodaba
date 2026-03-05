@@ -12,6 +12,11 @@ def is_cache_key_valid(key):
 
 def add_cache(key, value):
     if is_cache_key_valid(key) and value and (not NO_CACHE or UPDATE_CACHE):
+        # Si no hemos buscado en la cache pero tenemos el forzado de actualizar
+        # cache, tenemos que eliminar antes la cache existente
+        if NO_CACHE and UPDATE_CACHE:
+            delete_cache(key)
+        
         TABLE_CACHE_OBJS.create(
             key=key,
             value=serialize(value)
@@ -28,7 +33,7 @@ def get_cache(key):
         cache_data = TABLE_CACHE_OBJS.filter(key=key).all()
 
         if cache_data.count() > 0:
-            if not UPDATE_CACHE:
+            if not UPDATE_CACHE and cache_data[0].is_alive:
                 return unserialize(cache_data[0].value)
             else:
                 delete_cache(key=key)

@@ -1,5 +1,6 @@
 from iso3166 import countries
 from requests.utils import requote_uri
+import time
 
 from django.core.paginator import Paginator
 from django.db import models
@@ -8,19 +9,28 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-
-from homodaba.settings import SMB_SHARE_2_URL, DATABASES
+from homodaba.settings import SMB_SHARE_2_URL, DATABASES, CACHE_TTL
 
 from data.utils import trace
 
 MAX_CACHE_KEY_SIZE = 255
 
 class CacheTable(models.Model):
-    key = models.CharField(max_length=MAX_CACHE_KEY_SIZE, unique=True, db_index=True)
+    key = models.CharField(max_length=MAX_CACHE_KEY_SIZE, primary_key=True)
     value = models.TextField()
+    created = models.BigIntegerField(editable=False, null=False, default=0, db_index=True)
+
+    def save(self, *args, **kwargs):
+        if not self.created:
+            self.created = int(time.time())
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.key
+
+    @property
+    def is_alive(self):
+        return CACHE_TTL and (int(time.time()) - self.created) >= CACHE_TTL
 
     class Meta:
         verbose_name = "Entrada de Caché"

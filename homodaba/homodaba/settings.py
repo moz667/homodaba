@@ -33,8 +33,12 @@ while os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, ""):
 # establecer a 0 por lo que no tendria limite
 CASTING_LIMIT = int(os.getenv("CASTING_LIMIT", "12"))
 
+# Define si usamos cache (1) o NO (0)
 NO_CACHE = int(os.getenv("NO_CACHE", "0")) == 1
+# Define si queremos forzar la actualizacion de cache (1) o NO (0)
 UPDATE_CACHE = int(os.getenv("UPDATE_CACHE", "0")) == 1
+# Define el tiempo de vida de la cache expresado en segundos, por defecto 1 dia
+CACHE_TTL = int(os.getenv("CACHE_TTL", (24 * 60 * 60)))
 
 TBOT_TOKEN = os.getenv("TBOT_TOKEN", "")
 TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))

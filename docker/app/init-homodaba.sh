@@ -22,9 +22,21 @@ if [ "$DATABASE_ENGINE" = "mysql" ] ; then
     done
 fi
 
+python manage.py migrate --check data 0026_remove_cachetable_id_cachetable_created_and_more
+if [ "$?" == "1" ]; then
+  echo "INFO: We're sorry, but there are changes in the cache model that require us to delete all data from it."
+  yes | python manage.py --default-database delete_cache
+fi
+
 python manage.py migrate
 
 if [ "$CACHE_DATABASE" != '0' ]; then
+  python manage.py migrate --database cache --check data 0026_remove_cachetable_id_cachetable_created_and_more
+  if [ "$?" == "1" ]; then
+    echo "INFO: We're sorry, but there are changes in the cache model that require us to delete all data from it."
+    yes | python manage.py delete_cache
+  fi
+
   python manage.py migrate --database cache
 fi
 
