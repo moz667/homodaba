@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib import admin
 from django.db.models import Q
 from django.shortcuts import reverse
@@ -26,6 +28,8 @@ class CacheTableAdmin(admin.ModelAdmin):
     using = 'cache' if 'cache' in DATABASES.keys() else 'default'
 
     readonly_fields = ('unserialize_data',)
+    search_fields = ('key',)
+    list_display = ('key', 'created_as_date')
 
     def save_model(self, request, obj, form, change):
         # Tell Django to save objects to the 'other' database.
@@ -54,6 +58,12 @@ class CacheTableAdmin(admin.ModelAdmin):
         if obj.value:
             return format_html("<pre>{}</pre>", cache_obj_str_to_json_str(obj.value))
         return "Sin datos"
+    
+    @admin.display(description='Fecha de Creación', ordering='created')
+    def created_as_date(self, obj):
+        if obj.created:
+            return datetime.fromtimestamp(obj.created).strftime('%d/%m/%Y %H:%M:%S')
+        return "-"
 admin.site.register(CacheTable, CacheTableAdmin)
 
 class CountryAdmin(admin.ModelAdmin):
