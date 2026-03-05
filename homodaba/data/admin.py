@@ -2,12 +2,14 @@ from django.contrib import admin
 from django.db.models import Q
 from django.shortcuts import reverse
 from django.urls import path
+from django.utils.html import format_html
 
 from admin_auto_filters.filters import AutocompleteFilter
 
 from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, CacheTable, Country
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
+from .utils.cache import cache_obj_str_to_json_str
 
 from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE, DATABASES
 
@@ -22,6 +24,8 @@ class DirectorFilter(AutocompleteFilter):
 class CacheTableAdmin(admin.ModelAdmin):
     # A handy constant for the name of the alternate database.
     using = 'cache' if 'cache' in DATABASES.keys() else 'default'
+
+    readonly_fields = ('unserialize_data',)
 
     def save_model(self, request, obj, form, change):
         # Tell Django to save objects to the 'other' database.
@@ -44,6 +48,12 @@ class CacheTableAdmin(admin.ModelAdmin):
         # Tell Django to populate ManyToMany widgets using a query
         # on the 'other' database.
         return super().formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
+    
+    @admin.display(description='Datos deserializados:')
+    def unserialize_data(self, obj):
+        if obj.value:
+            return format_html("<pre>{}</pre>", cache_obj_str_to_json_str(obj.value))
+        return "Sin datos"
 admin.site.register(CacheTable, CacheTableAdmin)
 
 class CountryAdmin(admin.ModelAdmin):

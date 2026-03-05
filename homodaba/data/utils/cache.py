@@ -1,7 +1,9 @@
-from data.models import get_table_cache_objects, MAX_CACHE_KEY_SIZE
-
-import pickle
 import codecs
+import json
+import pickle
+
+from data.models import get_table_cache_objects, MAX_CACHE_KEY_SIZE
+from .facade_model import FacadeCredit
 
 from homodaba.settings import NO_CACHE, UPDATE_CACHE
 
@@ -51,3 +53,15 @@ TODO: funcion privada
 """
 def unserialize(str_obj):
     return pickle.loads(codecs.decode(str_obj.encode(), "base64"))
+
+def cache_obj_str_to_json_str(str_obj):
+    obj = unserialize(str_obj=str_obj)
+    data = None
+    if isinstance(obj, list):
+        data = []
+        for item in obj:
+            data.append({k: v for k, v in item.__dict__.items() if isinstance(v, (str, int, float, bool, list, dict))})
+    else:
+        data = {k: v for k, v in obj.__dict__.items() if isinstance(v, (str, int, float, bool, list, dict))}
+
+    return json.dumps(data, indent=4, sort_keys=True, default=str)

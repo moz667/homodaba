@@ -19,6 +19,13 @@ class FacadeCredit:
     avatar_url: str = None
     avatar_thumbnail_url: str = None
 
+    def __str__(self):
+        return '%s [%s:%s] (%s)' % (
+            self.name, 'imdb_id' if self.imdb_id else 'tmdb_id',
+            self.imdb_id if self.imdb_id else self.tmdb_id,
+            self.avatar_url
+        )
+
 class FacadeMovie:
     title: str = None
     title_original: str = None
