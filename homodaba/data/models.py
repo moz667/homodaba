@@ -18,7 +18,7 @@ MAX_CACHE_KEY_SIZE = 255
 class CacheTable(models.Model):
     key = models.CharField(max_length=MAX_CACHE_KEY_SIZE, primary_key=True)
     value = models.TextField()
-    created = models.BigIntegerField(editable=False, null=False, default=0, db_index=True)
+    created = models.BigIntegerField(null=False, default=0, db_index=True)
 
     def save(self, *args, **kwargs):
         if not self.created:
