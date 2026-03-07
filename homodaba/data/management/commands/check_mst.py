@@ -1,15 +1,12 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils.translation import gettext as _
-from django.utils.text import slugify
 
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag
+from data.models import Movie, MovieStorageType
 
-from data.utils.imdbpy_facade import facade_search, clean_string
+from data.utils.imdbpy_facade import clean_string
 
 import csv
-import sys
 
 verbosity = 0
 

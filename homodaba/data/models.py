@@ -1,39 +1,50 @@
+from iso3166 import countries
 from requests.utils import requote_uri
+import time
 
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from imdb.utils import KIND_MAP
-
-from homodaba.settings import SMB_SHARE_2_URL, DATABASES
+from homodaba.settings import SMB_SHARE_2_URL, DATABASES, CACHE_TTL
 
 from data.utils import trace
 
-class ImdbCache(models.Model):
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=False)
-    search_query = models.CharField('Search Query', max_length=255, null=True, blank=False)
-    raw_data = models.TextField('Raw Data', null=True, blank=True)
+MAX_CACHE_KEY_SIZE = 255
+
+class CacheTable(models.Model):
+    key = models.CharField(max_length=MAX_CACHE_KEY_SIZE, primary_key=True)
+    value = models.TextField()
+    created = models.BigIntegerField(null=False, default=0, db_index=True)
+
+    def save(self, *args, **kwargs):
+        if not self.created:
+            self.created = int(time.time())
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.imdb_id if self.imdb_id else self.search_query
+        return self.key
+
+    @property
+    def is_alive(self):
+        return CACHE_TTL and (int(time.time()) - self.created) >= CACHE_TTL
 
     class Meta:
-        indexes = [
-            models.Index(fields=['search_query'], name='imdbcache_search_query_idx'),
-            models.Index(fields=['imdb_id'], name='imdbcache_imdb_id_idx'),
-        ]
+        verbose_name = "Entrada de Caché"
+        verbose_name_plural = "Entradas de Caché"
 
 class Person(models.Model):
     DEFAULT_NO_DIRECTOR = 'Sin Director'
     DEFAULT_NO_WRITER = 'Sin Escritor'
     DEFAULT_NO_ACTOR = 'Sin Actor'
 
-    name = models.CharField('Nombre', max_length=200, null=False, blank=False)
-    canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False)
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
+    name = models.CharField('Nombre', max_length=200, null=False, blank=False, db_index=True)
+    canonical_name = models.CharField('Nombre (Canónico)', max_length=200, null=False, blank=False, db_index=True)
+    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True, db_index=True)
+    tmdb_id = models.CharField('TMDB ID', max_length=20, null=True, blank=True, db_index=True)
     avatar_url = models.CharField('Foto (URL)', max_length=255, null=True, blank=True)
     avatar_thumbnail_url = models.CharField('Foto en miniatura (URL)', max_length=255, null=True, blank=True)
     is_director = models.BooleanField('Director', default=False, null=False, blank=False)
@@ -41,9 +52,24 @@ class Person(models.Model):
     is_actor = models.BooleanField('Actor', default=False, null=False, blank=False)
     is_scraped = models.BooleanField('Scrapeado', default=False, null=False, blank=False)
 
+    def get_filter_external_id(self):
+        if self.imdb_id:
+            return "[imdb_id:%s]" % self.imdb_id
+        elif self.tmdb_id:
+            return "[tmdb_id:%s]" % self.tmdb_id
+
+        return ""
+        
+
     def get_imdb_url(self):
         if self.imdb_id:
             return 'https://www.imdb.com/name/nm%s/' % self.imdb_id
+        
+        return None
+    
+    def get_tmdb_url(self):
+        if self.tmdb_id:
+            return 'https://www.themoviedb.org/person/%s' % self.tmdb_id
         
         return None
 
@@ -91,8 +117,9 @@ class ContentRatingTag(AbstractTag):
         verbose_name_plural = "clasificaciones de edad"
 
 class TitleAka(models.Model):
-    title = models.CharField(max_length=255, unique=True)
+    title = models.CharField(max_length=255, unique=False, db_index=True)
     country = models.CharField(max_length=255, null=True, blank=True)
+    title_type = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -105,8 +132,22 @@ class Country(models.Model):
     NO_COUNTRY = 'Sin País'
     name = models.CharField(max_length=255, unique=True)
 
+    def get_display_name(self):
+        if len(self.name) > 2:
+            return self.name
+        
+        iso_country = countries.get(self.name)
+        if len(iso_country.name) < 15:
+            return iso_country.name 
+        elif len(iso_country.apolitical_name) < 15:
+            return iso_country.apolitical_name
+        else:
+            return iso_country.alpha3
+
     class Meta:
         ordering = ['name']
+        verbose_name = "pais"
+        verbose_name_plural = "paises"
 
     def __str__(self):
         return self.name
@@ -136,12 +177,13 @@ class Movie(models.Model):
     ]
 
     title = models.CharField('Título (Internacional)', max_length=200, 
-        null=False, blank=False)
+        null=False, blank=False, db_index=True)
     title_original = models.CharField('Título (Original)', max_length=200, 
-        null=True, blank=True)
+        null=True, blank=True, db_index=True)
     title_preferred = models.CharField('Título (Idioma preferido)', 
-        max_length=200, null=True, blank=True)
-    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True)
+        max_length=200, null=True, blank=True, db_index=True)
+    imdb_id = models.CharField('IMDB ID', max_length=20, null=True, blank=True, db_index=True)
+    tmdb_id = models.CharField('TMDB ID', max_length=20, null=True, blank=True, db_index=True)
     kind = models.CharField('Clase de pélicula', max_length=20, 
         choices=MOVIE_KINDS, default=MK_MOVIE, null=False, blank=False)
     summary = models.TextField('Resumen', null=True, blank=True)
@@ -191,8 +233,12 @@ class Movie(models.Model):
         other_titles = []
         if self.title_original and main_title != self.title_original:
             other_titles.append(self.title_original)
-        if self.title_preferred and main_title != self.title_preferred:
+        if self.title_preferred and main_title != self.title_preferred and self.title_preferred != self.title_original:
             other_titles.append(self.title_preferred)
+        
+        for aka in self.title_akas.all():
+            if aka.title_type == 'transliteration':
+                other_titles.append(aka.title)
 
         return other_titles
     get_other_main_titles.short_description = 'Otros títulos'
@@ -225,10 +271,10 @@ class Movie(models.Model):
         return self.get_persons(MoviePerson.RT_ACTOR)
 
     def clean_poster_thumbnail_url(self):
-        return self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@._V1_SY150_CR0,0,101,150_.jpg'
+        return self.poster_thumbnail_url if self.poster_thumbnail_url else 'https://image.tmdb.org/t/p/w780/5oJBRsNQks7bLb2ztY1XWYsA8xw.jpg'
 
     def clean_poster_url(self):
-        return self.poster_url if self.poster_url else 'https://m.media-amazon.com/images/M/MV5BMjAxNzk2OTI2OV5BMl5BanBnXkFtZTcwODk0MDIzMw@@.jpg'
+        return self.poster_url if self.poster_url else 'https://image.tmdb.org/t/p/original/5oJBRsNQks7bLb2ztY1XWYsA8xw.jpg'
 
     def get_plot(self):
         if self.summary:
@@ -239,19 +285,21 @@ class Movie(models.Model):
         return ''
 
     def get_formated_imdb_id(self):
-        if self.imdb_id:
-            return 'tt%s' % self.imdb_id
-        
-        return ''
+        return maybe_format_imdb_id(self.imdb_id)
 
     def get_imdb_url(self):
         if self.imdb_id:
-            return 'https://www.imdb.com/title/tt%s/' % self.imdb_id
+            return 'https://www.imdb.com/title/%s/' % self.get_formated_imdb_id()
         return 'https://www.imdb.com/title/tt0385307/'
+
+    def get_tmdb_url(self):
+        if self.tmdb_id:
+            return 'https://www.themoviedb.org/movie/%s' % self.tmdb_id
+        return 'https://www.themoviedb.org/movie/10040'
 
     def get_poster_thumbnail_img(self):
         return format_html(
-            '<a href="{}" target="_blank" class="modal-photo" ref="noopener noreferrer"><img src="{}" alt="{}" /></a>',
+            '<a href="{}" target="_blank" class="modal-photo" ref="noopener noreferrer"><img style="max-width: 101px;" src="{}" alt="{}" /></a>',
             self.get_imdb_url(),
             self.clean_poster_thumbnail_url(),
             self.title,
@@ -616,5 +664,8 @@ def populate_movie_auto_tags(movie):
         movie.tags.add(db_tag)
         movie.save()
 
-def get_imdb_cache_objects():
-    return ImdbCache.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')
+def get_table_cache_objects():
+    return CacheTable.objects.using('cache' if 'cache' in DATABASES.keys() else 'default')
+
+def maybe_format_imdb_id(maybe_imdb_id):
+    return ('tt%s' % maybe_imdb_id if maybe_imdb_id and maybe_imdb_id[0] != 't' else maybe_imdb_id)

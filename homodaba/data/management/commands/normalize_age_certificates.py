@@ -5,7 +5,6 @@ from django.utils.text import slugify
 
 
 from data.models import ContentRatingTag, Movie
-from data.models import get_first_or_create_tag
 
 from .utils import normalize_age_certificate
 

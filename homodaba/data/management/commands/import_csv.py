@@ -10,9 +10,9 @@ import csv
 from datetime import datetime
 import sys
 
-from .utils import trace_validate_imdb_movie, clean_csv_data, csv_validate
+from .utils import trace_validate_facade_movie, clean_csv_data, csv_validate
 
-from .import_data import get_or_insert_storage, insert_movie_from_imdb, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
+from .import_data import get_or_insert_storage, insert_movie_from_facade_movie, insert_movie_from_a_not_an_imdb_movie, populate_local_movie_tags
 
 HELP_TEXT = """
 Descripcion de los campos del csv:
@@ -123,14 +123,19 @@ class Command(BaseCommand):
             storage_name=cd['storage_name'],
             path=cd['path'],
             imdb_id=cd['imdb_id'],
+            tmdb_id=cd['tmdb_id'],
             not_an_imdb_movie=not_an_imdb_movie
         )
 
         tags = cd['tags']
 
-        if not facade_result and not not_an_imdb_movie:
-            trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
-            return None
+        if not facade_result or not facade_result.movie:
+            if not_an_imdb_movie:
+                trace.error('\tParece que no encontramos la pelicula "%s (%s)"' % (cd['title'], r['year']))
+                facade_result = None
+            else:
+                trace.error('\tParece que no encontramos la pelicula "%s (%s) [imdb_id:%s] [tmdb_id:%s]"' % (cd['title'], r['year'], cd['imdb_id'], cd['tmdb_id']))
+                return None
 
         local_movie = None
 
@@ -150,14 +155,14 @@ class Command(BaseCommand):
             # 1.1) si la esta, sacamos un mensaje y devolvemos la pelicula (FIN)
             trace.warning("\tYa tenemos una película con el título '%s' del año '%s'" % (cd['title'], r['year']))
 
-            local_movie = facade_result.movie
+            local_movie = facade_result.local_movie
         # El resto son pelis nuevas (localizables por el imdb)
         else:
-            trace_validate_imdb_movie(facade_result.movie, cd['title'], director=cd['director'])
+            trace_validate_facade_movie(facade_result.facade_movie, cd['title'], director=cd['director'])
 
-            local_movie = insert_movie_from_imdb(
+            local_movie = insert_movie_from_facade_movie(
                 r['title'],
-                facade_result.movie, 
+                facade_result.facade_movie, 
                 tags=tags, 
                 title_original=cd['title_original'],
                 title_preferred=cd['title_preferred'],

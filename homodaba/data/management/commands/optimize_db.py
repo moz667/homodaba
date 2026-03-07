@@ -1,14 +1,10 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.utils.translation import gettext as _
-from django.utils.text import slugify
+from django.core.management.base import BaseCommand
 
-
-from data.models import Movie, TitleAka, MoviePerson, Tag, Country
-from data.models import get_first_or_create_tag, get_or_create_country, populate_movie_auto_tags
+from data.models import Movie, TitleAka, MoviePerson, Tag
+from data.models import get_first_or_create_tag, populate_movie_auto_tags
 
 from data.utils import trace
-from data.utils.imdbpy_facade import get_imdb_movie, get_imdb_titles
+from data.utils.imdbpy_facade import get_facade_movie
 
 from .import_data import populate_countries
 
@@ -169,7 +165,9 @@ class Command(BaseCommand):
                             movies = Movie.objects.filter(id=csv_row['id']).all()
                         elif 'imdb_id' in csv_row and csv_row['imdb_id']:
                             movies = Movie.objects.filter(imdb_id=csv_row['imdb_id']).all()
-                        
+                        elif 'tmdb_id' in csv_row and csv_row['tmdb_id']:
+                            movies = Movie.objects.filter(tmdb_id=csv_row['tmdb_id']).all()
+
                         if movies.count() > 0:
                             for movie in movies:
                                 trace.debug('>> %s (%s) [id:%s]' % (movie.title, movie.get_countries_as_text(), movie.id))
@@ -235,41 +233,37 @@ def populate_casting(movie):
     if got_changes:
         movie.save()
 
-def clean_title_and_akas(movie):
-    title_akas = {}
-    new_titles = {}
+def clean_title_and_akas(movie: Movie):
+    title_akas = []
+    new_titles = []
 
-    if movie.imdb_id:
-        imdb_movie = get_imdb_movie(movie.imdb_id)
+    if movie.imdb_id or movie.tmdb_id:
+        facade_movie = get_facade_movie(imdb_id=movie.imdb_id, tmdb_id=movie.tmdb_id)
         
-        new_titles, title_akas = get_imdb_titles(imdb_movie)
-
-        if len(title_akas.keys()) > 0:
-            trace.debug(" * Los akas para la pelicula '%s' son:" % movie.title)
-
+        if len(facade_movie.title_akas) > 0:
             movie.title_akas.clear()
+            title_akas = facade_movie.title_akas
 
-            for country in title_akas.keys():
-                trace.debug("    - %s [%s]" % (title_akas[country], country))
+
+            for key in title_akas.keys():
+                key_parts = key.split('_')
+                country = key_parts[0]
+                title_type = key_parts[1] if len(key_parts) > 1 else None
+
+                trace.debug("    - %s [%s] (%s)" % (title_akas[key], country, title_type))
             
                 db_title_aka = get_first_or_create_tag(
-                    TitleAka, title=title_akas[country]
+                    TitleAka, title=title_akas[key], country=country, title_type=title_type
                 )
-
-                if db_title_aka.country:
-                    if db_title_aka.country != country:
-                        # El problema aqui es que el aka deberia permitir varios paises... 
-                        # pero tenemos un poco en el aire que hacemos con TitleAka (yo 
-                        # ultimamente pienso que tendriamos que borrarla... asi que por 
-                        # ahora solo informamos en modo debug)
-                        trace.debug("Tenemos este titulo como aka con distinto pais titulo:'%s' pais_db:'%s' pais_title:'%s'" % (
-                            title_akas[country], db_title_aka.country, country
-                        ))
-                else:
-                    db_title_aka.country = country
-                    db_title_aka.save()
                 
-                movie.title_akas.add(db_title_aka)
+                match = False
+                for ta in movie.title_akas.all():
+                    if ta.id == db_title_aka.id:
+                        match = True
+                        break
+                
+                if not match:
+                    movie.title_akas.add(db_title_aka)
             
             movie.save()
         

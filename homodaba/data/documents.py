@@ -2,9 +2,9 @@
 from django_elasticsearch_dsl import Document, fields
 from django_elasticsearch_dsl.registries import registry
 
-from elasticsearch_dsl import analyzer
+from elasticsearch.dsl import analyzer
 
-from .models import Movie, MoviePerson, Person
+from .models import Movie
 
 """
 Necesitamos leer la documentacion de las cosas antes de usarlas...

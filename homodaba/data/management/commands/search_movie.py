@@ -1,0 +1,148 @@
+from django.core.management.base import BaseCommand
+
+from data.utils import Trace as trace
+from data.utils.imdbpy_facade import facade_search
+
+from .utils import clean_csv_data
+from .import_csv import HELP_TEXT # Utiliza el mismo archivo csv que import_csv.py
+
+
+# TODO: Buscar diferencias en year y director?
+
+class Command(BaseCommand):
+    help = 'Busqueda usando la api externa y la cache'
+
+    """
+    Pinta la ayuda y sale
+    """
+    def csv_file_help(self):
+        print(HELP_TEXT)
+        exit()
+
+    """
+    Argumentos del comando:
+
+    """
+    def add_arguments(self, parser):
+        parser.add_argument('--title', nargs='*', type=str, help="""Titulo a buscar.""")
+        parser.add_argument('--year', nargs='*', type=str, help="""Año a buscar.""")
+        parser.add_argument('--imdb_id', nargs='*', type=str, help="""Por imdb id.""")
+
+    def search_and_print(self, r):
+        trace.debug('Tratando "%s (%s)"...' % (r['title'], r['year']))
+        
+        cd = clean_csv_data(r)
+        
+        facade_result = facade_search(
+            title=cd['title'], year=r['year'],
+            imdb_id=r['imdb_id'], tmdb_id=r['tmdb_id'], 
+            exclude_local_data=True
+        )
+
+        if facade_result is None or facade_result.facade_movie is None:
+            print('No encontramos la pelicula')
+            return
+
+        m = facade_result.facade_movie
+
+        print('## %s (%s) imdb_id="%s" tmdb_id="%s"' % (m.title, m.year, m.imdb_id, m.tmdb_id))
+
+        print('')
+        print(m.summary)
+        print('')
+
+        print('* title="%s"' % m.title)
+        print('* title_original="%s"' % m.title_original)
+        print('* title_preferred="%s"' % m.title_preferred)
+        print('* kind="%s"' % m.kind)
+        
+        print('* poster_url="%s"' % m.poster_url)
+        print('* poster_thumbnail_url="%s"' % m.poster_thumbnail_url)
+        print('* rating="%s"' % m.rating)
+
+        print ('* Title AKAS:')
+        if len(m.title_akas) > 0:
+            for key in m.title_akas.keys():
+                key_parts = key.split('_')
+                country = key_parts[0]
+                title_type = key_parts[1] if len(key_parts) > 1 else None
+                
+                print('    - %s [%s] (%s)' % (m.title_akas[key], country, title_type))
+        else:
+            print ('    - No tiene title AKAS')
+
+        print ('* Tags:')
+        if len(m.tags) > 0:
+            for t in m.tags:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene tags')
+
+        print ('* Genres:')
+        if len(m.genres) > 0:
+            for t in m.genres:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene genres')
+
+        print ('* Content rating systems:')
+        if len(m.content_rating_systems) > 0:
+            for t in m.content_rating_systems:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene content rating systems')
+
+        print ('* Directores:')
+        if len(m.directors) > 0:
+            for fc in m.directors:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene directores')
+
+        print ('* Escritores:')
+        if len(m.writers) > 0:
+            for fc in m.writers:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene escritores')
+
+        print ('* Actores:')
+        if len(m.actors) > 0:
+            for fc in m.actors:
+                print('    - %s (%s)' % (fc.name, fc.avatar_url if not fc.avatar_url is None else 'No tiene avatar'))
+        else:
+            print ('    - No tiene actores')
+
+
+        print ('* Paises:')
+        if len(m.countries) > 0:
+            for t in m.countries:
+                print('    - %s' % t)
+        else:
+            print ('    - No tiene paises')
+
+    def handle(self, *args, **options):
+        title = None
+        if 'title' in options and options['title'] and options['title'][0]:
+            title = options['title'][0]
+
+        year = None
+        if 'year' in options and options['year'] and options['year'][0]:
+            year = options['year'][0]
+        
+        imdb_id = None
+        if 'imdb_id' in options and options['imdb_id'] and options['imdb_id'][0]:
+            imdb_id = options['imdb_id'][0]
+        
+        if not title and not year and not imdb_id:
+            self.print_help('manage.py', __name__)
+            return
+
+        query = {}
+        query['title'] = title
+        query['year'] = year
+        query['imdb_id'] = imdb_id
+
+        self.search_and_print(query)
+
+

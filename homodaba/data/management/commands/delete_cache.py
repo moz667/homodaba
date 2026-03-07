@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext as _
 
-from data.models import ImdbCache, get_imdb_cache_objects
+from data.models import CacheTable, get_table_cache_objects
 
 from homodaba.settings import DATABASES
 
@@ -20,11 +20,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         delete_from_default = options['default_database']
 
-        objects = get_imdb_cache_objects()
+        objects = get_table_cache_objects()
         database = 'cache' if 'cache' in DATABASES.keys() else 'default'
 
         if delete_from_default:
-            objects = ImdbCache.objects.using('default')
+            objects = CacheTable.objects.using('default')
             database = 'default'
 
         print("")

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+import asyncio
 import os, django
 
-def main():
+async def main():
     # Init app django
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homodaba.settings')
     django.setup()
@@ -14,7 +15,11 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    init_bot()
+    await init_bot()
 
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.run(main())
+    except RuntimeError:
+        # Evita el error visual de loop cerrado al final en algunos SO
+        pass

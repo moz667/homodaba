@@ -16,6 +16,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(os.getenv('BASE_DIR', '/opt/app'))
 
+# TMDB Api
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
 # TODO: Quitar todo el tema este de variables para compartir por http
 # e incluirlo en la importacion como un tipo de storage_type mas
 SMB_SHARE_2_URL = {}
@@ -30,21 +33,18 @@ while os.getenv("SMB_SHARE_2_URL_KEY_%i" % i, ""):
 # establecer a 0 por lo que no tendria limite
 CASTING_LIMIT = int(os.getenv("CASTING_LIMIT", "12"))
 
+# Define si usamos cache (1) o NO (0)
 NO_CACHE = int(os.getenv("NO_CACHE", "0")) == 1
+# Define si queremos forzar la actualizacion de cache (1) o NO (0)
 UPDATE_CACHE = int(os.getenv("UPDATE_CACHE", "0")) == 1
+# Define el tiempo de vida de la cache expresado en segundos, por defecto 1 dia
+CACHE_TTL = int(os.getenv("CACHE_TTL", (24 * 60 * 60)))
 
 TBOT_TOKEN = os.getenv("TBOT_TOKEN", "")
 TBOT_LIMIT_MOVIES = int(os.getenv("TBOT_LIMIT_MOVIES", "10"))
 
 # Numero de elementos en la pagina de busqueda de peliculas
 ADMIN_MOVIE_LIST_PER_PAGE = int(os.getenv("ADMIN_MOVIE_LIST_PER_PAGE", "100"))
-
-# Tipos de pelicula que consideramos buenos. [por defecto: movie]
-# imdb tiene muchos tipos: movie, tv movie, video... en principio
-# esta guay usar solo movie para las peliculas porque es una forma
-# sencilla de filtrar los resultados de las busquedas para encontrar
-# buenos matches en el casos de peliculas (usando solo movie)
-IMDB_VALID_MOVIE_KINDS = os.getenv("IMDB_VALID_MOVIE_KINDS", 'movie').split(',')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
@@ -57,6 +57,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = False if os.getenv("DJANGO_DEBUG", '0') == '0' else True
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1 localhost').split()
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost http://127.0.0.1').split()
 
 # Upgrading to django-3.2.10
 DEFAULT_AUTO_FIELD='django.db.models.AutoField'
@@ -69,7 +70,6 @@ LOGOUT_REDIRECT_URL = 'home'
 
 INSTALLED_APPS = [
     'admin_interface',
-    'colorfield',
     'data.apps.DataConfig',
     'tbot.apps.TbotConfig',
     'django.contrib.admin',
@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'admin_auto_filters',
+    'colorfield',
     # 'easy_select2',
     # 'tagging', TODO: quitar de requeriments... no lo vamos a usar
 ]
@@ -111,6 +112,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
 ]
 
 ROOT_URLCONF = 'homodaba.urls'
@@ -161,8 +163,19 @@ if os.getenv('DATABASE_ENGINE', '') == 'mysql':
             'PASSWORD':  os.getenv('DATABASE_PASSWORD', ''),
             'HOST': os.getenv('DATABASE_HOST', ''),
             'PORT': os.getenv('DATABASE_PORT', ''),
+            'OPTIONS': {
+                'sql_mode': 'traditional',
+            }
         }
     }
+
+    if os.getenv('DATABASE_SSL_PEM', ''):
+        # TODO: Probar esto. Me da que faltan cosas
+        DATABASES['default']['OPTIONS']['ssl'] = {
+            'ca': os.getenv('DATABASE_SSL_PEM', ''),
+        }
+    else:
+        DATABASES['default']['OPTIONS']['ssl'] = 'DISABLED'
 
 # cache en base de datos separada
 if os.getenv('CACHE_DATABASE', 1):
@@ -179,7 +192,18 @@ if os.getenv('CACHE_DATABASE', 1):
             'PASSWORD':  os.getenv('CACHE_DATABASE_PASSWORD', ''),
             'HOST': os.getenv('CACHE_DATABASE_HOST', ''),
             'PORT': os.getenv('CACHE_DATABASE_PORT', ''),
+            'OPTIONS': {
+                'sql_mode': 'traditional',
+            }
         }
+
+        if os.getenv('CACHE_DATABASE_SSL_PEM', ''):
+            # TODO: Probar esto. Me da que faltan cosas
+            DATABASES['cache']['OPTIONS']['ssl'] = {
+                'ca': os.getenv('CACHE_DATABASE_SSL_PEM', ''),
+            }
+        else:
+            DATABASES['cache']['OPTIONS']['ssl'] = 'DISABLED'
 
 
 

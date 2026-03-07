@@ -1,13 +1,17 @@
+from datetime import datetime
+
 from django.contrib import admin
 from django.db.models import Q
 from django.shortcuts import reverse
 from django.urls import path
+from django.utils.html import format_html
 
 from admin_auto_filters.filters import AutocompleteFilter
 
-from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, ImdbCache
+from .models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag, CacheTable, Country
 from .search import populate_search_filter
 from .views import PersonDirectorJsonView
+from .utils.cache import cache_obj_str_to_json_str
 
 from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE, DATABASES
 
@@ -19,9 +23,13 @@ class DirectorFilter(AutocompleteFilter):
     def get_autocomplete_url(self, request, model_admin):
         return reverse('admin:json_autocomplete_director_search')
 
-class ImdbCacheAdmin(admin.ModelAdmin):
+class CacheTableAdmin(admin.ModelAdmin):
     # A handy constant for the name of the alternate database.
     using = 'cache' if 'cache' in DATABASES.keys() else 'default'
+
+    readonly_fields = ('unserialize_data',)
+    search_fields = ('key',)
+    list_display = ('key', 'created_as_date')
 
     def save_model(self, request, obj, form, change):
         # Tell Django to save objects to the 'other' database.
@@ -44,7 +52,23 @@ class ImdbCacheAdmin(admin.ModelAdmin):
         # Tell Django to populate ManyToMany widgets using a query
         # on the 'other' database.
         return super().formfield_for_manytomany(db_field, request, using=self.using, **kwargs)
-admin.site.register(ImdbCache, ImdbCacheAdmin)
+    
+    @admin.display(description='Datos deserializados:')
+    def unserialize_data(self, obj):
+        if obj.value:
+            return format_html("<pre>{}</pre>", cache_obj_str_to_json_str(obj.value))
+        return "Sin datos"
+    
+    @admin.display(description='Fecha de Creación', ordering='created')
+    def created_as_date(self, obj):
+        if obj.created:
+            return datetime.fromtimestamp(obj.created).strftime('%d/%m/%Y %H:%M:%S')
+        return "-"
+admin.site.register(CacheTable, CacheTableAdmin)
+
+class CountryAdmin(admin.ModelAdmin):
+    pass
+admin.site.register(Country, CountryAdmin)
 
 class TagAdmin(admin.ModelAdmin):
     pass
@@ -55,6 +79,7 @@ class GenreTagAdmin(admin.ModelAdmin):
 admin.site.register(GenreTag, GenreTagAdmin)
 
 class TitleAkaAdmin(admin.ModelAdmin):
+    list_display = ('title', 'country', 'title_type')
     search_fields = ('title',)
 admin.site.register(TitleAka, TitleAkaAdmin)
 
@@ -165,7 +190,7 @@ class MovieAdmin(admin.ModelAdmin):
 admin.site.register(Movie, MovieAdmin)
 
 class PersonAdmin(admin.ModelAdmin):
-    list_display = ('name', 'imdb_id', 'is_director', 'is_writer', 'is_actor', 'avatar_url')
+    list_display = ('name', 'imdb_id', 'tmdb_id', 'is_director', 'is_writer', 'is_actor', 'avatar_url')
 
     search_fields = ('name', 'canonical_name',)
     list_filter = ('is_director', 'is_writer', 'is_actor', )

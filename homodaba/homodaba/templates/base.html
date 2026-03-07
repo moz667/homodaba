@@ -52,10 +52,15 @@
                         </li>
                     {% endif %}
                     <li class="nav-item logout-page">
-                        <a class="nav-link" href="{% url 'logout' %}">Salir ({{ request.user.username }})</a>
+                        <a class="nav-link" 
+                            href="{% url 'logout' %}"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                            >Salir ({{ request.user.username }})</a>
                     </li>
+                    <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+                        {% csrf_token %}
+                    </form>
                 </ul>
-
                 <form class="search-mini-form form-inline mt-2 mt-md-0" action="{% url 'search_movies' %}">
                     <input name="search_term" class="form-control mr-sm-2" type="text" placeholder="Buscar películas" aria-label="Buscar películas">
                     <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Buscar</button>

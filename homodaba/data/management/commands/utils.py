@@ -1,23 +1,19 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
-from django.utils.translation import gettext as _
-from django.utils.text import slugify
-
-from data.models import Movie, Person, MovieStorageType, MoviePerson, Tag, GenreTag, TitleAka, ContentRatingTag
-from data.models import get_first_or_create_tag
+from data.models import Movie, MovieStorageType
 
 from data.utils.imdbpy_facade import clean_string, match_director
 from data.utils import Trace as trace
 
-from imdb import Cinemagoer
-
-import csv
-from datetime import datetime
-from distutils.util import strtobool
 import json
 import re
-import sys
-from time import sleep
+
+def strtobool(val):
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f"Valor no válido: {val}")
 
 """
 Divide un nombre de archivo (sin ruta) en partes diferenciadas
@@ -90,6 +86,7 @@ def clean_csv_data(r):
     year = int(r['year']) if 'year' in r and r['year'] else Movie.DEFAULT_NO_YEAR
     is_original = True if not storage_name else False
     imdb_id = r['imdb_id'] if 'imdb_id' in r and r['imdb_id'] else None
+    tmdb_id = r['tmdb_id'] if 'tmdb_id' in r and r['tmdb_id'] else None
 
     not_an_imdb_movie = False
     if 'not_an_imdb_movie' in r:
@@ -138,6 +135,7 @@ def clean_csv_data(r):
         'year':year,
         'is_original':is_original,
         'imdb_id':imdb_id,
+        'tmdb_id':tmdb_id,
         'not_an_imdb_movie':not_an_imdb_movie,
         'storage_type':storage_type,
         'media_format':media_format,
@@ -155,71 +153,21 @@ def normalize_age_certificate(raw_certificate):
     return raw_certificate
 
 """
-Compara los datos recuperados de imdb en ia_movie con el title y director que 
+Compara los datos recuperados de la API en facade_movie con el title y director que 
 le pasamos como parametro.
 Si no coinciden, sacamos un mensaje notificando las diferencias.
 """
-def trace_validate_imdb_movie(ia_movie, title, director=None):
+def trace_validate_facade_movie(facade_movie, title, director=None):
     # Puede que el titulo de la pelicula este mal en el CSV, asi que lo notificamos:
-    if clean_string(ia_movie['title']) != clean_string(title):
-        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado del imdb "%s"' % (title, ia_movie['title']))
+    if clean_string(facade_movie.title) != clean_string(title):
+        trace.info('\tEl titulo de la pelicula "%s" no corresponde con el cargado de la api externa "%s"' % (title, facade_movie.title))
 
     # 2.2.3) Si r tiene directores, los validamos, si no son los mismos, sacamos mensaje
     if director:
-        if not 'director' in ia_movie.keys():
-            trace.info('\ttrace_validate_ia_movie: No encontramos directores para la pelicula "%s"' % ia_movie['title'])
+        if len(facade_movie.directors) == 0:
+            trace.info('\trace_validate_facade_movie: No encontramos directores para la pelicula "%s"' % facade_movie.title)
         else:
-            if not match_director(director, ia_movie['director']):
+            if not match_director(director, facade_movie.directors):
                 # Esto es para que revises tu csv!!!
                 trace.info("\tNo encontramos el/los director/es '%s' en IMDB para la pelicula '%s'" % (director, title))
 
-
-"""
-Busqueda interactiva.
-
-TODO: No se esta usando pero lo dejamos por aqui por si queremos retomarlo
-TODO: Si lo volvemos a usar, utilizar la cache
-def interactive_imdb_search(title, year, title_alt=None):
-    ia = Cinemagoer(reraiseExceptions=True)
-    search_results = ia.search_movie('%s (%s)' % (title, year))
-            
-    if len(search_results) == 0:
-        search_results = ia.search_movie(title)
-    
-    if len(search_results) == 0 and title_alt:
-        return interactive_imdb_search(title_alt, year)
-
-    if len(search_results) > 0:
-        print('\tParece que no encontramos la pelicula "%s (%s)" ¿Es alguna de estas?:' % (title, year))
-        i = 1
-        for sr in search_results:
-            print("\t%s) %s (%s)" % (str(i), sr['title'], sr['year']))
-            i = i + 1
-        print("\tn) Para continuar con el siguiente")
-        print("\tq) Para salir")
-
-        input_return = ''
-        while not input_return:
-            input_return = input("")
-
-            if input_return == 'q':
-                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                exit()
-            elif input_return == 'n':
-                trace.error("\tParece que NO encontramos películas con el título '%s' del año '%s'" % (title, year))
-                return None
-            else:
-                try:
-                    input_return = int(input_return)
-                    if not (input_return > 0 and input_return <= len(search_results)):
-                        trace.error("\tEse valor no es posible.")
-                        input_return = ""
-                except ValueError:
-                    trace.error("\tEse valor no es posible.")
-                    input_return = ""
-        
-        return search_results[int(input_return) - 1]
-    
-    # No encontramos ni una...
-    return None
-"""

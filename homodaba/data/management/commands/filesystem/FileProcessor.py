@@ -1,19 +1,19 @@
 
 from data.management.commands.utils import save_json
 from data.utils import Trace as trace
-from data.utils.imdbpy_facade import get_imdb_movie, match_imdb_movie, is_valid_imdb_movie, clean_string
+from data.utils.imdbpy_facade import get_facade_movie, match_facade_movie
+from data.models import maybe_format_imdb_id
 
 import getch
 
 from datetime import datetime
 import os, sys, re, json
 
-from . import clean_filename_for_samba_share, escape_single_quoute
-from .JSONDirectory import JSONDirectoryScan, get_output_filename
+from . import clean_filename_for_samba_share
+from .JSONDirectory import get_output_filename
 
 # kitty console:
 # from data.utils.imdbpy_facade import show_imdb_movie_image
-# from homodaba.settings import IMDB_VALID_MOVIE_KINDS
 
 class FileProcessor(object):
     files = []
@@ -78,25 +78,30 @@ class FileProcessor(object):
         trace.debug(" * Validando procesados (Datos basicos)")
         for f in self.processeds:
             trace.debug(" - %s" % f['fullname'])
-            if not 'imdb_id' in f:
-                trace.error("La pelicula '%s' no tiene imdb_id." % f['fullname'])
+            if not 'imdb_id' in f and not 'tmdb_id' in f:
+                trace.error("La pelicula '%s' no tiene imdb_id ni tmdb_id." % f['fullname'])
                 return False
-            imdb_movie = get_imdb_movie(f['imdb_id'])
 
-            if (not 'manual_valid' in f or not f['manual_valid']) and not is_valid_imdb_movie(imdb_movie):
+            facade_movie_params = {}
+
+            if 'imdb_id' in f:
+                facade_movie_params['imdb_id'] = f['imdb_id']
+            
+            if 'tmdb_id' in f:
+                facade_movie_params['tmdb_id'] = f['tmdb_id']
+
+            facade_movie = get_facade_movie(**facade_movie_params)
+
+            if (not 'manual_valid' in f or not f['manual_valid']) and not facade_movie:
                 print("")
                 print("## Encontramos errores en '%s'" % f['fullname'])
                 print("")
-                if not 'kind' in imdb_movie.keys():
-                    print(" - No sabemos el tipo de peli para imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
-                elif imdb_movie['kind'] != 'movie':
-                    print(" - El tipo de peli es '%s' para imdb_id='%s' fullname='%s'" % (imdb_movie['kind'], f['imdb_id'], f['fullname']))
-                
-                if not 'full-size cover url' in imdb_movie.keys() or not imdb_movie['full-size cover url']:
-                    print(" - La peli no tiene portada. imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
-            
-                print(" - Revise la url https://www.imdb.com/title/tt%s y si no coincide puede borrarla a continuacion." % f['imdb_id'])
-                print("")
+                if 'imdb_id' in f and f['imdb_id']:
+                    print(" - Revise la url https://www.imdb.com/title/%s y si no coincide puede borrarla a continuacion." % maybe_format_imdb_id(f['imdb_id']))
+                    print("")
+                if 'tmdb_id' in f and f['tmdb_id']:
+                    print(" - Revise la url https://www.themoviedb.org/movie/%s y si no coincide puede borrarla a continuacion." % f['tmdb_id'])
+                    print("")
 
                 if not self.not_interactive:
                     print(" * Desea BORRAR la peli '%s' de la lista de procesados? [Y/n]: " % f['fullname'])
@@ -114,9 +119,9 @@ class FileProcessor(object):
                             f['manual_valid'] = True
 
             if not 'imdb_title' in f:
-                if imdb_movie:
-                    f['imdb_title'] = imdb_movie['title']
-                    f['imdb_year'] = imdb_movie['year']
+                if facade_movie:
+                    f['imdb_title'] = facade_movie.title
+                    f['imdb_year'] = facade_movie.year
                 else:
                     trace.error("No encontramos peli en el imdb_id='%s' fullname='%s'" % (f['imdb_id'], f['fullname']))
                 
@@ -148,11 +153,9 @@ class FileProcessor(object):
                 print("")
                 print(" > '%s'" % f['fullname'])
                 print(" > '%s'" % f['new_fullname'])
-                print("   https://www.imdb.com/title/tt%s" % f['imdb_id'])
+                print("   https://www.imdb.com/title/%s" % maybe_format_imdb_id(f['imdb_id']))
 
                 if not self.not_interactive:
-                    # kitty console:
-                    # show_imdb_movie_image(get_imdb_movie(f['imdb_id']))
                     print(" * Es correcto? [Y/n]")
                     
                     selected_option = getch.getch()
@@ -170,7 +173,7 @@ class FileProcessor(object):
         # Comprobamos que ya todos estan validados manualmente o son una peli valida de imdb
         for f in self.processeds:
             if (not 'manual_valid' in f or not f['manual_valid']):
-                if not is_valid_imdb_movie(get_imdb_movie(f['imdb_id'])):
+                if get_facade_movie(f['imdb_id']) is None:
                     return False
         
         return True
@@ -224,8 +227,10 @@ class FileProcessor(object):
             for rf in repeated_files:
                 print("    - %s" % rf['fullname'])
             
-            imdb_movie = get_imdb_movie(imdb_id)
-            print(" * Los datos en imdb de la peli son %s (%s) [https://www.imdb.com/title/tt%s]:" % (imdb_movie['title'], imdb_movie['year'], imdb_id))
+            facade_movie = get_facade_movie(imdb_id=imdb_id)
+            print(" * Los datos en imdb de la peli son %s (%s) [https://www.imdb.com/title/%s]:" % (
+                facade_movie.title, facade_movie.year, maybe_format_imdb_id(imdb_id)
+            ))
 
             if not self.not_interactive:
                 print(" * Quieres borrar todos estos archivos de procesados? [y/N]")
@@ -260,10 +265,10 @@ class FileProcessor(object):
         clean_imdb_title = re.sub(r'[:]', ';', file['imdb_title'])
         clean_imdb_title = clean_filename_for_samba_share(clean_imdb_title)
 
-        new_name = "%s (%s) [tt%s].%s" % (
+        new_name = "%s (%s) [%s].%s" % (
             clean_imdb_title, 
             file['imdb_year'],
-            file['imdb_id'],
+            maybe_format_imdb_id(file['imdb_id']),
             file['ext']
         )
 
@@ -272,10 +277,10 @@ class FileProcessor(object):
         for extra_files in ['audios', 'subs']:
             if extra_files in file:
                 for extra_file in file[extra_files]:
-                    new_name = "%s (%s) [tt%s].%s" % (
+                    new_name = "%s (%s) [%s].%s" % (
                         clean_imdb_title, 
                         file['imdb_year'],
-                        file['imdb_id'],
+                        maybe_format_imdb_id(file['imdb_id']),
                         extra_file['ext']
                     )
 
@@ -293,7 +298,7 @@ class FileProcessor(object):
         # Titulo (Director/es, año)
 
         # Buscamos el año
-        possible_years = re.findall('\d+\d+\d+\d+', cur_name)
+        possible_years = re.findall(r'\d+\d+\d+\d+', cur_name)
         for pos_year in reversed(possible_years):
             if int(pos_year) > 1930 and int(pos_year) <= datetime.now().year:
                 year = pos_year
@@ -307,10 +312,10 @@ class FileProcessor(object):
             # hacer estos replaces:
             #   s/(año).*//
             #   s/año.*//
-            pattern = re.compile("\(%s\)" % year)
+            pattern = re.compile(r"\(%s\)" % year)
 
             if pattern.search(cur_name):
-                new_cur_name = re.sub("\(%s\).*" % year, "", cur_name).strip()
+                new_cur_name = re.sub(r"\(%s\).*" % year, "", cur_name).strip()
                 if len(new_cur_name) > 0:
                     cur_name = new_cur_name
             else:
@@ -359,64 +364,54 @@ class FileProcessor(object):
     def get_total_files(self):
         return len(self.files)
 
-    def match_file_as_imdb_movie(self, file):
-        imdb_movie = None
-        posible_movies = []
+    def match_file_as_facade_match(self, file):
+        facade_match = None
 
         if file['title']:
-            imdb_movie, posible_movies = match_imdb_movie(
+            facade_match = match_facade_movie(
                 file['title'], year=file['year'] if file['year'] else None
             )
         
-        if imdb_movie:
-            file['title'] = imdb_movie['title']
-            file['year'] = imdb_movie['year']
-            file['imdb_id'] = imdb_movie.getID()
-
-            # kitty console:
-            # show_imdb_movie_image(imdb_movie)
-        else:
-            if not file['year']:
-                print(" * No tenemos año para la peli '%s' *" % file['fullname'])
-            
-            if not file['title']:
-                print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
+        if facade_match:
+            if facade_match.facade_movie:
+                file['title'] = facade_match.facade_movie.title
+                file['year'] = facade_match.facade_movie.year
+                file['imdb_id'] = facade_match.facade_movie.imdb_id
             else:
-                print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
+                if not file['year']:
+                    print(" * No tenemos año para la peli '%s' *" % file['fullname'])
+                
+                if not file['title']:
+                    print(" * No tenemos titulo para la peli '%s' *" % file['fullname'])
+                else:
+                    print(" * No encontramos coincidencia clara para la peli '%s' *" % file['fullname'])
 
-                if len(posible_movies) > 0:
-                    print(" * Aunque hemos encontrado las siguientes: *")
-                    for sr in posible_movies:
-                        print(" - %s (%s) [%s] https://www.imdb.com/title/tt%s" % (
-                            sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID
-                        ))
+                    if len(facade_match.promissing_facade_movies) > 0:
+                        print(" * Aunque hemos encontrado las siguientes: *")
+                        for facade_movie in facade_match.promissing_facade_movies:
+                            print(" - %s (%s) [%s] https://www.imdb.com/title/%s" % (
+                                facade_movie.title, facade_movie.year, facade_movie.imdb_id, facade_movie.imdb_id
+                            ))
 
-                        # kitty console:
-                        # if 'kind' in sr and sr['kind'] in IMDB_VALID_MOVIE_KINDS:
-                        #    show_imdb_movie_image(get_imdb_movie(sr.movieID))
+        return facade_match
 
-        return imdb_movie, posible_movies
+    def process_file(self, file):
+        facade_match = self.match_file_as_facade_match(file)
 
-    def process_file(self, file, query_file=True):
-        imdb_movie = None
-        posible_movies = []
-
-        if query_file:
-            imdb_movie, posible_movies = self.match_file_as_imdb_movie(file)
-
-            if not imdb_movie is None:
-                self.processeds.append(file)
-                return True
+        if facade_match.facade_movie:
+            self.processeds.append(file)
+            return True
 
         if self.not_interactive:
             return False
 
         print("")
-        if len(posible_movies) == 1:
-            sr = posible_movies[0]
-            print(" 0. Selecciona '%s (%s) [%s]'  https://www.imdb.com/title/tt%s" % (sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID))
-        elif len(posible_movies) > 0:
-            print(" 0. Selecciona una de las pelis encontradas")
+        if facade_match and len(facade_match.promissing_facade_movies) > 0:
+            if len(facade_match.promissing_facade_movies) == 1:
+                sr = facade_match.promissing_facade_movies[0]
+                print(" 0. Selecciona '%s (%s) [%s]'  https://www.imdb.com/title/%s" % (sr.title, sr.year, sr.imdb_id, sr.imdb_id))
+            else:
+                print(" 0. Selecciona una de las pelis encontradas")
         print(" 1. Introducir imdb_id")
         print(" 2. Introducir/Cambiar titulo (año)")
         print(" 3. Introducir/Cambiar año")
@@ -434,47 +429,54 @@ class FileProcessor(object):
         selected_option = getch.getch()
         print("")
 
-        if selected_option == "0" and len(posible_movies) > 0:
+        if selected_option == "0" and facade_match and len(facade_match.promissing_facade_movies) > 0:
             movie_index = 0
 
-            if len(posible_movies) > 1:
+            if len(facade_match.promissing_facade_movies) > 1:
                 i = 0
-                for sr in posible_movies:
-                    print(" %s.- %s (%s) [%s] https://www.imdb.com/title/tt%s" % (i, sr['title'], sr['year'] if 'year' in sr else None, sr.movieID, sr.movieID))
+                for sr in facade_match.promissing_facade_movies:
+                    print(" %s.- %s (%s) [%s] https://www.imdb.com/title/%s" % (i, sr.title, sr.year, sr.imdb_id, sr.imdb_id))
                     i = i + 1
                 movie_index = input('Introduce el indice:')
                 
 
-            imdb_id = posible_movies[int(movie_index)].movieID
-            imdb_movie = get_imdb_movie(imdb_id)
+            imdb_id = facade_match.promissing_facade_movies[int(movie_index)].imdb_id
+            tmdb_id = facade_match.promissing_facade_movies[int(movie_index)].tmdb_id
 
-            if not imdb_movie is None:
-                file['title'] = imdb_movie['title']
-                file['year'] = imdb_movie['year']
-                file['imdb_id'] = imdb_id
+            facade_movie = facade_match.promissing_facade_movies[int(movie_index)]
 
-                self.processeds.append(file)
-                return True
+            file['title'] = facade_movie.title
+            file['year'] = facade_movie.year
+            file['imdb_id'] = facade_movie.imdb_id
+            file['tmdb_id'] = facade_movie.tmdb_id
 
-            trace.error("No hemos encontrado la peli por el imdb_id='%s'" % imdb_id)
-            return False
+            self.processeds.append(file)
+            return True
         elif selected_option == "1":
+            kargs = {}
             imdb_id = input('Introduce el imdb_id: ')
+            tmdb_id = None
 
-            imdb_id = re.sub(r'^tt', '', imdb_id)
-            
-            if imdb_id.isdigit():
-                imdb_movie = get_imdb_movie(imdb_id)
+            if imdb_id:
+                kargs['imdb_id'] = maybe_format_imdb_id(imdb_id)
+            else:
+                tmdb_id = input('Introduce el tmdb_id: ')
+                if tmdb_id:
+                    kargs['tmdb_id'] = tmdb_id
 
-                if not imdb_movie is None:
-                    file['title'] = imdb_movie['title']
-                    file['year'] = imdb_movie['year']
+            if len(kargs) > 0:
+                facade_movie = get_facade_movie(**kargs)
+
+                if not facade_movie is None:
+                    file['title'] = facade_movie.title
+                    file['year'] = facade_movie.year
                     file['imdb_id'] = imdb_id
+                    file['tmdb_id'] = tmdb_id
 
                     self.processeds.append(file)
                     return True
-            
-            trace.error("No hemos encontrado la peli por el imdb_id='%s'" % imdb_id)
+        
+            trace.error("No hemos encontrado la peli por imdb_id='%s' ni por tmdb_id='%s" % (imdb_id, tmdb_id))
             return False
         elif selected_option == "2":
             text = input('Introduce el titulo (año): ')

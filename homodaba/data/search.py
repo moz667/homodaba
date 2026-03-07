@@ -3,13 +3,13 @@ from django.db.models import Q, Max, Min
 import re
 from datetime import datetime
 
-from .models import Movie, TitleAka, MoviePerson
+from .models import Movie
 
 from homodaba.settings import ELASTICSEARCH_DSL, ADMIN_MOVIE_LIST_PER_PAGE
 
 if ELASTICSEARCH_DSL:
     from .documents import MovieDocument
-    from elasticsearch_dsl import Q as DSL_Q
+    from elasticsearch.dsl import Q as DSL_Q
 
     def populate_search_filter_dsl(queryset, search_term, use_use_distinct=False, 
         genre=None, content_rating_system=None, tag=None, year=None, 
@@ -162,6 +162,7 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
             search_query = Q(title__icontains=search_term)
             search_query.add(Q(title_original__icontains=search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=search_term), Q.OR)
         else:
             search_query = Q(title__iexact=search_term)
             search_query.add(Q(title__icontains=' ' + search_term), Q.OR)
@@ -172,6 +173,9 @@ def populate_search_filter_model(queryset, search_term, use_use_distinct=False,
             search_query.add(Q(title_preferred__iexact=search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=' ' + search_term), Q.OR)
             search_query.add(Q(title_preferred__icontains=search_term+ ' '), Q.OR)
+            search_query.add(Q(directors__name__iexact=search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=' ' + search_term), Q.OR)
+            search_query.add(Q(directors__name__icontains=search_term+ ' '), Q.OR)
 
     if year:
         search_query_new = Q(year=year)
@@ -266,7 +270,7 @@ def extract_year(search_term):
     y es un valor de 4 caracteres
     """
     if search_term.find('(') > -1 and search_term.find(')') > 3:
-        year_str = re.compile('.*\(|\)').sub('', search_term)
+        year_str = re.compile(r'.*\\(|\\)').sub('', search_term)
         if year_str.isdigit():
             year = int(year_str)
             
@@ -274,7 +278,7 @@ def extract_year(search_term):
             min_year = list(Movie.objects.aggregate(Min('year')).values())[0]
             
             if year >= min_year and year <= max_year:
-                search_term = re.compile('\(.*').sub('', search_term).strip()
+                search_term = re.compile(r'\\(.*').sub('', search_term).strip()
                 return year, search_term
     
     return None, search_term
