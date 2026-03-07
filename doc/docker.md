@@ -121,3 +121,31 @@ app:
 * `/opt/app/import`, path to simplify the process of importing data to the app.
 
 * `/opt/app/sqlite`, path where de sqlite files are stored. (See also: [SQLITE_ROOT](#app-other-args-sqlite-root))
+
+
+## "Official" image flavors
+
+* **moz667/homodaba:latest-mini**: Minimal (sqlite database and no extras)
+* **moz667/homodaba:latest-mini-telegram**: sqlite database with Telegram bot
+* **moz667/homodaba:latest-mysql**: MySQL database
+* **moz667/homodaba:latest-mysql-telegram**: MySQL database with Telegram bot
+
+### Example of build process
+
+```bash
+# Mini: sqlite, NO telegram
+docker build -t moz667/homodaba:latest-mini -f docker/app/Dockerfile .
+docker push moz667/homodaba:latest-mini
+
+# Mini + Telegram: sqlite with telegram
+docker build -t moz667/homodaba:latest-mini-telegram --build-arg TELEGRAM=true -f docker/app/Dockerfile .
+docker push moz667/homodaba:latest-mini-telegram
+
+# MySQL: mysql, NO telegram
+docker build -t moz667/homodaba:latest-mysql --build-arg DATABASE_ENGINE=mysql -f docker/app/Dockerfile .
+docker push moz667/homodaba:latest-mysql
+
+# MySQL + Telegram: mysql with telegram
+docker build -t moz667/homodaba:latest-mysql-telegram --build-arg DATABASE_ENGINE=mysql --build-arg TELEGRAM=true -f docker/app/Dockerfile .
+docker push moz667/homodaba:latest-mysql-telegram
+```
