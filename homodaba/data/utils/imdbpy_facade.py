@@ -276,13 +276,7 @@ def get_facade_movie(imdb_id=None, tmdb_id=None):
 TODO: funcion privada
 """
 def get_tmdb_movie(tmdb_id):
-    cache_key = 'gtm(%s)' % tmdb_id
-    if cached_obj := get_cache(key=cache_key):
-        return cached_obj
-    
-    tmdb_movie = tmdb.Movies(tmdb_id)
-
-    return add_cache(key=cache_key, value=tmdb_movie)
+    return tmdb.Movies(tmdb_id)
 
 """
 TODO: funcion privada
