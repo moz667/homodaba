@@ -106,8 +106,13 @@ class Command(BaseCommand):
             type=str,
             help='Caracter de encomillado para cadenas del csv (por defecto "|")',
         )
+        parser.add_argument(
+            '--update',
+            action='store_true',
+            help='Revisa y actualiza los datos con una nueva llamada a API.',
+        )
 
-    def process_movie(self, r):
+    def process_movie(self, r, update=False):
         trace.info('Tratando "%s (%s)"...' % (r['title'], r['year']))
         
         cd = clean_csv_data(r)
@@ -188,9 +193,17 @@ class Command(BaseCommand):
         # sido dada de alta con anterioridad
         populate_local_movie_tags(local_movie, tags)
 
+        if update and facade_result.is_local_data:
+            trace.info("\tActualizando datos de la pelicula local")
+
+            pass
+
+
         return local_movie
 
     def handle(self, *args, **options):
+        update = options['update']
+
         if options['csv_file_help']:
             self.csv_file_help()
         
@@ -240,7 +253,7 @@ class Command(BaseCommand):
                 
                 if start:
                     try:
-                        cur_movie = self.process_movie(csv_row)
+                        cur_movie = self.process_movie(csv_row, update)
                         if cur_movie is None:
                             csv_writer_fails.writerow(csv_row)
                         else:

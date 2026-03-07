@@ -348,7 +348,8 @@ def facade_get(imdb_id=None, tmdb_id=None, exclude_local_data=False):
         return FacadeResult.facade_data(get_facade_movie(imdb_id=imdb_id, tmdb_id=tmdb_id))
 
 def facade_search(title, year, title_alt=None, director=None, storage_type=None, 
-    storage_name=None, path=None, imdb_id=None, tmdb_id=None, not_an_imdb_movie=False, exclude_local_data=False):
+    storage_name=None, path=None, imdb_id=None, tmdb_id=None, not_an_imdb_movie=False, 
+    exclude_local_data=False):
     """
     Funcion principal de busqueda que se encarga de hacerlo tanto
     en local como en imdb.
@@ -372,31 +373,15 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
         return facade_result
 
     if not exclude_local_data:
-        # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
-        # si se trata de una peli almacenada en el disco
-        if storage_type and storage_name and path:
-            trace.debug('\t\t- Buscando por storage "storage_type=%s storage_name=%s path=%s"...' % (storage_type, storage_name, path))
-            storages = MovieStorageType.objects.filter(
-                storage_type=storage_type, 
-                name=storage_name,
-                path=path,
-            )
+        facade_result_local = get_local_facade_result_by_local_data(
+            title=title, year=year, title_alt=title_alt, 
+            storage_type=storage_type, storage_name=storage_name, path=path
+        )
 
-            if storages.count() == 1:
-                return FacadeResult.local_data(storages[0].movie, storage_match=True)
-
-        # Las que no podemos buscar por la ubicacion del archivo, la buscamos por 
-        # los campos tipicos de titulo y año
-        trace.debug('\t\t- Buscando datos locales "title=%s year=%s title_alt=%s)"...' % (title, year, title_alt))
-        movies_local_data = search_movie_local_data(title, year, title_alt)
-
-        if movies_local_data.count() == 1:
-            return FacadeResult.local_data(movies_local_data[0])
-        elif movies_local_data.count() > 1:
-            trace.debug(" * Hemos encontrado varios resultados para la busqueda local (title='%s', year='%s', title_alt='%s')" % (title, year, title_alt))
-        
+        if facade_result_local:
+            return facade_result_local
         # Si se trata de una peli que no esta en el imdb, no la vamos a buscar alli
-        if not_an_imdb_movie:
+        elif not facade_result_local and not_an_imdb_movie:
             trace.debug(" * La pelicula '%s (%s)' se trata de una pelicula que no se encuentra en el imdb y que todavia no hemos dado de alta." % (title, year))
             return None
     
@@ -430,6 +415,35 @@ def facade_search(title, year, title_alt=None, director=None, storage_type=None,
             trace.debug(" * Aunque hemos encontrado las siguientes: *")
             trace_results(facade_match.promissing_facade_movies)
 
+    return None
+
+"""
+TODO: funcion privada
+"""
+def get_local_facade_result_by_local_data(title, year, title_alt=None, storage_type=None, storage_name=None, path=None):
+    # Para buscar datos locales es mas sencillo encontrar primero por ubicacion
+    # si se trata de una peli almacenada en el disco
+    if storage_type and storage_name and path:
+        trace.debug('\t\t- Buscando por storage "storage_type=%s storage_name=%s path=%s"...' % (storage_type, storage_name, path))
+        storages = MovieStorageType.objects.filter(
+            storage_type=storage_type, 
+            name=storage_name,
+            path=path,
+        )
+
+        if storages.count() == 1:
+            return FacadeResult.local_data(storages[0].movie, storage_match=True)
+
+    # Las que no podemos buscar por la ubicacion del archivo, la buscamos por 
+    # los campos tipicos de titulo y año
+    trace.debug('\t\t- Buscando datos locales "title=%s year=%s title_alt=%s)"...' % (title, year, title_alt))
+    movies_local_data = search_movie_local_data(title, year, title_alt)
+
+    if movies_local_data.count() == 1:
+        return FacadeResult.local_data(movies_local_data[0])
+    elif movies_local_data.count() > 1:
+        trace.debug(" * Hemos encontrado varios resultados para la busqueda local (title='%s', year='%s', title_alt='%s')" % (title, year, title_alt))
+    
     return None
 
 """
