@@ -30,7 +30,7 @@ class CacheTable(models.Model):
 
     @property
     def is_alive(self):
-        return CACHE_TTL and (int(time.time()) - self.created) >= CACHE_TTL
+        return CACHE_TTL and (int(time.time()) - self.created) <= CACHE_TTL
 
     class Meta:
         verbose_name = "Entrada de Caché"
