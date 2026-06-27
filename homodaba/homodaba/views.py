@@ -149,7 +149,7 @@ def get_person_filter(request, request_key, **kargs):
     if request_key in request.GET.keys():
         if request.GET[request_key]:
             imdb_id = None
-            pattern = re.compile(".*\[imdb_id:(.*)\]")
+            pattern = re.compile(".*\\[imdb_id:(.*)\\]")
             person_name = request.GET[request_key]
 
             if pattern.search(person_name):
@@ -157,7 +157,7 @@ def get_person_filter(request, request_key, **kargs):
                 person_name = person_name.replace("[imdb_id:%s]" % imdb_id, "").strip()
             
             tmdb_id = None
-            pattern = re.compile(".*\[tmdb_id:(.*)\]")
+            pattern = re.compile(".*\\[tmdb_id:(.*)\\]")
             person_name = request.GET[request_key]
 
             if pattern.search(person_name):
