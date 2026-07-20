@@ -136,13 +136,17 @@ class Country(models.Model):
         if len(self.name) > 2:
             return self.name
         
-        iso_country = countries.get(self.name)
-        if len(iso_country.name) < 15:
-            return iso_country.name 
-        elif len(iso_country.apolitical_name) < 15:
-            return iso_country.apolitical_name
-        else:
-            return iso_country.alpha3
+        if self.name in countries:
+            iso_country = countries.get(self.name)
+
+            if len(iso_country.name) < 15:
+                return iso_country.name 
+            elif len(iso_country.apolitical_name) < 15:
+                return iso_country.apolitical_name
+            else:
+                return iso_country.alpha3
+        
+        return self.name
 
     class Meta:
         ordering = ['name']
